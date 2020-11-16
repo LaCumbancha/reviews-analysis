@@ -13,16 +13,17 @@ deps:
 	go mod vendor
 
 build: deps
-	GOOS=linux go build -o bin/review-scatter $(GIT_REMOTE)/review-scatter
+	GOOS=linux go build -o bin/review-scatter $(GIT_REMOTE)/reviews-scatter
+	GOOS=linux go build -o bin/review-receiver $(GIT_REMOTE)/reviews-receiver
 .PHONY: build
 
 docker-image:
-	docker build -f ./review-scatter/Dockerfile -t "review_scatter:latest" .
+	docker build -f ./reviews-scatter/Dockerfile -t "rvw_scatter:latest" .
+	docker build -f ./reviews-receiver/Dockerfile -t "rvw_receiver:latest" .
 .PHONY: docker-image
 
 docker-compose-up: docker-image
 	docker-compose -f docker-compose-dev.yaml --project-name $(PROJECT_NAME) up -d --build --remove-orphans
-	docker run --detach --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 .PHONY: docker-compose-up
 
 docker-compose-down:

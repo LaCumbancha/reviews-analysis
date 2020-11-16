@@ -1,51 +1,49 @@
+version: '3'
+
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: "rabbitmq:3-management"
+    ports:
+      - "15672:15672"
+
+  rvw_scatter:
+    container_name: rvw_scatter
+    image: rvw_scatter:latest
+    entrypoint: /scatter
+    environment:
+    - RVWSCA_CONFIG_FILE=/config/initial-config.yaml
+    networks:
+    - testing_net
+    volumes:
+    - reviews_dataset:/data
+    - rvw_scatter_config_vol:/config
+
+  rvw_receiver:
+    container_name: rvw_receiver
+    image: rvw_receiver:latest
+    entrypoint: /receiver
+    networks:
+    - testing_net
+
+volumes:
+  reviews_dataset:
+    driver: local
+    driver_opts:
+      device: $PWD/dataset/reviews
+      o: bind
+      type: none
+
+  rvw_scatter_vol:
+    driver: local
+    driver_opts:
+      device: $PWD/reviews-scatter/config
+      o: bind
+      type: none
+
 networks:
   testing_net:
     ipam:
       config:
       - subnet: 172.25.125.0/24
       driver: default
-services:
-  bkp_manager1:
-    container_name: bkp_manager1
-    entrypoint: /manager
-    environment:
-    - BKP_CONFIG_FILE=/config/initial-config.yaml
-    image: bkp_manager:latest
-    networks:
-    - testing_net
-    volumes:
-    - bkp_manager_vol:/config
-  echo_server1:
-    container_name: echo_server1
-    entrypoint: /echo-server
-    environment:
-    - APP_CONFIG_FILE=/config/initial-config.yaml
-    image: echo_server:latest
-    networks:
-    - testing_net
-    volumes:
-    - echo_server_vol:/config
-  echo_server2:
-    container_name: echo_server2
-    entrypoint: /echo-server
-    environment:
-    - APP_CONFIG_FILE=/config/initial-config.yaml
-    image: echo_server:latest
-    networks:
-    - testing_net
-    volumes:
-    - echo_server_vol:/config
-version: '3'
-volumes:
-  bkp_manager_vol:
-    driver: local
-    driver_opts:
-      device: $PWD/backup-manager/config
-      o: bind
-      type: none
-  echo_server_vol:
-    driver: local
-    driver_opts:
-      device: $PWD/echo-server/config
-      o: bind
-      type: none
