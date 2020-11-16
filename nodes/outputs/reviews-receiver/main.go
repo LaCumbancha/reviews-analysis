@@ -14,7 +14,10 @@ func failOnError(err error, msg string) {
 
 func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
+	if err != nil {
+		conn, err = amqp.Dial("amqp://guest:guest@localhost:5672/")
+		failOnError(err, "Failed to connect to RabbitMQ")
+	}
 	defer conn.Close()
 
 	ch, err := conn.Channel()
@@ -22,7 +25,7 @@ func main() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"ReviewsScatter", // name
+		"FunnyBusinessMapper", // name
 		false,   // durable
 		false,   // delete when unused
 		false,   // exclusive

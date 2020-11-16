@@ -9,7 +9,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/reviews-scatter/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/rabbitmq"
 )
 
 type ReviewsScatterConfig struct {
@@ -63,7 +63,7 @@ func (scatter *ReviewsScatter) Run() {
     	// Publishing asynchronously with Goroutines.
     	go func() {
     		wg.Add(1)
-    		scatter.queue.Publish(GetReviewId(review), review)
+    		scatter.queue.PublishReview(review)
     		wg.Done()
     	}()
     }
@@ -79,9 +79,4 @@ func (scatter *ReviewsScatter) Run() {
 func (scatter *ReviewsScatter) Stop() {
 	scatter.connection.Close()
 	scatter.channel.Close()
-}
-
-func GetReviewId(review string) string {
-	// Substring limits hardcoded (after analysing data) to avoid parsing the review.
-	return review[14:34]
 }

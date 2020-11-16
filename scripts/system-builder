@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+import sys
+import yaml
+import argparse
+
+parser = argparse.ArgumentParser()
+
+args = parser.parse_args()
+
+file = {}
+
+# Setting version
+file['version'] = '3'
+
+# Setting services
+file['services'] = {}
+
+file['services']['rabbitmq'] = {
+	'container_name': f'rabbitmq',
+	'image': 'rabbitmq:custom',
+	'ports': ['15672:15672'],
+	'networks': ['testing_net'],
+	'healthcheck': {
+		'test': '''["CMD", "curl", "-f", "http://rabbitmq:156722]'''
+		'interval': '10s'
+		'timeout': '5s'
+		'retries': '10'
+	}
+}
+	
+file['services']['rvw_scatter'] = {
+	'container_name': 'rvw_scatter',
+	'image': 'rvw_scatter:latest',
+	'entrypoint': '/scatter',
+	'restart': 'on-failure',
+	'environment': ['RVWSCA_CONFIG_FILE=/config/initial-config.yaml'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+	'volumes': ['reviews_dataset:/data', 'rvw_scatter_vol:/config']
+}
+
+file['services']['rvw_receiver'] = {
+	'container_name': f'rvw_receiver',
+	'image': 'rvw_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq']
+}
+
+# Setting volumes
+file['volumes'] = {
+	'reviews_dataset': {
+		'driver': 'local',
+		'driver_opts': {
+			'type': 'none',
+			'device': '$PWD/datasets/reviews',
+			'o': 'bind'
+		}
+	},
+	'business_dataset': {
+		'driver': 'local',
+		'driver_opts': {
+			'type': 'none',
+			'device': '$PWD/datasets/business',
+			'o': 'bind'
+		}
+	},
+	'rvw_scatter_vol': {
+		'driver': 'local',
+		'driver_opts': {
+			'type': 'none',
+			'device': '$PWD/nodes/inputs/reviews-scatter/config',
+			'o': 'bind'
+		}
+	}
+}
+
+# Setting networks
+file['networks'] = {
+	'testing_net': {
+		'ipam': {
+			'driver': 'default', 
+			'config': [
+				{'subnet': '172.25.125.0/24'}
+			]
+		}
+	}
+}
+
+with open('docker-compose-dev.yaml', 'w') as outfile:
+    yaml.dump(file, outfile, default_flow_style=False)

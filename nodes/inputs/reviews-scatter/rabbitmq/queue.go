@@ -3,6 +3,8 @@ package rabbitmq
 import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
 )
 
 type RabbitQueue struct {
@@ -36,7 +38,8 @@ func (queue *RabbitQueue) initialize() {
 	}
 }
 
-func (queue *RabbitQueue) Publish(reviewId string, fullReview string) {
+func (queue *RabbitQueue) PublishReview(review string) {
+	reviewId := utils.GetReviewId(review)
 	err := queue.channel.Publish(
 		"",     							// Exchange
 		queue.name, 						// Routing Key
@@ -44,7 +47,7 @@ func (queue *RabbitQueue) Publish(reviewId string, fullReview string) {
 		false,  							// Immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte(fullReview),
+			Body:        []byte(review),
 		})
 
 	if err != nil {

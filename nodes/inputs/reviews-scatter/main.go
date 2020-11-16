@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/reviews-scatter/common"
-	"github.com/LaCumbancha/reviews-analysis/reviews-scatter/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {

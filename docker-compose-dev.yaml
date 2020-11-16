@@ -61,7 +61,7 @@ volumes:
   rvw_scatter_vol:
     driver: local
     driver_opts:
-      device: $PWD/reviews-scatter/config
+      device: $PWD/nodes/inputs/reviews-scatter/config
       o: bind
       type: none
 
