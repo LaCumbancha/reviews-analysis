@@ -7,23 +7,22 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/backup-server/backup-manager/utils"
-	"github.com/LaCumbancha/backup-server/backup-manager/common"
-	"github.com/LaCumbancha/backup-server/backup-manager/manager"
-	"github.com/LaCumbancha/backup-server/backup-manager/scheduler"
+	"github.com/LaCumbancha/review-analysis/review-scatter/common"
+	"github.com/LaCumbancha/review-analysis/review-scatter/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the BKPMNGR_ prefix
+	// Configure viper to read env variables with the REVSCA_ prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("bkp")
+	configEnv.SetEnvPrefix("revsca")
 
 	// Add env variables supported
-	configEnv.BindEnv("storage")
-	configEnv.BindEnv("manager", "port")
-	configEnv.BindEnv("scheduler", "port")
+	configEnv.BindEnv("reviews", "data")
+	configEnv.BindEnv("rabbitmq", "ip")
+	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("scatter", "queue", "name")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -44,6 +43,12 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	return configEnv, configFile, nil
 }
 
+func failOnError(err error, msg string) {
+  if err != nil {
+    log.Fatalf("%s: %s", msg, err)
+  }
+}
+
 func main() {
 	log.SetLevel(log.DebugLevel)
 	configEnv, configFile, err := InitConfig()
@@ -52,43 +57,38 @@ func main() {
 		log.Fatalf("%s", err)
 	}
 
-	storagePath := utils.GetConfigValue(configEnv, configFile, "storage")
+	reviewsData := utils.GetConfigValue(configEnv, configFile, "reviews_data")
 	
-	if storagePath == "" {
-		log.Fatalf("Storage variable missing")
+	if reviewsData == "" {
+		log.Fatalf("ReviewsData variable missing")
 	}
 
-	managerPort := utils.GetConfigValue(configEnv, configFile, "manager_port")
+	rabbitIp := utils.GetConfigValue(configEnv, configFile, "rabbitmq_ip")
 	
-	if managerPort == "" {
-		log.Fatalf("Port variable missing")
+	if rabbitIp == "" {
+		log.Fatalf("RabbitIp variable missing")
 	}
 
-	schedulerPort := utils.GetConfigValue(configEnv, configFile, "scheduler_port")
+	rabbitPort := utils.GetConfigValue(configEnv, configFile, "rabbitmq_port")
 	
-	if schedulerPort == "" {
-		log.Fatalf("Port variable missing")
+	if rabbitPort == "" {
+		log.Fatalf("RabbitPort variable missing")
 	}
 
-	backupStorageConfig := common.BackupStorageConfig {
-		Path: 			storagePath,
+	scatterQueueName := utils.GetConfigValue(configEnv, configFile, "scatter_queue_name")
+	
+	if scatterQueueName == "" {
+		log.Fatalf("ScatterQueueName variable missing")
 	}
 
-	backupStorage := common.NewBackupStorage(backupStorageConfig)
-	backupStorage.BuildBackupStructure()
-
-	backupSchedulerConfig := scheduler.BackupSchedulerConfig {
-		Storage:		backupStorage,
+	reviewsScatterConfig := common.ReviewsScatterConfig {
+		Data:					reviewsData,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		ScatterQueueName:		scatterQueueName,
 	}
 
-	backupScheduler := scheduler.NewBackupScheduler(backupSchedulerConfig)
-	go backupScheduler.Run()
-
-	managerConfig := manager.BackupManagerConfig {
-		Port: 			managerPort,
-		Storage: 		backupStorage,
-	}
-
-	backupManager := manager.NewBackupManager(managerConfig)
-	backupManager.Run()
+	reviewsScatter := common.NewReviewsScatter(reviewsScatterConfig)
+	reviewsScatter.Run()
+	reviewsScatter.Stop()
 }
