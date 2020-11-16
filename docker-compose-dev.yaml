@@ -3,13 +3,13 @@ version: '3'
 services:
   rabbitmq:
     container_name: rabbitmq
-    image: "rabbitmq:3-management"
+    image: "rabbitmq:custom"
     ports:
       - "15672:15672"
     networks:
     - testing_net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:15672"]
+      test: ["CMD", "curl", "-f", "http://rabbitmq:15672"]
       interval: 10s
       timeout: 5s
       retries: 10

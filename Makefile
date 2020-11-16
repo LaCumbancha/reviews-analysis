@@ -18,6 +18,7 @@ build: deps
 .PHONY: build
 
 docker-image:
+	docker build -f ./rabbitmq/Dockerfile -t "rabbitmq:custom" .
 	docker build -f ./reviews-scatter/Dockerfile -t "rvw_scatter:latest" .
 	docker build -f ./reviews-receiver/Dockerfile -t "rvw_receiver:latest" .
 .PHONY: docker-image
