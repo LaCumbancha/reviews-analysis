@@ -54,7 +54,7 @@ func main() {
 	configEnv, configFile, err := InitConfig()
 
 	if err != nil {
-		log.Fatalf("%s", err)
+		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
 	reviewsData := utils.GetConfigValue(configEnv, configFile, "reviews_data")

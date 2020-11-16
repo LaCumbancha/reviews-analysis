@@ -6,23 +6,40 @@ services:
     image: "rabbitmq:3-management"
     ports:
       - "15672:15672"
+    networks:
+    - testing_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:15672"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   rvw_scatter:
     container_name: rvw_scatter
     image: rvw_scatter:latest
     entrypoint: /scatter
+    restart: on-failure
     environment:
     - RVWSCA_CONFIG_FILE=/config/initial-config.yaml
+    links:
+      - rabbitmq
+    depends_on:
+      - rabbitmq
     networks:
     - testing_net
     volumes:
     - reviews_dataset:/data
-    - rvw_scatter_config_vol:/config
+    - rvw_scatter_vol:/config
 
   rvw_receiver:
     container_name: rvw_receiver
     image: rvw_receiver:latest
     entrypoint: /receiver
+    restart: on-failure
+    links:
+      - rabbitmq
+    depends_on:
+      - rabbitmq
     networks:
     - testing_net
 
@@ -30,7 +47,14 @@ volumes:
   reviews_dataset:
     driver: local
     driver_opts:
-      device: $PWD/dataset/reviews
+      device: $PWD/datasets/reviews
+      o: bind
+      type: none
+
+  business_dataset:
+    driver: local
+    driver_opts:
+      device: $PWD/datasets/business
       o: bind
       type: none
 

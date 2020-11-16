@@ -29,12 +29,12 @@ type ReviewsScatter struct {
 func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort , err)
+		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort , err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel.", err)
+		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
 	scatterQueue := rabbitmq.NewRabbitQueue(config.ScatterQueueName, ch)
@@ -51,7 +51,7 @@ func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
 func (scatter *ReviewsScatter) Run() {
 	file, err := os.Open(scatter.data)
     if err != nil {
-        log.Fatalf("Error opening reviews data file.", err)
+        log.Fatalf("Error opening reviews data file. Err: '%s'", err)
     }
     defer file.Close()
 
@@ -69,7 +69,7 @@ func (scatter *ReviewsScatter) Run() {
     }
 
     if err := scanner.Err(); err != nil {
-        log.Fatalf("Error reading reviews data from file %s.", scatter.data, err)
+        log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
     }
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.

@@ -32,7 +32,7 @@ func (queue *RabbitQueue) initialize() {
 	)
 
 	if err != nil {
-		log.Fatalf("Error creating queue %s", queue.name)
+		log.Fatalf("Error creating queue %s. Err: '%s'", queue.name, err)
 	}
 }
 
@@ -48,7 +48,7 @@ func (queue *RabbitQueue) Publish(reviewId string, fullReview string) {
 		})
 
 	if err != nil {
-		log.Errorf("Error sending review %s to queue %s", reviewId, queue.name, err)
+		log.Errorf("Error sending review %s to queue %s. Err: '%s'", reviewId, queue.name, err)
 	}
 
 	log.Debugf("Review %s sent.", reviewId)

@@ -27,7 +27,6 @@ docker-compose-up: docker-image
 .PHONY: docker-compose-up
 
 docker-compose-down:
-	./scripts/stop-extra-services
 	docker-compose -f docker-compose-dev.yaml --project-name $(PROJECT_NAME) stop -t 1
 	docker-compose -f docker-compose-dev.yaml --project-name $(PROJECT_NAME) down
 .PHONY: docker-compose-down
