@@ -9,6 +9,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/rabbitmq"
 )
 
@@ -20,10 +21,10 @@ type ReviewsScatterConfig struct {
 }
 
 type ReviewsScatter struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	data 			string
-	queue 			*rabbitmq.RabbitQueue
+	data 				string
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	outputFanout 		*rabbitmq.RabbitOutputFanout
 }
 
 func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
@@ -37,12 +38,12 @@ func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	scatterQueue := rabbitmq.NewRabbitQueue(config.ScatterQueueName, ch)
+	scatterFanout := rabbitmq.NewRabbitOutputFanout(config.ScatterQueueName, ch)
 	scatter := &ReviewsScatter {
-		connection:		conn,
-		channel:		ch,
-		data: 			config.Data,
-		queue:			scatterQueue,
+		data: 				config.Data,
+		connection:			conn,
+		channel:			ch,
+		outputFanout:		scatterFanout,
 	}
 
 	return scatter
@@ -63,7 +64,8 @@ func (scatter *ReviewsScatter) Run() {
     	// Publishing asynchronously with Goroutines.
     	go func() {
     		wg.Add(1)
-    		scatter.queue.PublishReview(review)
+    		reviewId := utils.GetReviewId(review)
+    		scatter.outputFanout.PublishReview(reviewId, review)
     		wg.Done()
     	}()
     }
@@ -74,9 +76,12 @@ func (scatter *ReviewsScatter) Run() {
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
+
+    // Publishing end message.
+    scatter.outputFanout.PublishReview(END_MESSAGE, END_MESSAGE)
 }
 
 func (scatter *ReviewsScatter) Stop() {
-	scatter.connection.Close()
-	scatter.channel.Close()
+	//scatter.connection.Close()
+	//scatter.channel.Close()
 }

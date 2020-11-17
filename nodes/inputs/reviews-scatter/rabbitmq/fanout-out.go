@@ -1,0 +1,58 @@
+package rabbitmq
+
+import (
+	"github.com/streadway/amqp"
+	log "github.com/sirupsen/logrus"
+)
+
+type RabbitOutputFanout struct {
+	channel 		*amqp.Channel
+	exchange 		string
+}
+
+func NewRabbitOutputFanout(name string, channel *amqp.Channel) *RabbitOutputFanout {
+	rabbitFanout := &RabbitOutputFanout {
+		channel: 	channel,
+		exchange:	name,
+	}
+
+	rabbitFanout.initialize()
+
+	return rabbitFanout
+}
+
+func (fanout *RabbitOutputFanout) initialize() {
+	err := fanout.channel.ExchangeDeclare(
+	  	fanout.exchange,   	// Name
+	  	"fanout", 			// Type
+	  	false,     			// Durable
+	  	false,    			// Auto-Deleted
+	  	false,    			// Internal
+	  	false,    			// No-Wait
+	  	nil,      			// Arguments
+	)
+
+	if err != nil {
+		log.Fatalf("Error creating exchange %s. Err: '%s'", fanout.exchange, err)
+	}
+}
+
+func (fanout *RabbitOutputFanout) PublishReview(reviewId string, review string) {
+	err := fanout.channel.Publish(
+  		fanout.exchange, 					// Exchange
+  		"",     							// Routing Key
+  		false,  							// Mandatory
+  		false,  							// Immediate
+  		amqp.Publishing{
+  			DeliveryMode:	amqp.Persistent,
+  		    ContentType: 	"text/plain",
+  		    Body:        	[]byte(review),
+  		},
+  	)
+
+	if err != nil {
+		log.Errorf("Error sending message %s to fanout %s. Err: '%s'", reviewId, fanout.exchange, err)
+	} else {
+		log.Debugf("Message %s sent to fanout %s.", reviewId, fanout.exchange)
+	}	
+}
