@@ -62,8 +62,8 @@ func (scatter *ReviewsScatter) Run() {
     	review := scanner.Text()
 
     	// Publishing asynchronously with Goroutines.
+    	wg.Add(1)
     	go func() {
-    		wg.Add(1)
     		reviewId := utils.GetReviewId(review)
     		scatter.outputFanout.PublishReview(reviewId, review)
     		wg.Done()
@@ -78,10 +78,11 @@ func (scatter *ReviewsScatter) Run() {
     wg.Wait()
 
     // Publishing end message.
-    scatter.outputFanout.PublishReview(END_MESSAGE, END_MESSAGE)
+    scatter.outputFanout.PublishFinish()
 }
 
 func (scatter *ReviewsScatter) Stop() {
-	//scatter.connection.Close()
-	//scatter.channel.Close()
+	log.Infof("Closing Reviews-Scatter connections.")
+	scatter.connection.Close()
+	scatter.channel.Close()
 }

@@ -34,6 +34,8 @@ func (fanout *RabbitOutputFanout) initialize0() {
 
 	if err != nil {
 		log.Fatalf("Error creating exchange %s. Err: '%s'", fanout.exchange, err)
+	} else {
+		log.Fatalf("Exchange %s created.", fanout.exchange)
 	}
 }
 
@@ -44,7 +46,6 @@ func (fanout *RabbitOutputFanout) PublishReview0(reviewId string, review string)
   		false,  							// Mandatory
   		false,  							// Immediate
   		amqp.Publishing{
-  			DeliveryMode:	amqp.Persistent,
   		    ContentType: 	"text/plain",
   		    Body:        	[]byte(review),
   		},
@@ -53,7 +54,26 @@ func (fanout *RabbitOutputFanout) PublishReview0(reviewId string, review string)
 	if err != nil {
 		log.Errorf("Error sending message %s to fanout %s. Err: '%s'", reviewId, fanout.exchange, err)
 	} else {
-		log.Debugf("Message %s sent to fanout %s.", reviewId, fanout.exchange)
+		log.Infof("Message %s sent to fanout %s.", reviewId, fanout.exchange)
+	}	
+}
+
+func (fanout *RabbitOutputFanout) PublishFinish0() {
+	err := fanout.channel.Publish(
+  		fanout.exchange, 					// Exchange
+  		"",     							// Routing Key
+  		false,  							// Mandatory
+  		false,  							// Immediate
+  		amqp.Publishing{
+  		    ContentType: 	"text/plain",
+  		    Body:        	[]byte(END_MESSAGE),
+  		},
+  	)
+
+	if err != nil {
+		log.Errorf("Error sending End-Message to fanout %s. Err: '%s'", fanout.exchange, err)
+	} else {
+		log.Infof("End-Message sent to fanout %s.", fanout.exchange)
 	}	
 }
 
@@ -91,6 +111,25 @@ func (fanout *RabbitOutputFanout) PublishReview(reviewId string, review string) 
 	if err != nil {
 		log.Errorf("Error sending message %s to fanout %s. Err: '%s'", reviewId, fanout.exchange, err)
 	} else {
-		log.Debugf("Message %s sent to fanout %s.", reviewId, fanout.exchange)
+		log.Infof("Message %s sent to fanout %s.", reviewId, fanout.exchange)
+	}	
+}
+
+func (fanout *RabbitOutputFanout) PublishFinish() {
+	err := fanout.channel.Publish(
+		"",									// Exchange
+  		fanout.exchange, 					// Routing Key
+  		false,  							// Mandatory
+  		false,  							// Immediate
+  		amqp.Publishing{
+  		    ContentType: 	"text/plain",
+  		    Body:        	[]byte(END_MESSAGE),
+  		},
+  	)
+
+	if err != nil {
+		log.Errorf("Error sending End-Message to fanout %s. Err: '%s'", fanout.exchange, err)
+	} else {
+		log.Infof("End-Message sent to fanout %s.", fanout.exchange)
 	}	
 }

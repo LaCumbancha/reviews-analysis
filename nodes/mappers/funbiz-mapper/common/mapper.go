@@ -53,24 +53,27 @@ func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for reviews.")
 
 	var wg sync.WaitGroup
-	for message := range mapper.inputQueue.ConsumeReviews() {
-		wg.Add(1)
-		messageBody := string(message.Body)
+	wg.Add(1)
+	go func() {
+		for message := range mapper.inputQueue.ConsumeReviews() {
+			messageBody := string(message.Body)
 
-		if messageBody == END_MESSAGE {
-			log.Infof("End-Message received.")
-			wg.Done()
-		} else {
-			review := messageBody
-			log.Infof("Review %s received.", utils.GetReviewId(review))
-
-			go func() {
-				mapper.processReview(review)
+			if messageBody == END_MESSAGE {
+				log.Infof("End-Message received.")
 				wg.Done()
-			}()
-		}
-	}
+			} else {
+				review := messageBody
+				log.Infof("Review %s received.", utils.GetReviewId(review))
 
+				wg.Add(1)
+				go func() {
+					mapper.processReview(review)
+					wg.Done()
+				}()
+			}
+		}
+	}()
+	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 }
@@ -93,6 +96,7 @@ func (mapper *Mapper) processReview(rawReview string) {
 }
 
 func (mapper *Mapper) Stop() {
+	log.Infof("Closing Funbiz-Mapper connections.")
 	mapper.connection.Close()
 	mapper.channel.Close()
 }
