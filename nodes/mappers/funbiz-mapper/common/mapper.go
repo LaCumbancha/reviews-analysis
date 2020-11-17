@@ -26,23 +26,6 @@ type Mapper struct {
 	outputQueue 	*rabbitmq.RabbitQueue
 }
 
-type FullReview struct {
-	ReviewId 		string 						`json:"review_id",omitempty`
-	UserId 			string 						`json:"user_id",omitempty`
-	BusinessId 		string 						`json:"business_id",omitempty`
-	Stars 			int8 						`json:"stars",omitempty`
-	Useful			int8 						`json:"useful",omitempty`
-	Funny 			int8 						`json:"funny",omitempty`
-	Cool			int8 						`json:"cool",omitempty`
-	Text 			string 						`json:"text",omitempty`
-	Date 			string 						`json:"date",omitempty`
-}
-
-type FunnyBusinessData struct {
-	BusinessId 		string 						`json:"business_id",omitempty`
-	Funny 			int8 						`json:"funny",omitempty`
-}
-
 func NewMapper(config MapperConfig) *Mapper {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
@@ -71,13 +54,21 @@ func (mapper *Mapper) Run() {
 
 	var wg sync.WaitGroup
 	for message := range mapper.inputQueue.ConsumeReviews() {
-		go func() {
-			wg.Add(1)
-			review := string(message.Body)
-			log.Infof("Review %s received.", utils.GetReviewId(review))
-			mapper.processReview(review)
+		wg.Add(1)
+		messageBody := string(message.Body)
+
+		if messageBody == END_MESSAGE {
+			log.Infof("End-Message received.")
 			wg.Done()
-		}()
+		} else {
+			review := messageBody
+			log.Infof("Review %s received.", utils.GetReviewId(review))
+
+			go func() {
+				mapper.processReview(review)
+				wg.Done()
+			}()
+		}
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.

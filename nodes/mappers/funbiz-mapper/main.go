@@ -16,13 +16,13 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 
 	// Configure viper to read env variables with the REVSCA_ prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("funbizmap")
+	configEnv.SetEnvPrefix("funbiz")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("mapper", "input", "queue", "name")
-	configEnv.BindEnv("mapper", "output", "queue", "name")
+	configEnv.BindEnv("input", "queue", "name")
+	configEnv.BindEnv("output", "queue", "name")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -69,23 +69,23 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	mapperInputQueueName := utils.GetConfigValue(configEnv, configFile, "mapper_input_queue_name")
+	inputQueueName := utils.GetConfigValue(configEnv, configFile, "input_queue_name")
 	
-	if mapperInputQueueName == "" {
-		log.Fatalf("MapperInputQueueName variable missing")
+	if inputQueueName == "" {
+		log.Fatalf("InputQueueName variable missing")
 	}
 
-	mapperOutputQueueName := utils.GetConfigValue(configEnv, configFile, "mapper_output_queue_name")
+	outputQueueName := utils.GetConfigValue(configEnv, configFile, "output_queue_name")
 	
-	if mapperOutputQueueName == "" {
-		log.Fatalf("MapperOutputQueueName variable missing")
+	if outputQueueName == "" {
+		log.Fatalf("OutputQueueName variable missing")
 	}
 
 	mapperConfig := common.MapperConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		InputQueueName:		mapperInputQueueName,
-		OutputQueueName:	mapperOutputQueueName,
+		InputQueueName:		inputQueueName,
+		OutputQueueName:	outputQueueName,
 	}
 
 	mapper := common.NewMapper(mapperConfig)
