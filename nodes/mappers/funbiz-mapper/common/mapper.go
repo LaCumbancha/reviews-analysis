@@ -60,6 +60,11 @@ func (mapper *Mapper) Run() {
 
 			if messageBody == END_MESSAGE {
 				log.Infof("End-Message received.")
+				
+				if err := message.Ack(false); err != nil {
+					log.Errorf("Error sending ACK of message %s. Err: '%s'", message.MessageId, err)
+				}
+
 				wg.Done()
 			} else {
 				review := messageBody
@@ -68,6 +73,11 @@ func (mapper *Mapper) Run() {
 				wg.Add(1)
 				go func() {
 					mapper.processReview(review)
+					
+				if err := message.Ack(false); err != nil {
+					log.Errorf("Error sending ACK of message %s. Err: '%s'", message.MessageId, err)
+				}
+
 					wg.Done()
 				}()
 			}

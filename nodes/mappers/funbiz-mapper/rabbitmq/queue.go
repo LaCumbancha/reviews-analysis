@@ -58,7 +58,7 @@ func (queue *RabbitQueue) ConsumeReviews() <-chan amqp.Delivery {
 	reviews, err := queue.channel.Consume(
 		queue.name, 		// Name
 		"",     			// Consumer
-		true,   			// AutoACK
+		false,   			// AutoACK
 		false,  			// Exclusive
 		false,  			// No-Local
 		false,  			// No-Wait
