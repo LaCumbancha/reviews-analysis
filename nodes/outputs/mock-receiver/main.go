@@ -1,9 +1,8 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	"github.com/streadway/amqp"
+	log "github.com/sirupsen/logrus"
 )
 
 func failOnError(err error, msg string) {
@@ -25,23 +24,23 @@ func main() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"FunnyBusinessMapper", // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		"FunnyBusinessMapper", 		// Name
+		false,   					// Durable
+		false,   					// Auto-Delete
+		false,   					// Exclusive
+		false,   					// No-Wait
+		nil,     					// Args
 	)
 	failOnError(err, "Failed to declare a queue")
 
 	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+		q.Name, 					// Queue
+		"",     					// Consumer
+		true,   					// Auto-ACK
+		false,  					// Exclusive
+		false,  					// No-Local
+		false,  					// No-Wait
+		nil,    					// Args
 	)
 	failOnError(err, "Failed to register a consumer")
 
@@ -49,9 +48,10 @@ func main() {
 
 	go func() {
 		for d := range msgs {
-			log.Infof("Received a review: %s", d.Body)
+			log.Printf("Received a message: %s", d.Body)
 		}
 	}()
 
+	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
 }

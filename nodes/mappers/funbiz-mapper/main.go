@@ -14,7 +14,7 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the REVSCA_ prefix
+	// Configure viper to read env variables with the FUNBIZ prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("funbiz")
 
@@ -23,6 +23,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("input", "queue", "name")
 	configEnv.BindEnv("output", "queue", "name")
+	configEnv.BindEnv("funny", "filters")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -50,35 +51,41 @@ func failOnError(err error, msg string) {
 }
 
 func main() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.TraceLevel)
 	configEnv, configFile, err := InitConfig()
 
 	if err != nil {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
-	rabbitIp := utils.GetConfigValue(configEnv, configFile, "rabbitmq_ip")
+	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
 		log.Fatalf("RabbitIp variable missing")
 	}
 
-	rabbitPort := utils.GetConfigValue(configEnv, configFile, "rabbitmq_port")
+	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
 	
 	if rabbitPort == "" {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	inputQueueName := utils.GetConfigValue(configEnv, configFile, "input_queue_name")
+	inputQueueName := utils.GetConfigString(configEnv, configFile, "input_queue_name")
 	
 	if inputQueueName == "" {
 		log.Fatalf("InputQueueName variable missing")
 	}
 
-	outputQueueName := utils.GetConfigValue(configEnv, configFile, "output_queue_name")
+	outputQueueName := utils.GetConfigString(configEnv, configFile, "output_queue_name")
 	
 	if outputQueueName == "" {
 		log.Fatalf("OutputQueueName variable missing")
+	}
+
+	funnyFilters := utils.GetConfigInt(configEnv, configFile, "funny_filters")
+	
+	if funnyFilters == 0 {
+		log.Fatalf("FunnyFilters variable missing")
 	}
 
 	mapperConfig := common.MapperConfig {
@@ -86,6 +93,7 @@ func main() {
 		RabbitPort:			rabbitPort,
 		InputQueueName:		inputQueueName,
 		OutputQueueName:	outputQueueName,
+		FunnyFilters:		funnyFilters,
 	}
 
 	mapper := common.NewMapper(mapperConfig)

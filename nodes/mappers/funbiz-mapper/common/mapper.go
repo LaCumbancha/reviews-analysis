@@ -17,13 +17,14 @@ type MapperConfig struct {
 	RabbitPort			string
 	InputQueueName		string
 	OutputQueueName		string
+	FunnyFilters 		int
 }
 
 type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
-	inputQueue 		*rabbitmq.RabbitQueue
-	outputQueue 	*rabbitmq.RabbitQueue
+	inputFanout 	*rabbitmq.RabbitInputFanout
+	outputQueue 	*rabbitmq.RabbitOutputQueue
 }
 
 func NewMapper(config MapperConfig) *Mapper {
@@ -37,12 +38,12 @@ func NewMapper(config MapperConfig) *Mapper {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	inputQueue := rabbitmq.NewRabbitQueue(config.InputQueueName, ch)
-	outputQueue := rabbitmq.NewRabbitQueue(config.OutputQueueName, ch)
+	inputFanout := rabbitmq.NewRabbitInputFanout(config.InputQueueName, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(config.OutputQueueName, config.FunnyFilters, ch)
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,
-		inputQueue:		inputQueue,
+		inputFanout:	inputFanout,
 		outputQueue:	outputQueue,
 	}
 
@@ -55,16 +56,13 @@ func (mapper *Mapper) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		for message := range mapper.inputQueue.ConsumeReviews() {
+		for message := range mapper.inputFanout.ConsumeReviews() {
 			messageBody := string(message.Body)
 
-			if messageBody == END_MESSAGE {
+			if messageBody == rabbitmq.END_MESSAGE {
 				log.Infof("End-Message received.")
-				
-				if err := message.Ack(false); err != nil {
-					log.Errorf("Error sending ACK of message %s. Err: '%s'", message.MessageId, err)
-				}
-
+				mapper.outputQueue.PublishFinish()
+				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 				wg.Done()
 			} else {
 				review := messageBody
@@ -73,11 +71,7 @@ func (mapper *Mapper) Run() {
 				wg.Add(1)
 				go func() {
 					mapper.processReview(review)
-					
-				if err := message.Ack(false); err != nil {
-					log.Errorf("Error sending ACK of message %s. Err: '%s'", message.MessageId, err)
-				}
-
+					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}

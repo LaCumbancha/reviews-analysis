@@ -14,7 +14,7 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the REVSCA_ prefix
+	// Configure viper to read env variables with the SINK_ prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("sink")
 
@@ -53,43 +53,43 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
-	rabbitIp := utils.GetConfigValue(configEnv, configFile, "rabbitmq_ip")
+	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
 		log.Fatalf("RabbitIp variable missing")
 	}
 
-	rabbitPort := utils.GetConfigValue(configEnv, configFile, "rabbitmq_port")
+	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
 	
 	if rabbitPort == "" {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	funnyCityQueueName := utils.GetConfigValue(configEnv, configFile, "funny_city_queue_name")
+	funnyCityQueueName := utils.GetConfigString(configEnv, configFile, "funny_city_queue_name")
 	
 	if funnyCityQueueName == "" {
 		log.Fatalf("FunnyCityQueueName variable missing")
 	}
 
-	weekdayHistogramQueueName := utils.GetConfigValue(configEnv, configFile, "weekday_histogram_queue_name")
+	weekdayHistogramQueueName := utils.GetConfigString(configEnv, configFile, "weekday_histogram_queue_name")
 	
 	if weekdayHistogramQueueName == "" {
 		log.Fatalf("WeekdayHistogramQueueName variable missing")
 	}
 
-	topUsersQueueName := utils.GetConfigValue(configEnv, configFile, "top_users_queue_name")
+	topUsersQueueName := utils.GetConfigString(configEnv, configFile, "top_users_queue_name")
 	
 	if topUsersQueueName == "" {
 		log.Fatalf("TopUsersQueueName variable missing")
 	}
 
-	bestUsersQueueName := utils.GetConfigValue(configEnv, configFile, "best_users_queue_name")
+	bestUsersQueueName := utils.GetConfigString(configEnv, configFile, "best_users_queue_name")
 	
 	if bestUsersQueueName == "" {
 		log.Fatalf("BestUsersQueueName variable missing")
 	}
 
-	botUsersQueueName := utils.GetConfigValue(configEnv, configFile, "bot_users_queue_name")
+	botUsersQueueName := utils.GetConfigString(configEnv, configFile, "bot_users_queue_name")
 	
 	if botUsersQueueName == "" {
 		log.Fatalf("BotUsersQueueName variable missing")

@@ -14,7 +14,7 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the REVSCA_ prefix
+	// Configure viper to read env variables with the RVWSCA_ prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("rvwsca")
 
@@ -51,25 +51,25 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
-	reviewsData := utils.GetConfigValue(configEnv, configFile, "reviews_data")
+	reviewsData := utils.GetConfigString(configEnv, configFile, "reviews_data")
 	
 	if reviewsData == "" {
 		log.Fatalf("ReviewsData variable missing")
 	}
 
-	rabbitIp := utils.GetConfigValue(configEnv, configFile, "rabbitmq_ip")
+	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
 		log.Fatalf("RabbitIp variable missing")
 	}
 
-	rabbitPort := utils.GetConfigValue(configEnv, configFile, "rabbitmq_port")
+	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
 	
 	if rabbitPort == "" {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	scatterQueueName := utils.GetConfigValue(configEnv, configFile, "scatter_queue_name")
+	scatterQueueName := utils.GetConfigString(configEnv, configFile, "scatter_queue_name")
 	
 	if scatterQueueName == "" {
 		log.Fatalf("ScatterQueueName variable missing")

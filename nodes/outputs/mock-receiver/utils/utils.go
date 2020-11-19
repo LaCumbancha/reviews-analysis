@@ -15,7 +15,7 @@ func GetConfigFile(configFileName string) (string, string, string) {
 }
 
 // Give precedence to environment variables over configuration file's
-func GetConfigString(configEnv *viper.Viper, configFile *viper.Viper, key string) (string) {
+func GetConfigValue(configEnv *viper.Viper, configFile *viper.Viper, key string) (string) {
 	value := configEnv.GetString(key)
 	if value == "" {
 		value = configFile.GetString(key)

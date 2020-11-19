@@ -8,12 +8,14 @@ import (
 type RabbitOutputQueue struct {
 	channel 			*amqp.Channel
 	name 				string
+	endSignals 			int
 }
 
-func NewRabbitOutputQueue(name string, channel *amqp.Channel) *RabbitOutputQueue {
+func NewRabbitOutputQueue(name string, endSignals int, channel *amqp.Channel) *RabbitOutputQueue {
 	queue := &RabbitOutputQueue {
-		channel: 	channel,
-		name:		name,
+		channel: 		channel,
+		name:			name,
+		endSignals:		endSignals,
 	}
 
 	queue.initialize()
@@ -22,12 +24,12 @@ func NewRabbitOutputQueue(name string, channel *amqp.Channel) *RabbitOutputQueue
 
 func (queue *RabbitOutputQueue) initialize() {
 	_, err := queue.channel.QueueDeclare(
-		queue.name, 	// Name
-		false,   		// Durable
-		false,   		// Auto-Deleted
-		false,   		// Exclusive
-		false,   		// No-wait
-		nil,     		// Args
+		queue.name, 						// Name
+		false,   							// Durable
+		false,   							// Auto-Deleted
+		false,   							// Exclusive
+		false,   							// No-wait
+		nil,     							// Args
 	)
 
 	if err != nil {
@@ -44,8 +46,8 @@ func (queue *RabbitOutputQueue) PublishData(data []byte) {
 		false,  							// Mandatory
 		false,  							// Immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        data,
+			ContentType: 	"text/plain",
+			Body:        	data,
 		})
 
 	if err != nil {
@@ -53,4 +55,26 @@ func (queue *RabbitOutputQueue) PublishData(data []byte) {
 	} else {
 		log.Debugf("Mapped data (%s) sent.", data)
 	}
+}
+
+func (queue *RabbitOutputQueue) PublishFinish() {
+	for idx := 1; idx <= queue.endSignals; idx++ {
+		err := queue.channel.Publish(
+  			"", 							// Exchange
+	  		queue.name,     				// Routing Key
+	  		false,  						// Mandatory
+	  		false,  						// Immediate
+	  		amqp.Publishing{
+	  		    ContentType: 	"text/plain",
+	  		    Body:        	[]byte(END_MESSAGE),
+	  		},
+	  	)
+
+		if err != nil {
+			log.Errorf("Error sending End-Message #%d to queue %s. Err: '%s'", idx, queue.name, err)
+		} else {
+			log.Infof("End-Message #%d sent to queue %s.", idx, queue.name)
+		}
+	}
+	
 }

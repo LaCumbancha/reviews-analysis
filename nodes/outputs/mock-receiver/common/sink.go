@@ -52,14 +52,19 @@ func (sink *Sink) Run() {
 	log.Infof("Starting to listen for results.")
 
 	var wg sync.WaitGroup
-	wg.Add(5)
-
-	// TODO: Use this same logic for this and the other queues.
+	// TODO: Should initialize WaitGroup in 5 when the service is fully operational.
+	wg.Add(1)
 	go func() {
-		for message := range sink.funnyCityQueue.ConsumeData() {
-			log.Infof("Top 10 Funniest Cities: %s", string(message.Body))
-			rabbitmq.AckMessage(&message, "FUNNIEST-CITIES")
-			wg.Done()
+		// TODO: Use this same logic for this and the other queues.
+		//
+		// for message := range sink.funnyCityQueue.ConsumeData() {
+		// 	log.Infof("Top 10 Funniest Cities: %s", string(message.Body))
+		// 	rabbitmq.AckMessage(&message, "FUNNIEST-CITIES")
+		// 	wg.Done()
+		// }
+
+		for d := range sink.funnyCityQueue.ConsumeData() {
+			log.Infof("Received data: %s", d.Body)
 		}
 	}()
 

@@ -74,7 +74,7 @@ func (fanout *RabbitInputFanout) ConsumeReviews() <-chan amqp.Delivery {
 	reviews, err := fanout.channel.Consume(
 		fanout.queue, 		// Name
 		"",     			// Consumer
-		false,   			// Auto-ACK
+		true,   			// Auto-ACK
 		false,  			// Exclusive
 		false,  			// No-Local
 		false,  			// No-Wait

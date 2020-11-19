@@ -1,4 +1,5 @@
 rabbitmq_ip: "rabbitmq"
 rabbitmq_port: "5672"
-mapper_input_queue_name: "ReviewsScatter"
-mapper_output_queue_name: "FunnyBusinessMapper"
+input_queue_name: "ReviewsScatter"
+output_queue_name: "FunnyBusinessMapper"
+funny_filters: 2

@@ -21,7 +21,7 @@ func NewRabbitOutputFanout(name string, channel *amqp.Channel) *RabbitOutputFano
 	return rabbitFanout
 }
 
-func (fanout *RabbitOutputFanout) initialize0() {
+func (fanout *RabbitOutputFanout) initialize() {
 	err := fanout.channel.ExchangeDeclare(
 	  	fanout.exchange,   	// Name
 	  	"fanout", 			// Type
@@ -35,71 +35,14 @@ func (fanout *RabbitOutputFanout) initialize0() {
 	if err != nil {
 		log.Fatalf("Error creating exchange %s. Err: '%s'", fanout.exchange, err)
 	} else {
-		log.Fatalf("Exchange %s created.", fanout.exchange)
-	}
-}
-
-func (fanout *RabbitOutputFanout) PublishReview0(reviewId string, review string) {
-	err := fanout.channel.Publish(
-  		fanout.exchange, 					// Exchange
-  		"",     							// Routing Key
-  		false,  							// Mandatory
-  		false,  							// Immediate
-  		amqp.Publishing{
-  		    ContentType: 	"text/plain",
-  		    Body:        	[]byte(review),
-  		},
-  	)
-
-	if err != nil {
-		log.Errorf("Error sending message %s to fanout %s. Err: '%s'", reviewId, fanout.exchange, err)
-	} else {
-		log.Infof("Message %s sent to fanout %s.", reviewId, fanout.exchange)
-	}	
-}
-
-func (fanout *RabbitOutputFanout) PublishFinish0() {
-	err := fanout.channel.Publish(
-  		fanout.exchange, 					// Exchange
-  		"",     							// Routing Key
-  		false,  							// Mandatory
-  		false,  							// Immediate
-  		amqp.Publishing{
-  		    ContentType: 	"text/plain",
-  		    Body:        	[]byte(END_MESSAGE),
-  		},
-  	)
-
-	if err != nil {
-		log.Errorf("Error sending End-Message to fanout %s. Err: '%s'", fanout.exchange, err)
-	} else {
-		log.Infof("End-Message sent to fanout %s.", fanout.exchange)
-	}	
-}
-
-
-
-
-
-func (fanout *RabbitOutputFanout) initialize() {
-	_, err := fanout.channel.QueueDeclare(
-	  	fanout.exchange,   	// Name
-	  	false,     			// Durable
-	  	false,    			// Auto-Deleted
-	  	false,    			// Exclusive
-	  	false,    			// No-Wait
-	  	nil,      			// Arguments
-	)
-
-	if err != nil {
-		log.Fatalf("Error creating exchange %s. Err: '%s'", fanout.exchange, err)
+		log.Infof("Exchange %s created.", fanout.exchange)
 	}
 }
 
 func (fanout *RabbitOutputFanout) PublishReview(reviewId string, review string) {
 	err := fanout.channel.Publish(
-		"",									// Exchange
-  		fanout.exchange, 					// Routing Key
+  		fanout.exchange, 					// Exchange
+  		"",     							// Routing Key
   		false,  							// Mandatory
   		false,  							// Immediate
   		amqp.Publishing{
@@ -117,8 +60,8 @@ func (fanout *RabbitOutputFanout) PublishReview(reviewId string, review string) 
 
 func (fanout *RabbitOutputFanout) PublishFinish() {
 	err := fanout.channel.Publish(
-		"",									// Exchange
-  		fanout.exchange, 					// Routing Key
+  		fanout.exchange, 					// Exchange
+  		"",     							// Routing Key
   		false,  							// Mandatory
   		false,  							// Immediate
   		amqp.Publishing{
