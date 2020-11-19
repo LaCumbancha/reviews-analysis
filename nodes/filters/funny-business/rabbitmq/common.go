@@ -1,6 +1,8 @@
 package rabbitmq
 
 import (
+	"strconv"
+
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 )
@@ -11,4 +13,14 @@ func AckMessage(message *amqp.Delivery, messageId string) {
 	} else {
 		log.Tracef("Sending message %s ACK.", messageId)
 	}
+}
+
+func GeneratePartitionMap(partitions int) map[string]string {
+	partitionsMap := make(map[string]string)
+
+	for idx, value := range PARTITIONER_VALUES {
+		partitionsMap[value] = strconv.Itoa(idx % partitions)
+	}
+
+	return partitionsMap
 }

@@ -33,9 +33,9 @@ func (fanout *RabbitInputFanout) initialize() {
 	)
 
 	if err != nil {
-		log.Fatalf("Error creating exchange %s. Err: '%s'", fanout.exchange, err)
+		log.Fatalf("Error creating fanout-exchange %s. Err: '%s'", fanout.exchange, err)
 	} else {
-		log.Debugf("Exchange %s created.", fanout.exchange)
+		log.Debugf("Fanout-Exchange %s created.", fanout.exchange)
 	}
 
 	queue, err := fanout.channel.QueueDeclare(
@@ -48,9 +48,9 @@ func (fanout *RabbitInputFanout) initialize() {
     )
 
     if err != nil {
-		log.Fatalf("Error creating anonymous queue for exchange %s. Err: '%s'", fanout.exchange, err)
+		log.Fatalf("Error creating anonymous queue for fanout-exchange %s. Err: '%s'", fanout.exchange, err)
 	} else {
-		log.Debugf("Anonymous queue %s for exchange %s created.", queue.Name, fanout.exchange)
+		log.Debugf("Anonymous queue %s for fanout-exchange %s created.", queue.Name, fanout.exchange)
 	}
 
 	err = fanout.channel.QueueBind(
@@ -62,9 +62,9 @@ func (fanout *RabbitInputFanout) initialize() {
     )
 
     if err != nil {
-		log.Fatalf("Error binding anonymous queue %s to exchange %s. Err: '%s'", queue.Name, fanout.exchange, err)
+		log.Fatalf("Error binding anonymous queue %s to fanout-exchange %s. Err: '%s'", queue.Name, fanout.exchange, err)
 	} else {
-		log.Debugf("Anonymous queue %s binded to exchange %s.", queue.Name, fanout.exchange)
+		log.Debugf("Anonymous queue %s binded to fanout-exchange %s.", queue.Name, fanout.exchange)
 	}
 
 	fanout.queue = queue.Name
@@ -82,7 +82,7 @@ func (fanout *RabbitInputFanout) ConsumeReviews() <-chan amqp.Delivery {
 	)
 
 	if err != nil {
-		log.Errorf("Error receiving reviews from exchange %s (through queue %s). Err: '%s'", fanout.exchange, fanout.queue, err)
+		log.Errorf("Error receiving reviews from fanout-exchange %s (through queue %s). Err: '%s'", fanout.exchange, fanout.queue, err)
 	}
 
 	return reviews

@@ -17,7 +17,6 @@ func NewRabbitOutputFanout(name string, channel *amqp.Channel) *RabbitOutputFano
 	}
 
 	rabbitFanout.initialize()
-
 	return rabbitFanout
 }
 
@@ -33,9 +32,9 @@ func (fanout *RabbitOutputFanout) initialize() {
 	)
 
 	if err != nil {
-		log.Fatalf("Error creating exchange %s. Err: '%s'", fanout.exchange, err)
+		log.Fatalf("Error creating fanout-exchange %s. Err: '%s'", fanout.exchange, err)
 	} else {
-		log.Infof("Exchange %s created.", fanout.exchange)
+		log.Infof("Fanout-Exchange %s created.", fanout.exchange)
 	}
 }
 
@@ -52,9 +51,9 @@ func (fanout *RabbitOutputFanout) PublishReview(reviewId string, review string) 
   	)
 
 	if err != nil {
-		log.Errorf("Error sending message %s to fanout %s. Err: '%s'", reviewId, fanout.exchange, err)
+		log.Errorf("Error sending message %s to fanout-exchange %s. Err: '%s'", reviewId, fanout.exchange, err)
 	} else {
-		log.Infof("Message %s sent to fanout %s.", reviewId, fanout.exchange)
+		log.Infof("Message %s sent to fanout-exchange %s.", reviewId, fanout.exchange)
 	}	
 }
 
@@ -71,8 +70,8 @@ func (fanout *RabbitOutputFanout) PublishFinish() {
   	)
 
 	if err != nil {
-		log.Errorf("Error sending End-Message to fanout %s. Err: '%s'", fanout.exchange, err)
+		log.Errorf("Error sending End-Message to fanout-exchange %s. Err: '%s'", fanout.exchange, err)
 	} else {
-		log.Infof("End-Message sent to fanout %s.", fanout.exchange)
+		log.Infof("End-Message sent to fanout-exchange %s.", fanout.exchange)
 	}	
 }

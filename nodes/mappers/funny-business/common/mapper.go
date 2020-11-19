@@ -8,8 +8,8 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/funbiz-mapper/utils"
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/funbiz-mapper/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/funny-business/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/funny-business/rabbitmq"
 )
 
 type MapperConfig struct {
@@ -17,7 +17,7 @@ type MapperConfig struct {
 	RabbitPort			string
 	InputQueueName		string
 	OutputQueueName		string
-	FunnyFilters 		int
+	FunbizFilters 		int
 }
 
 type Mapper struct {
@@ -39,7 +39,7 @@ func NewMapper(config MapperConfig) *Mapper {
 	}
 
 	inputFanout := rabbitmq.NewRabbitInputFanout(config.InputQueueName, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(config.OutputQueueName, config.FunnyFilters, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(config.OutputQueueName, config.FunbizFilters, ch)
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,
@@ -100,7 +100,7 @@ func (mapper *Mapper) processReview(rawReview string) {
 }
 
 func (mapper *Mapper) Stop() {
-	log.Infof("Closing Funbiz-Mapper connections.")
+	log.Infof("Closing Funny-Business Mapper connections.")
 	mapper.connection.Close()
 	mapper.channel.Close()
 }
