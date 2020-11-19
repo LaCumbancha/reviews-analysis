@@ -14,8 +14,6 @@ import (
 type FilterConfig struct {
 	RabbitIp			string
 	RabbitPort			string
-	InputQueueName		string
-	OutputQueueName		string
 	FunbizMappers 		int
 	FunbizAggregators	int
 }
@@ -39,8 +37,8 @@ func NewFilter(config FilterConfig) *Filter {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(config.InputQueueName, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(config.OutputQueueName, config.FunbizAggregators, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.FunbizAggregators, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,

@@ -24,6 +24,16 @@ func GetConfigString(configEnv *viper.Viper, configFile *viper.Viper, key string
 	return value
 }
 
+// Give precedence to environment variables over configuration file's
+func GetConfigInt(configEnv *viper.Viper, configFile *viper.Viper, key string) int {
+	value := configEnv.GetInt(key)
+	if value == 0 {
+		value = configFile.GetInt(key)
+	}
+
+	return value
+}
+
 func GetReviewId(review string) string {
 	// Substring limits hardcoded (after analysing data) to avoid parsing the review.
 	return review[14:34]

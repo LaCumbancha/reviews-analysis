@@ -1,5 +1,10 @@
 package rabbitmq
 
+// Queues
+const INPUT_QUEUE_NAME = "FunnyBusinessMapper"
+const OUTPUT_EXCHANGE_NAME = "FunnyBusinessFilter"
+
+// Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
 
 // This configuration allows at max 63 partitions.

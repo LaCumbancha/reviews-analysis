@@ -46,7 +46,7 @@ func main() {
 
     err = ch.QueueBind(
         q.Name,        			// queue name
-        "0",             		// routing key
+        "1",             		// routing key
         "FunnyBusinessFilter", 	// exchange
         false,
         nil)

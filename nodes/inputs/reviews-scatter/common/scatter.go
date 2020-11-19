@@ -17,14 +17,18 @@ type ReviewsScatterConfig struct {
 	Data				string
 	RabbitIp			string
 	RabbitPort			string
-	ScatterQueueName	string
+	FunbizMappers		int
+	WeekdaysMappers		int
+	HashesMappers		int
+	UsersMappers		int
+	StarsMappers		int
 }
 
 type ReviewsScatter struct {
 	data 				string
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
-	outputFanout 		*rabbitmq.RabbitOutputFanout
+	outputDirect 		*rabbitmq.RabbitOutputDirect
 }
 
 func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
@@ -38,12 +42,21 @@ func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	scatterFanout := rabbitmq.NewRabbitOutputFanout(config.ScatterQueueName, ch)
+	scatterDirect := rabbitmq.NewRabbitOutputDirect(
+		rabbitmq.OUTPUT_EXCHANGE_NAME, 
+		config.FunbizMappers, 
+		config.WeekdaysMappers, 
+		config.HashesMappers, 
+		config.UsersMappers, 
+		config.StarsMappers, 
+		ch,
+	)
+	
 	scatter := &ReviewsScatter {
 		data: 				config.Data,
 		connection:			conn,
 		channel:			ch,
-		outputFanout:		scatterFanout,
+		outputDirect:		scatterDirect,
 	}
 
 	return scatter
@@ -65,7 +78,7 @@ func (scatter *ReviewsScatter) Run() {
     	wg.Add(1)
     	go func() {
     		reviewId := utils.GetReviewId(review)
-    		scatter.outputFanout.PublishReview(reviewId, review)
+    		scatter.outputDirect.PublishReview(review, reviewId)
     		wg.Done()
     	}()
     }
@@ -78,7 +91,7 @@ func (scatter *ReviewsScatter) Run() {
     wg.Wait()
 
     // Publishing end message.
-    scatter.outputFanout.PublishFinish()
+    scatter.outputDirect.PublishFinish()
 }
 
 func (scatter *ReviewsScatter) Stop() {

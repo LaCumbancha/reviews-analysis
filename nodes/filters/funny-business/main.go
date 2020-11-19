@@ -21,8 +21,6 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("input", "queue", "name")
-	configEnv.BindEnv("output", "queue", "name")
 	configEnv.BindEnv("funbiz", "mappers")
 	configEnv.BindEnv("funbiz", "aggregators")
 
@@ -70,18 +68,6 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	inputQueueName := utils.GetConfigString(configEnv, configFile, "input_queue_name")
-	
-	if inputQueueName == "" {
-		log.Fatalf("InputQueueName variable missing")
-	}
-
-	outputQueueName := utils.GetConfigString(configEnv, configFile, "output_queue_name")
-	
-	if outputQueueName == "" {
-		log.Fatalf("OutputQueueName variable missing")
-	}
-
 	funbizMappers := utils.GetConfigInt(configEnv, configFile, "funbiz_mappers")
 	
 	if funbizMappers == 0 {
@@ -97,8 +83,6 @@ func main() {
 	filterConfig := common.FilterConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		InputQueueName:		inputQueueName,
-		OutputQueueName:	outputQueueName,
 		FunbizMappers:		funbizMappers,
 		FunbizAggregators:	funbizAggregators,
 	}

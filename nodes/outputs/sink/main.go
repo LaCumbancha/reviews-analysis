@@ -21,11 +21,6 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("funny", "city", "queue", "name")
-	configEnv.BindEnv("weekday", "histogram", "queue", "name")
-	configEnv.BindEnv("top", "users", "queue", "name")
-	configEnv.BindEnv("best", "users", "queue", "name")
-	configEnv.BindEnv("bot", "users", "queue", "name")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -65,44 +60,9 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	funnyCityQueueName := utils.GetConfigString(configEnv, configFile, "funny_city_queue_name")
-	
-	if funnyCityQueueName == "" {
-		log.Fatalf("FunnyCityQueueName variable missing")
-	}
-
-	weekdayHistogramQueueName := utils.GetConfigString(configEnv, configFile, "weekday_histogram_queue_name")
-	
-	if weekdayHistogramQueueName == "" {
-		log.Fatalf("WeekdayHistogramQueueName variable missing")
-	}
-
-	topUsersQueueName := utils.GetConfigString(configEnv, configFile, "top_users_queue_name")
-	
-	if topUsersQueueName == "" {
-		log.Fatalf("TopUsersQueueName variable missing")
-	}
-
-	bestUsersQueueName := utils.GetConfigString(configEnv, configFile, "best_users_queue_name")
-	
-	if bestUsersQueueName == "" {
-		log.Fatalf("BestUsersQueueName variable missing")
-	}
-
-	botUsersQueueName := utils.GetConfigString(configEnv, configFile, "bot_users_queue_name")
-	
-	if botUsersQueueName == "" {
-		log.Fatalf("BotUsersQueueName variable missing")
-	}
-
 	sinkConfig := common.SinkConfig {
 		RabbitIp:						rabbitIp,
 		RabbitPort:						rabbitPort,
-		FunnyCityQueueName:				funnyCityQueueName,
-		WeekdayHistogramQueueName:		weekdayHistogramQueueName,
-		TopUsersQueueName:				topUsersQueueName,
-		BestUsersQueueName:				bestUsersQueueName,
-		BotUsersQueueName:				botUsersQueueName,
 	}
 
 	sink := common.NewSink(sinkConfig)

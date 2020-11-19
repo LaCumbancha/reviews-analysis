@@ -11,20 +11,14 @@ import (
 )
 
 type SinkConfig struct {
-	Data							string
-	RabbitIp						string
-	RabbitPort						string
-	FunnyCityQueueName				string
-	WeekdayHistogramQueueName		string
-	TopUsersQueueName				string
-	BestUsersQueueName				string
-	BotUsersQueueName				string
+	RabbitIp					string
+	RabbitPort					string
 }
 
 type Sink struct {
-	connection 			*amqp.Connection
-	channel 			*amqp.Channel
-	funnyCityQueue 		*rabbitmq.RabbitInputQueue
+	connection 					*amqp.Connection
+	channel 					*amqp.Channel
+	funniestCitiesQueue 		*rabbitmq.RabbitInputQueue
 }
 
 func NewSink(config SinkConfig) *Sink {
@@ -38,11 +32,11 @@ func NewSink(config SinkConfig) *Sink {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	funnyCityQueue := rabbitmq.NewRabbitInputQueue(config.FunnyCityQueueName, ch)
+	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.FUNNIES_CITIES_QUEUE_NAME, ch)
 	sink := &Sink {
-		connection:			conn,
-		channel:			ch,
-		funnyCityQueue:		funnyCityQueue,
+		connection:				conn,
+		channel:				ch,
+		funniestCitiesQueue:	funniestCitiesQueue,
 	}
 
 	return sink
@@ -56,7 +50,7 @@ func (sink *Sink) Run() {
 
 	// TODO: Use this same logic for this and the other queues.
 	go func() {
-		for message := range sink.funnyCityQueue.ConsumeData() {
+		for message := range sink.funniestCitiesQueue.ConsumeData() {
 			log.Infof("Top 10 Funniest Cities: %s", string(message.Body))
 			rabbitmq.AckMessage(&message, "FUNNIEST-CITIES")
 			wg.Done()

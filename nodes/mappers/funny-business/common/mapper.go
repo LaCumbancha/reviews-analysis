@@ -15,15 +15,13 @@ import (
 type MapperConfig struct {
 	RabbitIp			string
 	RabbitPort			string
-	InputQueueName		string
-	OutputQueueName		string
 	FunbizFilters 		int
 }
 
 type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
-	inputFanout 	*rabbitmq.RabbitInputFanout
+	inputDirect 	*rabbitmq.RabbitInputDirect
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 }
 
@@ -38,12 +36,12 @@ func NewMapper(config MapperConfig) *Mapper {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	inputFanout := rabbitmq.NewRabbitInputFanout(config.InputQueueName, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(config.OutputQueueName, config.FunbizFilters, ch)
+	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.FunbizFilters, ch)
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,
-		inputFanout:	inputFanout,
+		inputDirect:	inputDirect,
 		outputQueue:	outputQueue,
 	}
 
@@ -56,7 +54,7 @@ func (mapper *Mapper) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		for message := range mapper.inputFanout.ConsumeReviews() {
+		for message := range mapper.inputDirect.ConsumeReviews() {
 			messageBody := string(message.Body)
 
 			if messageBody == rabbitmq.END_MESSAGE {
@@ -66,6 +64,7 @@ func (mapper *Mapper) Run() {
 				wg.Done()
 			} else {
 				review := messageBody
+				log.Infof("Message %s received.", messageBody)
 				log.Infof("Review %s received.", utils.GetReviewId(review))
 
 				wg.Add(1)
