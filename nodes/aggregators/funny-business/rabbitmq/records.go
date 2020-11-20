@@ -1,4 +1,4 @@
-package common
+package rabbitmq
 
 type FunnyBusinessData struct {
 	BusinessId 		string 						`json:"business_id",omitempty`

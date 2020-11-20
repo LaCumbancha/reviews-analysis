@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
@@ -14,7 +13,7 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the FUNBIZ prefix
+	// Configure viper to read env variables with the FUNBIZFIL prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("funbizfil")
 
@@ -87,7 +86,7 @@ func main() {
 		FunbizAggregators:	funbizAggregators,
 	}
 
-	mapper := common.NewFilter(filterConfig)
-	mapper.Run()
-	mapper.Stop()
+	filter := common.NewFilter(filterConfig)
+	filter.Run()
+	filter.Stop()
 }

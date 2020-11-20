@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
@@ -59,12 +58,15 @@ func (mapper *Mapper) Run() {
 
 			if messageBody == rabbitmq.END_MESSAGE {
 				log.Infof("End-Message received.")
+
+				// Using WaitGroup to avoid publishing finish message before all others are sent.
+				wg.Done()
+				wg.Wait()
+
 				mapper.outputQueue.PublishFinish()
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
-				wg.Done()
 			} else {
 				review := messageBody
-				log.Infof("Message %s received.", messageBody)
 				log.Infof("Review %s received.", utils.GetReviewId(review))
 
 				wg.Add(1)
@@ -82,10 +84,10 @@ func (mapper *Mapper) Run() {
 }
 
 func (mapper *Mapper) processReview(rawReview string) {
-	var fullReview FullReview
+	var fullReview rabbitmq.FullReview
 	json.Unmarshal([]byte(rawReview), &fullReview)
 
-	mappedReview := &FunnyBusinessData {
+	mappedReview := &rabbitmq.FunnyBusinessData {
 		BusinessId:		fullReview.BusinessId,
 		Funny:			fullReview.Funny,
 	}

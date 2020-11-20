@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
@@ -70,8 +69,13 @@ func (filter *Filter) Run() {
 				log.Infof("End-Message #%d received.", endSignalsReceived)
 
 				if (endSignalsReceived >= filter.endSignals) {
-					filter.outputDirect.PublishFinish()
+					log.Infof("End-Message received.")
+
+					// Using WaitGroup to avoid publishing finish message before all others are sent.
 					wg.Done()
+					wg.Wait()
+	
+					filter.outputDirect.PublishFinish()
 				}
 				
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
@@ -93,7 +97,7 @@ func (filter *Filter) Run() {
 }
 
 func (filter *Filter) filterFunnyBusiness(rawData string) {
-	var mappedFunnyBusiness FunnyBusinessData
+	var mappedFunnyBusiness rabbitmq.FunnyBusinessData
 	json.Unmarshal([]byte(rawData), &mappedFunnyBusiness)
 
 	if (mappedFunnyBusiness.Funny > 0) {

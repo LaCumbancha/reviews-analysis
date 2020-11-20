@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"bufio"
-
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 

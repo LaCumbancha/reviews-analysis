@@ -2,11 +2,9 @@
 
 import sys
 import yaml
-import argparse
 
-parser = argparse.ArgumentParser()
-
-args = parser.parse_args()
+input_yaml_file = open("./scripts/system-config.yaml")
+input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
 file = {}
 
@@ -21,33 +19,109 @@ file['services']['rabbitmq'] = {
 	'image': 'rabbitmq:custom',
 	'ports': ['15672:15672'],
 	'networks': ['testing_net'],
+	'logging': {
+		'driver': 'none'
+	},
 	'healthcheck': {
-		'test': '''["CMD", "curl", "-f", "http://rabbitmq:156722]'''
-		'interval': '10s'
-		'timeout': '5s'
+		'test': '''["CMD", "curl", "-f", "http://rabbitmq:156722]''',
+		'interval': '10s',
+		'timeout': '5s',
 		'retries': '10'
 	}
 }
-	
+
+SINK_DEPS = ['mock_receiver0', 'mock_receiver1']	# TODO: Change to ['rabbitmq']
+FUNBIZAGG_DEPS = []
+FUNBIZFIL_DEPS = []
+FUNBIZMAP_DEPS = []
+RVWSCA_DEPS = []
+
+file['services']['mock_receiver0'] = {
+	'container_name': 'mock_receiver0',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=0'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
+
+file['services']['mock_receiver1'] = {
+	'container_name': 'mock_receiver1',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=1'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
+
+FUNBIZAGG_DEPS += ['sink']
+file['services']['sink'] = {
+	'container_name': 'sink',
+	'image': 'sink:latest',
+	'entrypoint': '/sink',
+	'restart': 'on-failure',
+	'environment': ['SINK_RABBITMQ_IP=rabbitmq', 'SINK_RABBITMQ_PORT=5672'],
+	'links': ['rabbitmq'],
+	'depends_on': list(SINK_DEPS),
+	'networks': ['testing_net']
+}
+
+for idx in range(0, input_yaml['funbiz_aggregators']):
+	container_name = f'funbiz_aggregator{idx}'
+	FUNBIZFIL_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funbiz_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': ['FUNBIZAGG_RABBITMQ_IP=rabbitmq', 'FUNBIZAGG_RABBITMQ_PORT=5672', f'FUNBIZAGG_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}', f'FUNBIZAGG_FUNBIZ_JOINERS={input_yaml["funbiz_joiners"]}', f'FUNBIZAGG_INPUT_TOPIC={idx}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['funbiz_filters']):
+	container_name = f'funbiz_filter{idx}'
+	FUNBIZMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funbiz_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': ['FUNBIZFIL_RABBITMQ_IP=rabbitmq', 'FUNBIZFIL_RABBITMQ_PORT=5672', f'FUNBIZFIL_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'FUNBIZFIL_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['funbiz_mappers']):
+	container_name = f'funbiz_mapper{idx}'
+	RVWSCA_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funbiz_mapper:latest',
+		'entrypoint': '/mapper',
+		'restart': 'on-failure',
+		'environment': ['FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZMAP_DEPS),
+		'networks': ['testing_net']
+	}
+
 file['services']['rvw_scatter'] = {
 	'container_name': 'rvw_scatter',
 	'image': 'rvw_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['RVWSCA_CONFIG_FILE=/config/initial-config.yaml'],
+	'environment': ['RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', 'RVWSCA_FUNBIZ_MAPPERS=2', 'RVWSCA_WEEKDAYS_MAPPERS=1', 'RVWSCA_HASHES_MAPPERS=1', 'RVWSCA_USERS_MAPPERS=1', 'RVWSCA_STARS_MAPPERS=1'],
 	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-	'volumes': ['reviews_dataset:/data', 'rvw_scatter_vol:/config']
-}
-
-file['services']['rvw_receiver'] = {
-	'container_name': f'rvw_receiver',
-	'image': 'rvw_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq']
+	'depends_on': list(RVWSCA_DEPS),
+	'networks': ['testing_net'],
+	'volumes': ['reviews_dataset:/data']
 }
 
 # Setting volumes
@@ -65,14 +139,6 @@ file['volumes'] = {
 		'driver_opts': {
 			'type': 'none',
 			'device': '$PWD/datasets/business',
-			'o': 'bind'
-		}
-	},
-	'rvw_scatter_vol': {
-		'driver': 'local',
-		'driver_opts': {
-			'type': 'none',
-			'device': '$PWD/nodes/inputs/reviews-scatter/config',
 			'o': 'bind'
 		}
 	}

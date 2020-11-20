@@ -1,4 +1,4 @@
-package common
+package rabbitmq
 
 type FullReview struct {
 	ReviewId 		string 						`json:"review_id",omitempty`

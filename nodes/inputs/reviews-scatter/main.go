@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"

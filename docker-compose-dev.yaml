@@ -1,73 +1,207 @@
-version: '3'
-
-services:
-  rabbitmq:
-    container_name: rabbitmq
-    image: "rabbitmq:custom"
-    ports:
-      - "15672:15672"
-    networks:
-    - testing_net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://rabbitmq:15672"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  rvw_scatter:
-    container_name: rvw_scatter
-    image: rvw_scatter:latest
-    entrypoint: /scatter
-    restart: on-failure
-    environment:
-    - RVWSCA_CONFIG_FILE=/config/initial-config.yaml
-    links:
-      - rabbitmq
-    depends_on:
-      - rabbitmq
-    networks:
-    - testing_net
-    volumes:
-    - reviews_dataset:/data
-    - rvw_scatter_vol:/config
-
-  rvw_receiver:
-    container_name: rvw_receiver
-    image: rvw_receiver:latest
-    entrypoint: /receiver
-    restart: on-failure
-    links:
-      - rabbitmq
-    depends_on:
-      - rabbitmq
-    networks:
-    - testing_net
-
-volumes:
-  reviews_dataset:
-    driver: local
-    driver_opts:
-      device: $PWD/datasets/reviews
-      o: bind
-      type: none
-
-  business_dataset:
-    driver: local
-    driver_opts:
-      device: $PWD/datasets/business
-      o: bind
-      type: none
-
-  rvw_scatter_vol:
-    driver: local
-    driver_opts:
-      device: $PWD/nodes/inputs/reviews-scatter/config
-      o: bind
-      type: none
-
 networks:
   testing_net:
     ipam:
       config:
       - subnet: 172.25.125.0/24
       driver: default
+services:
+  funbiz_aggregator0:
+    container_name: funbiz_aggregator0
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - FUNBIZAGG_RABBITMQ_IP=rabbitmq
+    - FUNBIZAGG_RABBITMQ_PORT=5672
+    - FUNBIZAGG_FUNBIZ_FILTERS=2
+    - FUNBIZAGG_FUNBIZ_JOINERS=2
+    - FUNBIZAGG_INPUT_TOPIC=0
+    image: funbiz_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funbiz_aggregator1:
+    container_name: funbiz_aggregator1
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - FUNBIZAGG_RABBITMQ_IP=rabbitmq
+    - FUNBIZAGG_RABBITMQ_PORT=5672
+    - FUNBIZAGG_FUNBIZ_FILTERS=2
+    - FUNBIZAGG_FUNBIZ_JOINERS=2
+    - FUNBIZAGG_INPUT_TOPIC=1
+    image: funbiz_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funbiz_filter0:
+    container_name: funbiz_filter0
+    depends_on:
+    - funbiz_aggregator0
+    - funbiz_aggregator1
+    entrypoint: /filter
+    environment:
+    - FUNBIZFIL_RABBITMQ_IP=rabbitmq
+    - FUNBIZFIL_RABBITMQ_PORT=5672
+    - FUNBIZFIL_FUNBIZ_MAPPERS=2
+    - FUNBIZFIL_FUNBIZ_AGGREGATORS=2
+    image: funbiz_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funbiz_filter1:
+    container_name: funbiz_filter1
+    depends_on:
+    - funbiz_aggregator0
+    - funbiz_aggregator1
+    entrypoint: /filter
+    environment:
+    - FUNBIZFIL_RABBITMQ_IP=rabbitmq
+    - FUNBIZFIL_RABBITMQ_PORT=5672
+    - FUNBIZFIL_FUNBIZ_MAPPERS=2
+    - FUNBIZFIL_FUNBIZ_AGGREGATORS=2
+    image: funbiz_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funbiz_mapper0:
+    container_name: funbiz_mapper0
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - FUNBIZMAP_RABBITMQ_IP=rabbitmq
+    - FUNBIZMAP_RABBITMQ_PORT=5672
+    - FUNBIZMAP_FUNBIZ_FILTERS=2
+    image: funbiz_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funbiz_mapper1:
+    container_name: funbiz_mapper1
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - FUNBIZMAP_RABBITMQ_IP=rabbitmq
+    - FUNBIZMAP_RABBITMQ_PORT=5672
+    - FUNBIZMAP_FUNBIZ_FILTERS=2
+    image: funbiz_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver0:
+    container_name: mock_receiver0
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_TOPIC=0
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver1:
+    container_name: mock_receiver1
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_TOPIC=1
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  rabbitmq:
+    container_name: rabbitmq
+    healthcheck:
+      interval: 10s
+      retries: '10'
+      test: '["CMD", "curl", "-f", "http://rabbitmq:156722]'
+      timeout: 5s
+    image: rabbitmq:custom
+    logging:
+      driver: none
+    networks:
+    - testing_net
+    ports:
+    - 15672:15672
+  rvw_scatter:
+    container_name: rvw_scatter
+    depends_on:
+    - funbiz_mapper0
+    - funbiz_mapper1
+    entrypoint: /scatter
+    environment:
+    - RVWSCA_REVIEWS_DATA=/data/test-reviews.json
+    - RVWSCA_RABBITMQ_IP=rabbitmq
+    - RVWSCA_RABBITMQ_PORT=5672
+    - RVWSCA_FUNBIZ_MAPPERS=2
+    - RVWSCA_WEEKDAYS_MAPPERS=1
+    - RVWSCA_HASHES_MAPPERS=1
+    - RVWSCA_USERS_MAPPERS=1
+    - RVWSCA_STARS_MAPPERS=1
+    image: rvw_scatter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+    volumes:
+    - reviews_dataset:/data
+  sink:
+    container_name: sink
+    depends_on:
+    - mock_receiver0
+    - mock_receiver1
+    entrypoint: /sink
+    environment:
+    - SINK_RABBITMQ_IP=rabbitmq
+    - SINK_RABBITMQ_PORT=5672
+    image: sink:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+version: '3'
+volumes:
+  business_dataset:
+    driver: local
+    driver_opts:
+      device: $PWD/datasets/business
+      o: bind
+      type: none
+  reviews_dataset:
+    driver: local
+    driver_opts:
+      device: $PWD/datasets/reviews
+      o: bind
+      type: none

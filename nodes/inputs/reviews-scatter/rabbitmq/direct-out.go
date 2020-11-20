@@ -76,9 +76,9 @@ func (direct *RabbitOutputDirect) PublishFinish() {
 	  		)
 
 			if err != nil {
-				log.Errorf("Error sending End-Message #%d to direct-exchange %s (partition %s). Err: '%s'", idx, direct.exchange, partition, err)
+				log.Errorf("Error sending End-Message #%d to direct-exchange %s (partition %s). Err: '%s'", idx+1, direct.exchange, partition, err)
 			} else {
-				log.Infof("End-Message #%d sent to direct-exchange %s (partition %s).", idx, direct.exchange, partition)
+				log.Infof("End-Message #%d sent to direct-exchange %s (partition %s).", idx+1, direct.exchange, partition)
 			}
 		}
 	}
