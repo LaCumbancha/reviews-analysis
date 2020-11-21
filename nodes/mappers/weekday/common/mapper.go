@@ -2,26 +2,28 @@ package common
 
 import (
 	"fmt"
+	"time"
 	"sync"
+	"strconv"
 	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/funny-business/utils"
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/funny-business/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/rabbitmq"
 )
 
 type MapperConfig struct {
 	RabbitIp			string
 	RabbitPort			string
-	FunbizFilters 		int
+	WeekdayAggregators 	int
 }
 
 type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	inputDirect 	*rabbitmq.RabbitInputDirect
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputDirect 	*rabbitmq.RabbitOutputDirect
 }
 
 func NewMapper(config MapperConfig) *Mapper {
@@ -40,12 +42,12 @@ func NewMapper(config MapperConfig) *Mapper {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.FunbizFilters, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.WeekdayAggregators, ch)
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,
 		inputDirect:	inputDirect,
-		outputQueue:	outputQueue,
+		outputDirect:	outputDirect,
 	}
 
 	return mapper
@@ -82,28 +84,33 @@ func (mapper *Mapper) Run() {
     wg.Wait()
 
     // Publishing end messages.
-    mapper.outputQueue.PublishFinish()
+    mapper.outputDirect.PublishFinish()
 }
 
 func (mapper *Mapper) processReview(rawReview string) {
 	var fullReview rabbitmq.FullReview
 	json.Unmarshal([]byte(rawReview), &fullReview)
 
-	mappedReview := &rabbitmq.FunnyBusinessData {
-		BusinessId:		fullReview.BusinessId,
-		Funny:			fullReview.Funny,
-	}
-
-	data, err := json.Marshal(mappedReview)
+	reviewDate, err := time.Parse("2006-01-02 15:04:05", fullReview.Date)
 	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", mappedReview, err)
+		log.Errorf("Error parsing date from review %s (given date: %s)", fullReview.ReviewId, fullReview.Date)
 	} else {
-		mapper.outputQueue.PublishData(data)
+		reviewWeekday := reviewDate.Weekday()
+		mappedReview := &rabbitmq.WeekdayData {
+			Weekday:	reviewWeekday.String(),
+		}
+
+		data, err := json.Marshal(mappedReview)
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedReview, err)
+		} else {
+			mapper.outputDirect.PublishData(data, strconv.Itoa(int(reviewWeekday)))
+		}
 	}
 }
 
 func (mapper *Mapper) Stop() {
-	log.Infof("Closing Funny-Business Mapper connections.")
+	log.Infof("Closing Weekday Mapper connections.")
 	mapper.connection.Close()
 	mapper.channel.Close()
 }

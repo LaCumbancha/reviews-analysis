@@ -14,22 +14,43 @@ deps:
 	go mod vendor
 
 build: deps
+	# Inputs
 	GOOS=linux go build -o bin/review-scatter $(GIT_REMOTE)/nodes/inputs/reviews-scatter
-	GOOS=linux go build -o bin/mock-receiver $(GIT_REMOTE)/nodes/outputs/mock-receiver
+
+	# Mappers
 	GOOS=linux go build -o bin/funbiz-mapper $(GIT_REMOTE)/nodes/mappers/funbiz-mapper
+	GOOS=linux go build -o bin/weekday-mapper $(GIT_REMOTE)/nodes/mappers/weekday
+
+	# Filters
 	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/nodes/filters/funbiz-mapper
+
+	# Aggregators
 	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-mapper
+
+	# Outputs
+	GOOS=linux go build -o bin/sink $(GIT_REMOTE)/nodes/outputs/sink
+	GOOS=linux go build -o bin/mock-receiver $(GIT_REMOTE)/nodes/outputs/mock-receiver
 .PHONY: build
 
 docker-image:
+	# RabbitMQ
 	docker build -f ./nodes/rabbitmq/Dockerfile -t "rabbitmq:custom" .
-	docker build -f ./nodes/inputs/reviews-scatter/Dockerfile -t "rvw_scatter:latest" .
-	docker build -f ./nodes/mappers/funny-business/Dockerfile -t "funbiz_mapper:latest" .
-	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
-	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .
-	docker build -f ./nodes/outputs/sink/Dockerfile -t "sink:latest" .
 
-	# Mocked receiver
+	# Inputs
+	docker build -f ./nodes/inputs/reviews-scatter/Dockerfile -t "rvw_scatter:latest" .
+
+	# Mappers
+	docker build -f ./nodes/mappers/funny-business/Dockerfile -t "funbiz_mapper:latest" .
+	docker build -f ./nodes/mappers/weekday/Dockerfile -t "weekday_mapper:latest" .
+
+	# Filters
+	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
+
+	# Aggregators
+	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .
+
+	# Outputs
+	docker build -f ./nodes/outputs/sink/Dockerfile -t "sink:latest" .
 	docker build -f ./nodes/outputs/mock-receiver/Dockerfile -t "mock_receiver:latest" .
 .PHONY: docker-image
 

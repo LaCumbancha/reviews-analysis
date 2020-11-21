@@ -114,7 +114,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_EXCHANGE=WeekdayAggregator
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -131,8 +131,93 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_EXCHANGE=WeekdayAggregator
     - MOCK_TOPIC=1
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver2:
+    container_name: mock_receiver2
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=WeekdayAggregator
+    - MOCK_TOPIC=2
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver3:
+    container_name: mock_receiver3
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=WeekdayAggregator
+    - MOCK_TOPIC=3
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver4:
+    container_name: mock_receiver4
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=WeekdayAggregator
+    - MOCK_TOPIC=4
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver5:
+    container_name: mock_receiver5
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=WeekdayAggregator
+    - MOCK_TOPIC=5
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver6:
+    container_name: mock_receiver6
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=WeekdayAggregator
+    - MOCK_TOPIC=6
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -156,6 +241,8 @@ services:
   rvw_scatter:
     container_name: rvw_scatter
     depends_on:
+    - weekday_mapper0
+    - weekday_mapper1
     - funbiz_mapper0
     - funbiz_mapper1
     entrypoint: /scatter
@@ -181,11 +268,48 @@ services:
     depends_on:
     - mock_receiver0
     - mock_receiver1
+    - mock_receiver2
+    - mock_receiver3
+    - mock_receiver4
+    - mock_receiver5
+    - mock_receiver6
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq
     - SINK_RABBITMQ_PORT=5672
     image: sink:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_mapper0:
+    container_name: weekday_mapper0
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
+    - WEEKDAYMAP_RABBITMQ_PORT=5672
+    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=7
+    image: weekday_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_mapper1:
+    container_name: weekday_mapper1
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
+    - WEEKDAYMAP_RABBITMQ_PORT=5672
+    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=7
+    image: weekday_mapper:latest
     links:
     - rabbitmq
     networks:
