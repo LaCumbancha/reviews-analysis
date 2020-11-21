@@ -7,3 +7,12 @@ funbiz_joiners: 2
 # Weekday histogram flow.
 weekday_mappers: 2
 weekday_aggregators: 7
+
+# Users w/+50 reviews.
+users_mappers: 1
+
+# Users w/+50 5-stars reviews.
+stars_mappers: 1
+
+# Users w/+5 reviews with same text.
+hashes_mappers: 1

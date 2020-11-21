@@ -1,4 +1,0 @@
-reviews_data: "/data/test-reviews.json"
-rabbitmq_ip: "rabbitmq"
-rabbitmq_port: "5672"
-scatter_queue_name: "ReviewsScatter"

@@ -8,11 +8,21 @@ input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
 file = {}
 
-# Setting version
+#### VERSION
 file['version'] = '3'
 
-# Setting services
+#### SERVICES
 file['services'] = {}
+
+# Services dependencies
+# TODO: Change to ['rabbitmq']
+SINK_DEPS = ['mock_receiver0']
+FUNBIZAGG_DEPS = ['sink']
+WEEKDAYAGG_DEPS = ['sink']
+FUNBIZFIL_DEPS = []
+FUNBIZMAP_DEPS = []
+WEEKDAYMAP_DEPS = []
+RVWSCA_DEPS = []
 
 file['services']['rabbitmq'] = {
 	'container_name': f'rabbitmq',
@@ -30,13 +40,7 @@ file['services']['rabbitmq'] = {
 	}
 }
 
-# TODO: Change to ['rabbitmq']
-SINK_DEPS = ['mock_receiver0', 'mock_receiver1', 'mock_receiver2', 'mock_receiver3', 'mock_receiver4', 'mock_receiver5', 'mock_receiver6']	
-FUNBIZAGG_DEPS = []
-FUNBIZFIL_DEPS = []
-WEEKDAYMAP_DEPS = []
-FUNBIZMAP_DEPS = []
-RVWSCA_DEPS = []
+
 
 
 # TODO: Remove mocks
@@ -45,77 +49,22 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=WeekdayAggregator'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
 }
 
-file['services']['mock_receiver1'] = {
-	'container_name': 'mock_receiver1',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=1'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
-file['services']['mock_receiver2'] = {
-	'container_name': 'mock_receiver2',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=2'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
-file['services']['mock_receiver3'] = {
-	'container_name': 'mock_receiver3',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=3'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
-file['services']['mock_receiver4'] = {
-	'container_name': 'mock_receiver4',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=4'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
-file['services']['mock_receiver5'] = {
-	'container_name': 'mock_receiver5',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=5'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
-file['services']['mock_receiver6'] = {
-	'container_name': 'mock_receiver6',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=WeekdayAggregator', 'MOCK_TOPIC=6'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
+# file['services']['mock_receiver0'] = {
+# 	'container_name': 'mock_receiver0',
+# 	'image': 'mock_receiver:latest',
+# 	'entrypoint': '/receiver',
+# 	'restart': 'on-failure',
+# 	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=1'],
+# 	'links': ['rabbitmq'],
+# 	'depends_on': ['rabbitmq'],
+# 	'networks': ['testing_net']
+# }
 
 
 
@@ -130,8 +79,10 @@ file['services']['mock_receiver6'] = {
 
 
 
-FUNBIZAGG_DEPS += ['sink']
-WEEKDAYMAP_DEPS += ['sink']
+
+
+
+#### SERVICES
 file['services']['sink'] = {
 	'container_name': 'sink',
 	'image': 'sink:latest',
@@ -154,6 +105,20 @@ for idx in range(0, input_yaml['funbiz_aggregators']):
 		'environment': ['FUNBIZAGG_RABBITMQ_IP=rabbitmq', 'FUNBIZAGG_RABBITMQ_PORT=5672', f'FUNBIZAGG_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}', f'FUNBIZAGG_FUNBIZ_JOINERS={input_yaml["funbiz_joiners"]}', f'FUNBIZAGG_INPUT_TOPIC={idx}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNBIZAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['weekday_aggregators']):
+	container_name = f'weekday_aggregator{idx}'
+	WEEKDAYMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'weekday_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': ['WEEKDAYAGG_RABBITMQ_IP=rabbitmq', 'WEEKDAYAGG_RABBITMQ_PORT=5672', f'WEEKDAYAGG_INPUT_TOPIC={idx}', f'WEEKDAYAGG_WEEKDAY_MAPPERS={input_yaml["weekday_mappers"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(WEEKDAYAGG_DEPS),
 		'networks': ['testing_net']
 	}
 
@@ -181,7 +146,7 @@ for idx in range(0, input_yaml['weekday_mappers']):
 		'restart': 'on-failure',
 		'environment': ['WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
 		'links': ['rabbitmq'],
-		'depends_on': list(FUNBIZMAP_DEPS),
+		'depends_on': list(WEEKDAYMAP_DEPS),
 		'networks': ['testing_net']
 	}
 
@@ -204,14 +169,14 @@ file['services']['rvw_scatter'] = {
 	'image': 'rvw_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', 'RVWSCA_FUNBIZ_MAPPERS=2', 'RVWSCA_WEEKDAYS_MAPPERS=1', 'RVWSCA_HASHES_MAPPERS=1', 'RVWSCA_USERS_MAPPERS=1', 'RVWSCA_STARS_MAPPERS=1'],
+	'environment': ['RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hashes_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["users_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(RVWSCA_DEPS),
 	'networks': ['testing_net'],
 	'volumes': ['reviews_dataset:/data']
 }
 
-# Setting volumes
+#### VOLUMES
 file['volumes'] = {
 	'reviews_dataset': {
 		'driver': 'local',
@@ -231,7 +196,7 @@ file['volumes'] = {
 	}
 }
 
-# Setting networks
+#### NETWORK
 file['networks'] = {
 	'testing_net': {
 		'ipam': {

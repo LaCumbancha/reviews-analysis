@@ -7,15 +7,14 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/rabbitmq"
 )
 
 type AggregatorConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	InputTopic			string
-	FunbizFilters 		int
-	FunbizJoiners		int
+	WeekdayMappers 		int
 }
 
 type Aggregator struct {
@@ -23,7 +22,7 @@ type Aggregator struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputDirect 	*rabbitmq.RabbitInputDirect
-	outputDirect 	*rabbitmq.RabbitOutputDirect
+	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -43,21 +42,21 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.FunbizJoiners, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
 		calculator:		NewCalculator(),
 		inputDirect:	inputDirect,
-		outputDirect:	outputDirect,
-		endSignals:		config.FunbizFilters,
+		outputQueue:	outputQueue,
+		endSignals:		config.WeekdayMappers,
 	}
 
 	return aggregator
 }
 
 func (aggregator *Aggregator) Run() {
-	log.Infof("Starting to listen for funny-business data.")
+	log.Infof("Starting to listen for weekday data.")
 
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignalsReceived = 0
@@ -106,15 +105,15 @@ func (aggregator *Aggregator) Run() {
     wg.Wait()
 
     // Sending End-Message to consumers.
-    aggregator.outputDirect.PublishFinish()
+    aggregator.outputQueue.PublishFinish()
 }
 
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.FunnyBusinessData, wg *sync.WaitGroup) {
+func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.WeekdayData, wg *sync.WaitGroup) {
 	data, err := json.Marshal(aggregatedData)
 	if err != nil {
 		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
-		aggregator.outputDirect.PublishData(data, aggregatedData.BusinessId)
+		aggregator.outputQueue.PublishData(data)
 		wg.Done()
 	}
 }

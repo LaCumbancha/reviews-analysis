@@ -1,7 +1,0 @@
-rabbitmq_ip: "rabbitmq"
-rabbitmq_port: "5672"
-funny_city_queue_name: "FunnyBusinessMapper"
-weekday_histogram_queue_name: ""
-top_users_queue_name: ""
-best_users_queue_name: ""
-bot_users_queue_name: ""

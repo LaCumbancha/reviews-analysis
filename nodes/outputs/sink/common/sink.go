@@ -19,6 +19,7 @@ type Sink struct {
 	connection 					*amqp.Connection
 	channel 					*amqp.Channel
 	funniestCitiesQueue 		*rabbitmq.RabbitInputQueue
+	weekdayHistogramQueue 		*rabbitmq.RabbitInputQueue
 }
 
 func NewSink(config SinkConfig) *Sink {
@@ -33,10 +34,12 @@ func NewSink(config SinkConfig) *Sink {
 	}
 
 	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.FUNNIES_CITIES_QUEUE_NAME, ch)
+	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.WEEKDAY_HISTOGRAM_QUEUE_NAME, ch)
 	sink := &Sink {
 		connection:				conn,
 		channel:				ch,
 		funniestCitiesQueue:	funniestCitiesQueue,
+		weekdayHistogramQueue:  weekdayHistogramQueue,
 	}
 
 	return sink
@@ -53,6 +56,14 @@ func (sink *Sink) Run() {
 		for message := range sink.funniestCitiesQueue.ConsumeData() {
 			log.Infof("Top 10 Funniest Cities: %s", string(message.Body))
 			rabbitmq.AckMessage(&message, "FUNNIEST-CITIES")
+			wg.Done()
+		}
+	}()
+
+	go func() {
+		for message := range sink.weekdayHistogramQueue.ConsumeData() {
+			log.Infof("Reviews by Weekday: %s", string(message.Body))
+			//rabbitmq.AckMessage(&message, "WEEKDAY-HISTOGRAM")
 			wg.Done()
 		}
 	}()

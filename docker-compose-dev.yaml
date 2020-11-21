@@ -111,113 +111,10 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=DIRECT
+    - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=0
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver1:
-    container_name: mock_receiver1
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=1
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver2:
-    container_name: mock_receiver2
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=2
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver3:
-    container_name: mock_receiver3
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=3
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver4:
-    container_name: mock_receiver4
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=4
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver5:
-    container_name: mock_receiver5
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=5
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver6:
-    container_name: mock_receiver6
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=WeekdayAggregator
-    - MOCK_TOPIC=6
+    - MOCK_QUEUE=WeekdayAggregator
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -251,7 +148,7 @@ services:
     - RVWSCA_RABBITMQ_IP=rabbitmq
     - RVWSCA_RABBITMQ_PORT=5672
     - RVWSCA_FUNBIZ_MAPPERS=2
-    - RVWSCA_WEEKDAYS_MAPPERS=1
+    - RVWSCA_WEEKDAYS_MAPPERS=2
     - RVWSCA_HASHES_MAPPERS=1
     - RVWSCA_USERS_MAPPERS=1
     - RVWSCA_STARS_MAPPERS=1
@@ -267,12 +164,6 @@ services:
     container_name: sink
     depends_on:
     - mock_receiver0
-    - mock_receiver1
-    - mock_receiver2
-    - mock_receiver3
-    - mock_receiver4
-    - mock_receiver5
-    - mock_receiver6
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq
@@ -283,11 +174,128 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  weekday_aggregator0:
+    container_name: weekday_aggregator0
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=0
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_aggregator1:
+    container_name: weekday_aggregator1
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=1
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_aggregator2:
+    container_name: weekday_aggregator2
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=2
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_aggregator3:
+    container_name: weekday_aggregator3
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=3
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_aggregator4:
+    container_name: weekday_aggregator4
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=4
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_aggregator5:
+    container_name: weekday_aggregator5
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=5
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  weekday_aggregator6:
+    container_name: weekday_aggregator6
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
+    - WEEKDAYAGG_RABBITMQ_PORT=5672
+    - WEEKDAYAGG_INPUT_TOPIC=6
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    image: weekday_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   weekday_mapper0:
     container_name: weekday_mapper0
     depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
+    - weekday_aggregator0
+    - weekday_aggregator1
+    - weekday_aggregator2
+    - weekday_aggregator3
+    - weekday_aggregator4
+    - weekday_aggregator5
+    - weekday_aggregator6
     entrypoint: /mapper
     environment:
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
@@ -302,8 +310,13 @@ services:
   weekday_mapper1:
     container_name: weekday_mapper1
     depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
+    - weekday_aggregator0
+    - weekday_aggregator1
+    - weekday_aggregator2
+    - weekday_aggregator3
+    - weekday_aggregator4
+    - weekday_aggregator5
+    - weekday_aggregator6
     entrypoint: /mapper
     environment:
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq

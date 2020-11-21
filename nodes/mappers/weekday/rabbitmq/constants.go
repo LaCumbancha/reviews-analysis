@@ -2,7 +2,7 @@ package rabbitmq
 
 // Queues
 const INPUT_EXCHANGE_NAME = "ReviewsScatter"
-const OUTPUT_EXCHANGE_NAME = "WeekdayAggregator"
+const OUTPUT_EXCHANGE_NAME = "WeekdayMapper"
 const COMMON_QUEUE_NAME = "WeekdayMapperInput"
 
 // Topics

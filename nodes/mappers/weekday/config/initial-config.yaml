@@ -1,5 +1,0 @@
-rabbitmq_ip: "rabbitmq"
-rabbitmq_port: "5672"
-input_queue_name: "ReviewsScatter"
-output_queue_name: "FunnyBusinessMapper"
-funny_filters: 2
