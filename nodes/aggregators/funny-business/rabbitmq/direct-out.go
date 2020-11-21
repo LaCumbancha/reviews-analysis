@@ -43,6 +43,7 @@ func (direct *RabbitOutputDirect) initialize() {
 
 	// Generate PartitionsMap to send each message to the correct aggregator.
 	direct.partitionMap = GeneratePartitionMap(direct.partitions)
+	log.Tracef("Partition map calculated for exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
 func (direct *RabbitOutputDirect) PublishData(data []byte, businessId string) {

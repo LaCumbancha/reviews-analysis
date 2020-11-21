@@ -27,12 +27,16 @@ type Mapper struct {
 func NewMapper(config MapperConfig) *Mapper {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort , err)
+		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
+	} else {
+		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
+	} else {
+		log.Infof("RabbitMQ channel opened.")
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, ch)
@@ -58,12 +62,7 @@ func (mapper *Mapper) Run() {
 
 			if messageBody == rabbitmq.END_MESSAGE {
 				log.Infof("End-Message received.")
-
-				// Using WaitGroup to avoid publishing finish message before all others are sent.
 				wg.Done()
-				wg.Wait()
-
-				mapper.outputQueue.PublishFinish()
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				review := messageBody
@@ -81,6 +80,9 @@ func (mapper *Mapper) Run() {
 	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
+
+    // Publishing end messages.
+    mapper.outputQueue.PublishFinish()
 }
 
 func (mapper *Mapper) processReview(rawReview string) {

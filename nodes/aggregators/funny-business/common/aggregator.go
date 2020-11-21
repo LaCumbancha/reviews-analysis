@@ -30,12 +30,16 @@ type Aggregator struct {
 func NewAggregator(config AggregatorConfig) *Aggregator {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort , err)
+		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
+	} else {
+		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
+	} else {
+		log.Infof("RabbitMQ channel opened.")
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
@@ -71,21 +75,9 @@ func (aggregator *Aggregator) Run() {
 				endSignalsMutex.Unlock()
 				log.Infof("End-Message #%d received.", endSignalsReceived)
 
-				if (endSignalsReceived >= aggregator.endSignals) {
+				if (endSignalsReceived == aggregator.endSignals) {
 					log.Infof("All End-Messages were received.")
-
-					// Using WaitGroup to avoid publishing finish message before all others are sent.
 					wg.Done()
-					wg.Wait()
-
-					for _, aggregatedData := range aggregator.calculator.RetrieveData() {
-						wg.Add(1)
-						go aggregator.sendAggregatedData(aggregatedData, &wg)
-					}
-
-					wg.Wait()
-					aggregator.outputDirect.PublishFinish()
-					//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 				}
 				
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
@@ -102,8 +94,19 @@ func (aggregator *Aggregator) Run() {
 		}
 	}()
 	
+    // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
+    wg.Wait()
+
+    for _, aggregatedData := range aggregator.calculator.RetrieveData() {
+		wg.Add(1)
+		go aggregator.sendAggregatedData(aggregatedData, &wg)
+	}
+
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
+
+    // Sending End-Message to consumers.
+    aggregator.outputDirect.PublishFinish()
 }
 
 func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.FunnyBusinessData, wg *sync.WaitGroup) {

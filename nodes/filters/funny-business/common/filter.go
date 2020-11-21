@@ -28,12 +28,16 @@ type Filter struct {
 func NewFilter(config FilterConfig) *Filter {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort , err)
+		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
+	} else {
+		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
+	} else {
+		log.Infof("RabbitMQ channel opened.")
 	}
 
 	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
@@ -68,14 +72,9 @@ func (filter *Filter) Run() {
 				endSignalsMutex.Unlock()
 				log.Infof("End-Message #%d received.", endSignalsReceived)
 
-				if (endSignalsReceived >= filter.endSignals) {
+				if (endSignalsReceived == filter.endSignals) {
 					log.Infof("End-Message received.")
-
-					// Using WaitGroup to avoid publishing finish message before all others are sent.
 					wg.Done()
-					wg.Wait()
-	
-					filter.outputDirect.PublishFinish()
 				}
 				
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
@@ -94,6 +93,9 @@ func (filter *Filter) Run() {
 	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
+
+    // Publishing end messages.
+    filter.outputDirect.PublishFinish()
 }
 
 func (filter *Filter) filterFunnyBusiness(rawData string) {

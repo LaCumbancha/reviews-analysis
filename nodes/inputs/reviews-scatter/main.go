@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
@@ -114,6 +115,9 @@ func main() {
 	}
 
 	reviewsScatter := common.NewReviewsScatter(reviewsScatterConfig)
+
+	// Waiting for all other nodes to correctly configure before starting sending reviews.
+	time.Sleep(2000 * time.Millisecond)
 	reviewsScatter.Run()
 	reviewsScatter.Stop()
 }

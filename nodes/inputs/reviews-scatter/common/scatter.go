@@ -33,12 +33,16 @@ type ReviewsScatter struct {
 func NewReviewsScatter(config ReviewsScatterConfig) *ReviewsScatter {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort , err)
+		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
+	} else {
+		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
+	} else {
+		log.Infof("RabbitMQ channel opened.")
 	}
 
 	scatterDirect := rabbitmq.NewRabbitOutputDirect(
@@ -89,7 +93,7 @@ func (scatter *ReviewsScatter) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
-    // Publishing end message.
+    // Publishing end messages.
     scatter.outputDirect.PublishFinish()
 }
 
