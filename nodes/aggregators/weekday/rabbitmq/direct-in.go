@@ -82,7 +82,7 @@ func (direct *RabbitInputDirect) ConsumeData() <-chan amqp.Delivery {
 	)
 
 	if err != nil {
-		log.Errorf("Error receiving funny-business data from direct-exchange %s (through queue %s). Err: '%s'", direct.exchange, direct.queue, err)
+		log.Errorf("Error receiving data from direct-exchange %s (through queue %s). Err: '%s'", direct.exchange, direct.queue, err)
 	}
 
 	return data

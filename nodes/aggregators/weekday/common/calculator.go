@@ -34,7 +34,7 @@ func (calculator *Calculator) Aggregate(rawData string) {
 	    log.Infof("%s reviews incremented to %d.", weekdayReview.Weekday, newAmount)
 	} else {
 		calculator.data[weekdayReview.Weekday] = 1
-		log.Infof("Initialized %s reviews funniness at 1.", weekdayReview.Weekday)
+		log.Infof("Initialized %s reviews at 1.", weekdayReview.Weekday)
 	}
 
 	calculator.mutex.Unlock()

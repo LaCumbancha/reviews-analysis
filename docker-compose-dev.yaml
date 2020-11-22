@@ -126,28 +126,10 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=DIRECT
+    - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=UserMapper
-    - MOCK_TOPIC=0
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver1:
-    container_name: mock_receiver1
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=UserMapper
-    - MOCK_TOPIC=1
+    - MOCK_QUEUE=UserAggregator
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -209,11 +191,44 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  user_aggregator0:
+    container_name: user_aggregator0
+    depends_on:
+    - histogram_mapper
+    entrypoint: /aggregator
+    environment:
+    - USERAGG_RABBITMQ_IP=rabbitmq
+    - USERAGG_RABBITMQ_PORT=5672
+    - USERAGG_INPUT_TOPIC=0
+    - USERAGG_USER_MAPPERS=2
+    image: user_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  user_aggregator1:
+    container_name: user_aggregator1
+    depends_on:
+    - histogram_mapper
+    entrypoint: /aggregator
+    environment:
+    - USERAGG_RABBITMQ_IP=rabbitmq
+    - USERAGG_RABBITMQ_PORT=5672
+    - USERAGG_INPUT_TOPIC=1
+    - USERAGG_USER_MAPPERS=2
+    image: user_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   user_mapper0:
     container_name: user_mapper0
     depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
+    - sink
+    - user_aggregator0
+    - user_aggregator1
     entrypoint: /mapper
     environment:
     - USERMAP_RABBITMQ_IP=rabbitmq
@@ -228,8 +243,9 @@ services:
   user_mapper1:
     container_name: user_mapper1
     depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
+    - sink
+    - user_aggregator0
+    - user_aggregator1
     entrypoint: /mapper
     environment:
     - USERMAP_RABBITMQ_IP=rabbitmq
