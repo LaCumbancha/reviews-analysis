@@ -11,6 +11,7 @@ weekday_aggregators: 7
 # Users w/+50 reviews.
 user_mappers: 2
 user_aggregators: 2
+user_filters: 2
 
 # Users w/+50 5-stars reviews.
 stars_mappers: 1

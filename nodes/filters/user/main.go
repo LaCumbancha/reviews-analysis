@@ -6,23 +6,21 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/user/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/user/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the USERAGG prefix
+	// Configure viper to read env variables with the FUNBIZFIL prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("useragg")
+	configEnv.SetEnvPrefix("userfil")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("input", "topic")
-	configEnv.BindEnv("user", "mappers")
-	configEnv.BindEnv("user", "filters")
+	configEnv.BindEnv("user", "aggregators")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -68,33 +66,19 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
+	userAggregators := utils.GetConfigInt(configEnv, configFile, "user_aggregators")
 	
-	if inputTopic == "" {
-		log.Fatalf("InputTopic variable missing")
+	if userAggregators == 0 {
+		log.Fatalf("UserAggregators variable missing")
 	}
 
-	userMappers := utils.GetConfigInt(configEnv, configFile, "user_mappers")
-	
-	if userMappers == 0 {
-		log.Fatalf("UserMappers variable missing")
-	}
-
-	userFilters := utils.GetConfigInt(configEnv, configFile, "user_filters")
-	
-	if userFilters == 0 {
-		log.Fatalf("UserFilters variable missing")
-	}
-
-	aggregatorConfig := common.AggregatorConfig {
+	filterConfig := common.FilterConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		InputTopic: 		inputTopic,
-		UserMappers:		userMappers,
-		UserFilters:		userFilters,
+		UserAggregators:	userAggregators,
 	}
 
-	aggregator := common.NewAggregator(aggregatorConfig)
-	aggregator.Run()
-	aggregator.Stop()
+	filter := common.NewFilter(filterConfig)
+	filter.Run()
+	filter.Stop()
 }

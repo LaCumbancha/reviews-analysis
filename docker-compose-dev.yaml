@@ -129,7 +129,7 @@ services:
     - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=UserAggregator
+    - MOCK_QUEUE=TopUsersMapper
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -201,6 +201,7 @@ services:
     - USERAGG_RABBITMQ_PORT=5672
     - USERAGG_INPUT_TOPIC=0
     - USERAGG_USER_MAPPERS=2
+    - USERAGG_USER_FILTERS=2
     image: user_aggregator:latest
     links:
     - rabbitmq
@@ -217,7 +218,38 @@ services:
     - USERAGG_RABBITMQ_PORT=5672
     - USERAGG_INPUT_TOPIC=1
     - USERAGG_USER_MAPPERS=2
+    - USERAGG_USER_FILTERS=2
     image: user_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  user_filter0:
+    container_name: user_filter0
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - USERFIL_RABBITMQ_IP=rabbitmq
+    - USERFIL_RABBITMQ_PORT=5672
+    - USERFIL_USER_AGGREGATORS=2
+    image: user_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  user_filter1:
+    container_name: user_filter1
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - USERFIL_RABBITMQ_IP=rabbitmq
+    - USERFIL_RABBITMQ_PORT=5672
+    - USERFIL_USER_AGGREGATORS=2
+    image: user_filter:latest
     links:
     - rabbitmq
     networks:
@@ -226,7 +258,6 @@ services:
   user_mapper0:
     container_name: user_mapper0
     depends_on:
-    - sink
     - user_aggregator0
     - user_aggregator1
     entrypoint: /mapper
@@ -243,7 +274,6 @@ services:
   user_mapper1:
     container_name: user_mapper1
     depends_on:
-    - sink
     - user_aggregator0
     - user_aggregator1
     entrypoint: /mapper

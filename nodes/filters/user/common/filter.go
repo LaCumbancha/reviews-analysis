@@ -7,27 +7,24 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/user/rabbitmq"
 )
 
-type AggregatorConfig struct {
+type FilterConfig struct {
 	RabbitIp			string
 	RabbitPort			string
-	InputTopic			string
-	UserMappers 		int
-	UserFilters 		int
+	UserAggregators		int
 }
 
-type Aggregator struct {
+type Filter struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
-	calculator		*Calculator
-	inputDirect 	*rabbitmq.RabbitInputDirect
+	inputQueue 		*rabbitmq.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals		int
 }
 
-func NewAggregator(config AggregatorConfig) *Aggregator {
+func NewFilter(config FilterConfig) *Filter {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
@@ -42,21 +39,20 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.UserFilters, ch)
-	aggregator := &Aggregator {
+	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, ch)
+	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
-		calculator:		NewCalculator(),
-		inputDirect:	inputDirect,
+		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
-		endSignals:		config.UserMappers,
+		endSignals:		config.UserAggregators,
 	}
 
-	return aggregator
+	return filter
 }
 
-func (aggregator *Aggregator) Run() {
+func (filter *Filter) Run() {
 	log.Infof("Starting to listen for user reviews data.")
 
 	var endSignalsMutex = &sync.Mutex{}
@@ -65,7 +61,7 @@ func (aggregator *Aggregator) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		for message := range aggregator.inputDirect.ConsumeData() {
+		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if messageBody == rabbitmq.END_MESSAGE {
@@ -75,8 +71,8 @@ func (aggregator *Aggregator) Run() {
 				endSignalsMutex.Unlock()
 				log.Infof("End-Message #%d received.", endSignalsReceived)
 
-				if (endSignalsReceived == aggregator.endSignals) {
-					log.Infof("All End-Messages were received.")
+				if (endSignalsReceived == filter.endSignals) {
+					log.Infof("All End-Message were received.")
 					wg.Done()
 				}
 				
@@ -86,7 +82,7 @@ func (aggregator *Aggregator) Run() {
 
 				wg.Add(1)
 				go func() {
-					aggregator.calculator.Aggregate(messageBody)
+					filter.filterFunnyBusiness(messageBody)
 					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
@@ -94,33 +90,30 @@ func (aggregator *Aggregator) Run() {
 		}
 	}()
 	
-    // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
-    wg.Wait()
-
-    for _, aggregatedData := range aggregator.calculator.RetrieveData() {
-		wg.Add(1)
-		go aggregator.sendAggregatedData(aggregatedData, &wg)
-	}
-
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
-    // Sending End-Message to consumers.
-    aggregator.outputQueue.PublishFinish()
+    // Publishing end messages.
+    filter.outputQueue.PublishFinish()
 }
 
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.UserData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(aggregatedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
+func (filter *Filter) filterFunnyBusiness(rawData string) {
+	var mappedUserData rabbitmq.UserData
+	json.Unmarshal([]byte(rawData), &mappedUserData)
+
+	if (mappedUserData.Reviews > 2) {
+		data, err := json.Marshal(mappedUserData)
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedUserData, err)
+		}
+		filter.outputQueue.PublishData(data, mappedUserData.UserId)
 	} else {
-		aggregator.outputQueue.PublishData(data)
-		wg.Done()
+		log.Infof("Data '%s' filtered due to not having enough reviews.", rawData)
 	}
 }
 
-func (aggregator *Aggregator) Stop() {
-	log.Infof("Closing User Aggregator connections.")
-	aggregator.connection.Close()
-	aggregator.channel.Close()
+func (filter *Filter) Stop() {
+	log.Infof("Closing User Filter connections.")
+	filter.connection.Close()
+	filter.channel.Close()
 }

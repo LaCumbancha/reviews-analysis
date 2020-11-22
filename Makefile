@@ -51,6 +51,7 @@ docker-image:
 
 	# Filters
 	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
+	docker build -f ./nodes/filters/user/Dockerfile -t "user_filter:latest" .
 
 	# Aggregators
 	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .

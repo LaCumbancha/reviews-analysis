@@ -17,17 +17,18 @@ file['services'] = {}
 # Services dependencies
 # TODO: Change to ['rabbitmq']
 SINK_DEPS = ['mock_receiver0']
+HISTOMAP_DEPS = ['sink']
 
 FUNBIZAGG_DEPS = ['sink']
-USERAGG_DEPS = ['sink']
-WEEKDAYAGG_DEPS = ['histogram_mapper']
+USERAGG_DEPS = []
+WEEKDAYAGG_DEPS = []
 
 FUNBIZFIL_DEPS = []
+USERFIL_DEPS = ['sink']
 
-USERMAP_DEPS = ['sink']
+USERMAP_DEPS = []
 FUNBIZMAP_DEPS = []
 WEEKDAYMAP_DEPS = []
-HISTOMAP_DEPS = ['sink']
 
 RVWSCA_DEPS = []
 
@@ -56,7 +57,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=UserAggregator'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=TopUsersMapper'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -113,6 +114,7 @@ file['services']['sink'] = {
 }
 
 ## Output Mappers
+WEEKDAYAGG_DEPS += ['histogram_mapper']
 file['services']['histogram_mapper'] = {
 	'container_name': 'histogram_mapper',
 	'image': 'histogram_mapper:latest',
@@ -161,7 +163,7 @@ for idx in range(0, input_yaml['user_aggregators']):
 		'image': 'user_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': ['USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}'],
+		'environment': ['USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(WEEKDAYAGG_DEPS),
 		'networks': ['testing_net']
@@ -179,6 +181,20 @@ for idx in range(0, input_yaml['funbiz_filters']):
 		'environment': ['FUNBIZFIL_RABBITMQ_IP=rabbitmq', 'FUNBIZFIL_RABBITMQ_PORT=5672', f'FUNBIZFIL_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'FUNBIZFIL_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNBIZFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['user_filters']):
+	container_name = f'user_filter{idx}'
+	USERAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'user_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': ['USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(USERFIL_DEPS),
 		'networks': ['testing_net']
 	}
 
