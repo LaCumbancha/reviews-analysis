@@ -17,8 +17,9 @@ file['services'] = {}
 # Services dependencies
 # TODO: Change to ['rabbitmq']
 SINK_DEPS = ['mock_receiver0']
+HISTOMAP_DEPS = ['sink']
 FUNBIZAGG_DEPS = ['sink']
-WEEKDAYAGG_DEPS = ['sink']
+WEEKDAYAGG_DEPS = ['histogram_mapper']
 FUNBIZFIL_DEPS = []
 FUNBIZMAP_DEPS = []
 WEEKDAYMAP_DEPS = []
@@ -44,27 +45,38 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
+#file['services']['mock_receiver0'] = {
+#	'container_name': 'mock_receiver0',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=WeekdayAggregator'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
+
 file['services']['mock_receiver0'] = {
 	'container_name': 'mock_receiver0',
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=WeekdayAggregator'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=0'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
 }
 
-# file['services']['mock_receiver0'] = {
-# 	'container_name': 'mock_receiver0',
-# 	'image': 'mock_receiver:latest',
-# 	'entrypoint': '/receiver',
-# 	'restart': 'on-failure',
-# 	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=1'],
-# 	'links': ['rabbitmq'],
-# 	'depends_on': ['rabbitmq'],
-# 	'networks': ['testing_net']
-# }
+file['services']['mock_receiver1'] = {
+	'container_name': 'mock_receiver1',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=1'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
 
 
 
@@ -91,6 +103,17 @@ file['services']['sink'] = {
 	'environment': ['SINK_RABBITMQ_IP=rabbitmq', 'SINK_RABBITMQ_PORT=5672'],
 	'links': ['rabbitmq'],
 	'depends_on': list(SINK_DEPS),
+	'networks': ['testing_net']
+}
+
+file['services']['histogram_mapper'] = {
+	'container_name': 'histogram_mapper',
+	'image': 'histogram_mapper:latest',
+	'entrypoint': '/mapper',
+	'restart': 'on-failure',
+	'environment': ['HISTOMAP_RABBITMQ_IP=rabbitmq', 'HISTOMAP_RABBITMQ_PORT=5672', f'HISTOMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(HISTOMAP_DEPS),
 	'networks': ['testing_net']
 }
 

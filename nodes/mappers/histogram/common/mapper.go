@@ -1,0 +1,112 @@
+package common
+
+import (
+	"fmt"
+	"sync"
+	"github.com/streadway/amqp"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/histogram/rabbitmq"
+)
+
+type MapperConfig struct {
+	RabbitIp			string
+	RabbitPort			string
+	WeekdayAggregators 	int
+}
+
+type Mapper struct {
+	connection 		*amqp.Connection
+	channel 		*amqp.Channel
+	builder			*Builder
+	inputQueue 		*rabbitmq.RabbitInputQueue
+	outputQueue 	*rabbitmq.RabbitOutputQueue
+	endSignals 		int
+}
+
+func NewMapper(config MapperConfig) *Mapper {
+	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
+	} else {
+		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
+	} else {
+		log.Infof("RabbitMQ channel opened.")
+	}
+
+	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, ch)
+	mapper := &Mapper {
+		connection:		conn,
+		channel:		ch,
+		builder:		NewBuilder(),
+		inputQueue:		inputQueue,
+		outputQueue:	outputQueue,
+		endSignals:		config.WeekdayAggregators,
+	}
+
+	return mapper
+}
+
+func (mapper *Mapper) Run() {
+	log.Infof("Starting to listen for weekday reviews data.")
+
+	var endSignalsMutex = &sync.Mutex{}
+	var endSignalsReceived = 0
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for message := range mapper.inputQueue.ConsumeData() {
+			messageBody := string(message.Body)
+
+			if messageBody == rabbitmq.END_MESSAGE {
+				// Waiting for the total needed End-Signals to send the own End-Message.
+				endSignalsMutex.Lock()
+				endSignalsReceived++
+				endSignalsMutex.Unlock()
+				log.Infof("End-Message #%d received.", endSignalsReceived)
+
+				if (endSignalsReceived == mapper.endSignals) {
+					log.Infof("All End-Messages were received.")
+					wg.Done()
+				}
+				
+				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
+			} else {
+				log.Infof("Weekday reviews '%s' received.", messageBody)
+
+				wg.Add(1)
+				go func() {
+					mapper.builder.Save(messageBody)
+					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
+					wg.Done()
+				}()
+			}
+		}
+	}()
+	
+    // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
+    wg.Wait()
+
+    mapper.sendResults()
+
+    // Publishing end messages.
+    mapper.outputQueue.PublishFinish()
+}
+
+func (mapper *Mapper) sendResults() {
+	results := mapper.builder.BuildData()
+	mapper.outputQueue.PublishData(fmt.Sprintf("Reviews by Weekday --- %s", results))
+}
+
+func (mapper *Mapper) Stop() {
+	log.Infof("Closing Weekday Mapper connections.")
+	mapper.connection.Close()
+	mapper.channel.Close()
+}

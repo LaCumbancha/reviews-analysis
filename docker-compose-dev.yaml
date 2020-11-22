@@ -105,16 +105,49 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  histogram_mapper:
+    container_name: histogram_mapper
+    depends_on:
+    - sink
+    entrypoint: /mapper
+    environment:
+    - HISTOMAP_RABBITMQ_IP=rabbitmq
+    - HISTOMAP_RABBITMQ_PORT=5672
+    - HISTOMAP_WEEKDAY_AGGREGATORS=7
+    image: histogram_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   mock_receiver0:
     container_name: mock_receiver0
     depends_on:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=QUEUE
+    - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=WeekdayAggregator
+    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_TOPIC=0
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver1:
+    container_name: mock_receiver1
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -177,7 +210,7 @@ services:
   weekday_aggregator0:
     container_name: weekday_aggregator0
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -193,7 +226,7 @@ services:
   weekday_aggregator1:
     container_name: weekday_aggregator1
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -209,7 +242,7 @@ services:
   weekday_aggregator2:
     container_name: weekday_aggregator2
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -225,7 +258,7 @@ services:
   weekday_aggregator3:
     container_name: weekday_aggregator3
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -241,7 +274,7 @@ services:
   weekday_aggregator4:
     container_name: weekday_aggregator4
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -257,7 +290,7 @@ services:
   weekday_aggregator5:
     container_name: weekday_aggregator5
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -273,7 +306,7 @@ services:
   weekday_aggregator6:
     container_name: weekday_aggregator6
     depends_on:
-    - sink
+    - histogram_mapper
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq

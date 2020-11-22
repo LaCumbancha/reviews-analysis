@@ -20,13 +20,14 @@ build: deps
 	# Mappers
 	GOOS=linux go build -o bin/funbiz-mapper $(GIT_REMOTE)/nodes/mappers/funbiz-mapper
 	GOOS=linux go build -o bin/weekday-mapper $(GIT_REMOTE)/nodes/mappers/weekday
+	GOOS=linux go build -o bin/histogram-mapper $(GIT_REMOTE)/nodes/mappers/histogram
 
 	# Filters
 	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/nodes/filters/funbiz-mapper
 
 	# Aggregators
 	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-mapper
-	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/weekday
+	GOOS=linux go build -o bin/weekday-aggregator $(GIT_REMOTE)/nodes/aggregators/weekday
 
 	# Outputs
 	GOOS=linux go build -o bin/sink $(GIT_REMOTE)/nodes/outputs/sink
@@ -43,6 +44,7 @@ docker-image:
 	# Mappers
 	docker build -f ./nodes/mappers/funny-business/Dockerfile -t "funbiz_mapper:latest" .
 	docker build -f ./nodes/mappers/weekday/Dockerfile -t "weekday_mapper:latest" .
+	docker build -f ./nodes/mappers/histogram/Dockerfile -t "histogram_mapper:latest" .
 
 	# Filters
 	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
