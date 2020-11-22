@@ -101,7 +101,7 @@ func (filter *Filter) filterFunnyBusiness(rawData string) {
 	var mappedUserData rabbitmq.UserData
 	json.Unmarshal([]byte(rawData), &mappedUserData)
 
-	if (mappedUserData.Reviews > 2) {
+	if (mappedUserData.Reviews > 50) {
 		data, err := json.Marshal(mappedUserData)
 		if err != nil {
 			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedUserData, err)

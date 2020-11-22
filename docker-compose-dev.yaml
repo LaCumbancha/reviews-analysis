@@ -105,21 +105,6 @@ services:
     networks:
     - testing_net
     restart: on-failure
-  histogram_prettier:
-    container_name: histogram_prettier
-    depends_on:
-    - sink
-    entrypoint: /prettier
-    environment:
-    - HISTOPRE_RABBITMQ_IP=rabbitmq
-    - HISTOPRE_RABBITMQ_PORT=5672
-    - HISTOPRE_WEEKDAY_AGGREGATORS=7
-    image: histogram_prettier:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
   mock_receiver0:
     container_name: mock_receiver0
     depends_on:
@@ -191,10 +176,25 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  top_users_prettier:
+    container_name: top_users_prettier
+    depends_on:
+    - sink
+    entrypoint: /prettier
+    environment:
+    - TOPUSERPRE_RABBITMQ_IP=rabbitmq
+    - TOPUSERPRE_RABBITMQ_PORT=5672
+    - TOPUSERPRE_USER_FILTERS=2
+    image: top_users_prettier:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   user_aggregator0:
     container_name: user_aggregator0
     depends_on:
-    - histogram_prettier
+    - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
     - USERAGG_RABBITMQ_IP=rabbitmq
@@ -211,7 +211,7 @@ services:
   user_aggregator1:
     container_name: user_aggregator1
     depends_on:
-    - histogram_prettier
+    - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
     - USERAGG_RABBITMQ_IP=rabbitmq
@@ -228,7 +228,7 @@ services:
   user_filter0:
     container_name: user_filter0
     depends_on:
-    - sink
+    - top_users_prettier
     entrypoint: /filter
     environment:
     - USERFIL_RABBITMQ_IP=rabbitmq
@@ -243,7 +243,7 @@ services:
   user_filter1:
     container_name: user_filter1
     depends_on:
-    - sink
+    - top_users_prettier
     entrypoint: /filter
     environment:
     - USERFIL_RABBITMQ_IP=rabbitmq
@@ -290,7 +290,7 @@ services:
   weekday_aggregator0:
     container_name: weekday_aggregator0
     depends_on:
-    - histogram_prettier
+    - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -306,7 +306,7 @@ services:
   weekday_aggregator1:
     container_name: weekday_aggregator1
     depends_on:
-    - histogram_prettier
+    - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -319,81 +319,16 @@ services:
     networks:
     - testing_net
     restart: on-failure
-  weekday_aggregator2:
-    container_name: weekday_aggregator2
+  weekday_histogram_prettier:
+    container_name: weekday_histogram_prettier
     depends_on:
-    - histogram_prettier
-    entrypoint: /aggregator
+    - sink
+    entrypoint: /prettier
     environment:
-    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
-    - WEEKDAYAGG_RABBITMQ_PORT=5672
-    - WEEKDAYAGG_INPUT_TOPIC=2
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
-    image: weekday_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  weekday_aggregator3:
-    container_name: weekday_aggregator3
-    depends_on:
-    - histogram_prettier
-    entrypoint: /aggregator
-    environment:
-    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
-    - WEEKDAYAGG_RABBITMQ_PORT=5672
-    - WEEKDAYAGG_INPUT_TOPIC=3
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
-    image: weekday_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  weekday_aggregator4:
-    container_name: weekday_aggregator4
-    depends_on:
-    - histogram_prettier
-    entrypoint: /aggregator
-    environment:
-    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
-    - WEEKDAYAGG_RABBITMQ_PORT=5672
-    - WEEKDAYAGG_INPUT_TOPIC=4
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
-    image: weekday_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  weekday_aggregator5:
-    container_name: weekday_aggregator5
-    depends_on:
-    - histogram_prettier
-    entrypoint: /aggregator
-    environment:
-    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
-    - WEEKDAYAGG_RABBITMQ_PORT=5672
-    - WEEKDAYAGG_INPUT_TOPIC=5
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
-    image: weekday_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  weekday_aggregator6:
-    container_name: weekday_aggregator6
-    depends_on:
-    - histogram_prettier
-    entrypoint: /aggregator
-    environment:
-    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
-    - WEEKDAYAGG_RABBITMQ_PORT=5672
-    - WEEKDAYAGG_INPUT_TOPIC=6
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
-    image: weekday_aggregator:latest
+    - HISTOPRE_RABBITMQ_IP=rabbitmq
+    - HISTOPRE_RABBITMQ_PORT=5672
+    - HISTOPRE_WEEKDAY_AGGREGATORS=2
+    image: weekday_histogram_prettier:latest
     links:
     - rabbitmq
     networks:
@@ -404,16 +339,11 @@ services:
     depends_on:
     - weekday_aggregator0
     - weekday_aggregator1
-    - weekday_aggregator2
-    - weekday_aggregator3
-    - weekday_aggregator4
-    - weekday_aggregator5
-    - weekday_aggregator6
     entrypoint: /mapper
     environment:
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
-    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=7
+    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=2
     image: weekday_mapper:latest
     links:
     - rabbitmq
@@ -425,16 +355,11 @@ services:
     depends_on:
     - weekday_aggregator0
     - weekday_aggregator1
-    - weekday_aggregator2
-    - weekday_aggregator3
-    - weekday_aggregator4
-    - weekday_aggregator5
-    - weekday_aggregator6
     entrypoint: /mapper
     environment:
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
-    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=7
+    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=2
     image: weekday_mapper:latest
     links:
     - rabbitmq

@@ -6,13 +6,13 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/rabbitmq"
 )
 
 type MapperConfig struct {
-	RabbitIp			string
-	RabbitPort			string
-	WeekdayAggregators 	int
+	RabbitIp		string
+	RabbitPort		string
+	UserFilters 	int
 }
 
 type Mapper struct {
@@ -47,14 +47,14 @@ func NewMapper(config MapperConfig) *Mapper {
 		builder:		NewBuilder(),
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
-		endSignals:		config.WeekdayAggregators,
+		endSignals:		config.UserFilters,
 	}
 
 	return mapper
 }
 
 func (mapper *Mapper) Run() {
-	log.Infof("Starting to listen for weekday reviews data.")
+	log.Infof("Starting to listen for user with +50 reviews data.")
 
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignalsReceived = 0
@@ -79,7 +79,7 @@ func (mapper *Mapper) Run() {
 				
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				log.Infof("Weekday reviews '%s' received.", messageBody)
+				log.Infof("User reviews '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
@@ -102,11 +102,11 @@ func (mapper *Mapper) Run() {
 
 func (mapper *Mapper) sendResults() {
 	results := mapper.builder.BuildData()
-	mapper.outputQueue.PublishData(fmt.Sprintf("Reviews by Weekday --- %s", results))
+	mapper.outputQueue.PublishData(fmt.Sprintf("Users with +50 reviews --- %s", results))
 }
 
 func (mapper *Mapper) Stop() {
-	log.Infof("Closing Weekday Mapper connections.")
+	log.Infof("Closing Top-Users Prettier connections.")
 	mapper.connection.Close()
 	mapper.channel.Close()
 }

@@ -33,8 +33,3 @@ func GetConfigInt(configEnv *viper.Viper, configFile *viper.Viper, key string) i
 
 	return value
 }
-
-func GetReviewId(review string) string {
-	// Substring limits hardcoded (after analysing data) to avoid parsing the review.
-	return review[14:34]
-}

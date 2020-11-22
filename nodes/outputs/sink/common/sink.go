@@ -20,6 +20,9 @@ type Sink struct {
 	channel 					*amqp.Channel
 	funniestCitiesQueue 		*rabbitmq.RabbitInputQueue
 	weekdayHistogramQueue 		*rabbitmq.RabbitInputQueue
+	topUsersQueue 				*rabbitmq.RabbitInputQueue
+	bestUsersQueue 				*rabbitmq.RabbitInputQueue
+	botUsersQueue 				*rabbitmq.RabbitInputQueue
 }
 
 func NewSink(config SinkConfig) *Sink {
@@ -35,11 +38,17 @@ func NewSink(config SinkConfig) *Sink {
 
 	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.FUNNIES_CITIES_QUEUE_NAME, ch)
 	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.WEEKDAY_HISTOGRAM_QUEUE_NAME, ch)
+	topUsersQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.TOP_USERS_QUEUE_NAME, ch)
+	bestUsersQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.BEST_USERS_QUEUE_NAME, ch)
+	botUsersQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.BOT_USERS_QUEUE_NAME, ch)
 	sink := &Sink {
 		connection:				conn,
 		channel:				ch,
 		funniestCitiesQueue:	funniestCitiesQueue,
 		weekdayHistogramQueue:  weekdayHistogramQueue,
+		topUsersQueue:			topUsersQueue,
+		bestUsersQueue:			bestUsersQueue,
+		botUsersQueue:			botUsersQueue,
 	}
 
 	return sink
@@ -69,6 +78,42 @@ func (sink *Sink) Run() {
 			messageBody := string(message.Body)
 			if messageBody == rabbitmq.END_MESSAGE {
 				log.Infof("End-Message received from the Weekday Histogram flow.")
+				wg.Done()
+			} else {
+				log.Infof(messageBody)
+			}
+		}
+	}()
+
+	go func() {
+		for message := range sink.topUsersQueue.ConsumeData() {
+			messageBody := string(message.Body)
+			if messageBody == rabbitmq.END_MESSAGE {
+				log.Infof("End-Message received from the Top-Users flow.")
+				wg.Done()
+			} else {
+				log.Infof(messageBody)
+			}
+		}
+	}()
+
+	go func() {
+		for message := range sink.bestUsersQueue.ConsumeData() {
+			messageBody := string(message.Body)
+			if messageBody == rabbitmq.END_MESSAGE {
+				log.Infof("End-Message received from the Best-Users flow.")
+				wg.Done()
+			} else {
+				log.Infof(messageBody)
+			}
+		}
+	}()
+
+	go func() {
+		for message := range sink.botUsersQueue.ConsumeData() {
+			messageBody := string(message.Body)
+			if messageBody == rabbitmq.END_MESSAGE {
+				log.Infof("End-Message received from the Bot-Users flow.")
 				wg.Done()
 			} else {
 				log.Infof(messageBody)

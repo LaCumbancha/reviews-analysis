@@ -18,13 +18,14 @@ file['services'] = {}
 # TODO: Change to ['rabbitmq']
 SINK_DEPS = ['mock_receiver0']
 HISTOPRE_DEPS = ['sink']
+TOPUSERPRE_DEPS = ['sink']
 
 FUNBIZAGG_DEPS = ['sink']
 USERAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
 
 FUNBIZFIL_DEPS = []
-USERFIL_DEPS = ['sink']
+USERFIL_DEPS = []
 
 USERMAP_DEPS = []
 FUNBIZMAP_DEPS = []
@@ -114,15 +115,27 @@ file['services']['sink'] = {
 }
 
 ## Prettiers
-WEEKDAYAGG_DEPS += ['histogram_prettier']
-file['services']['histogram_prettier'] = {
-	'container_name': 'histogram_prettier',
-	'image': 'histogram_prettier:latest',
+WEEKDAYAGG_DEPS += ['weekday_histogram_prettier']
+file['services']['weekday_histogram_prettier'] = {
+	'container_name': 'weekday_histogram_prettier',
+	'image': 'weekday_histogram_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
 	'environment': ['HISTOPRE_RABBITMQ_IP=rabbitmq', 'HISTOPRE_RABBITMQ_PORT=5672', f'HISTOPRE_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(HISTOPRE_DEPS),
+	'networks': ['testing_net']
+}
+
+USERFIL_DEPS += ['top_users_prettier']
+file['services']['top_users_prettier'] = {
+	'container_name': 'top_users_prettier',
+	'image': 'top_users_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(TOPUSERPRE_DEPS),
 	'networks': ['testing_net']
 }
 

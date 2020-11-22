@@ -32,6 +32,7 @@ build: deps
 
 	# Prettiers
 	GOOS=linux go build -o bin/weekday-histogram $(GIT_REMOTE)/nodes/prettiers/weekday-histogram
+	GOOS=linux go build -o bin/top-users $(GIT_REMOTE)/nodes/prettiers/top-users
 
 	# Outputs
 	GOOS=linux go build -o bin/sink $(GIT_REMOTE)/nodes/outputs/sink
@@ -60,7 +61,8 @@ docker-image:
 	docker build -f ./nodes/aggregators/user/Dockerfile -t "user_aggregator:latest" .
 
 	# Prettiers
-	docker build -f ./nodes/prettiers/weekday-histogram/Dockerfile -t "histogram_prettier:latest" .
+	docker build -f ./nodes/prettiers/weekday-histogram/Dockerfile -t "weekday_histogram_prettier:latest" .
+	docker build -f ./nodes/prettiers/top-users/Dockerfile -t "top_users_prettier:latest" .
 
 	# Outputs
 	docker build -f ./nodes/outputs/sink/Dockerfile -t "sink:latest" .

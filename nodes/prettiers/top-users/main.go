@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -15,12 +15,12 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 
 	// Configure viper to read env variables with the WEEKDAYMAP prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("histomap")
+	configEnv.SetEnvPrefix("topuserpre")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("weekday", "aggregators")
+	configEnv.BindEnv("user", "filters")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -67,16 +67,16 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	weekdayAggregators := utils.GetConfigInt(configEnv, configFile, "weekday_aggregators")
+	userFilters := utils.GetConfigInt(configEnv, configFile, "user_filters")
 	
-	if weekdayAggregators == 0 {
-		log.Fatalf("WeekdayAggregators variable missing")
+	if userFilters == 0 {
+		log.Fatalf("UserFilters variable missing")
 	}
 
 	mapperConfig := common.MapperConfig {
-		RabbitIp:				rabbitIp,
-		RabbitPort:				rabbitPort,
-		WeekdayAggregators:		weekdayAggregators,
+		RabbitIp:			rabbitIp,
+		RabbitPort:			rabbitPort,
+		UserFilters:		userFilters,
 	}
 
 	mapper := common.NewMapper(mapperConfig)

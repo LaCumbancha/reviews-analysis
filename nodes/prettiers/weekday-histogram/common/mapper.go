@@ -106,7 +106,7 @@ func (mapper *Mapper) sendResults() {
 }
 
 func (mapper *Mapper) Stop() {
-	log.Infof("Closing Weekday Mapper connections.")
+	log.Infof("Closing Weekday-Histogram Prettier connections.")
 	mapper.connection.Close()
 	mapper.channel.Close()
 }
