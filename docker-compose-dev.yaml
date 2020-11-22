@@ -8,7 +8,8 @@ services:
   biz_scatter:
     container_name: biz_scatter
     depends_on:
-    - sink
+    - citbiz_mapper0
+    - citbiz_mapper1
     entrypoint: /scatter
     environment:
     - BIZSCA_BUSINESS_DATA=/data/test-business.json
@@ -23,6 +24,38 @@ services:
     restart: on-failure
     volumes:
     - business_dataset:/data
+  citbiz_mapper0:
+    container_name: citbiz_mapper0
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - CITBIZMAP_RABBITMQ_IP=rabbitmq
+    - CITBIZMAP_RABBITMQ_PORT=5672
+    - CITBIZMAP_FUNCIT_JOINERS=2
+    image: citbiz_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  citbiz_mapper1:
+    container_name: citbiz_mapper1
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - CITBIZMAP_RABBITMQ_IP=rabbitmq
+    - CITBIZMAP_RABBITMQ_PORT=5672
+    - CITBIZMAP_FUNCIT_JOINERS=2
+    image: citbiz_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   funbiz_aggregator0:
     container_name: funbiz_aggregator0
     depends_on:
@@ -32,7 +65,7 @@ services:
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
     - FUNBIZAGG_RABBITMQ_PORT=5672
     - FUNBIZAGG_FUNBIZ_FILTERS=2
-    - FUNBIZAGG_FUNBIZ_JOINERS=2
+    - FUNBIZAGG_FUNCIT_JOINERS=2
     - FUNBIZAGG_INPUT_TOPIC=0
     image: funbiz_aggregator:latest
     links:
@@ -49,7 +82,7 @@ services:
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
     - FUNBIZAGG_RABBITMQ_PORT=5672
     - FUNBIZAGG_FUNBIZ_FILTERS=2
-    - FUNBIZAGG_FUNBIZ_JOINERS=2
+    - FUNBIZAGG_FUNCIT_JOINERS=2
     - FUNBIZAGG_INPUT_TOPIC=1
     image: funbiz_aggregator:latest
     links:
@@ -129,10 +162,28 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=QUEUE
+    - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=BusinessScatter
+    - MOCK_EXCHANGE=CityBusinessJoiner
+    - MOCK_TOPIC=0
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver1:
+    container_name: mock_receiver1
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=CityBusinessJoiner
+    - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
     - rabbitmq

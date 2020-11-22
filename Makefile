@@ -20,6 +20,7 @@ build: deps
 
 	# Mappers
 	GOOS=linux go build -o bin/funbiz-mapper $(GIT_REMOTE)/nodes/mappers/funbiz-mapper
+	GOOS=linux go build -o bin/funcit-mapper $(GIT_REMOTE)/nodes/mappers/citbiz-mapper
 	GOOS=linux go build -o bin/weekday-mapper $(GIT_REMOTE)/nodes/mappers/weekday
 	GOOS=linux go build -o bin/user-mapper $(GIT_REMOTE)/nodes/mappers/user
 
@@ -50,6 +51,7 @@ docker-image:
 
 	# Mappers
 	docker build -f ./nodes/mappers/funny-business/Dockerfile -t "funbiz_mapper:latest" .
+	docker build -f ./nodes/mappers/city-business/Dockerfile -t "citbiz_mapper:latest" .
 	docker build -f ./nodes/mappers/weekday/Dockerfile -t "weekday_mapper:latest" .
 	docker build -f ./nodes/mappers/user/Dockerfile -t "user_mapper:latest" .
 

@@ -15,7 +15,7 @@ type AggregatorConfig struct {
 	RabbitPort			string
 	InputTopic			string
 	FunbizFilters 		int
-	FunbizJoiners		int
+	FuncitJoiners		int
 }
 
 type Aggregator struct {
@@ -43,7 +43,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.FunbizJoiners, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.FuncitJoiners, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,

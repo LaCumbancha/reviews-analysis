@@ -6,23 +6,22 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/city-business/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/city-business/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the FUNBIZAGG prefix
+	// Configure viper to read env variables with the FUNBIZMAP prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("funbizagg")
+	configEnv.SetEnvPrefix("citbizmap")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("input", "topic")
-	configEnv.BindEnv("funbiz", "filters")
 	configEnv.BindEnv("funcit", "joiners")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -68,33 +67,19 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
-	
-	if inputTopic == "" {
-		log.Fatalf("InputTopic variable missing")
-	}
-
-	funbizFilters := utils.GetConfigInt(configEnv, configFile, "funbiz_filters")
-	
-	if funbizFilters == 0 {
-		log.Fatalf("FunbizFilters variable missing")
-	}
-
 	funcitJoiners := utils.GetConfigInt(configEnv, configFile, "funcit_joiners")
 	
 	if funcitJoiners == 0 {
-		log.Fatalf("FuncitJoiners variable missing")
+		log.Fatalf("FuncitJoiner variable missing")
 	}
 
-	aggregatorConfig := common.AggregatorConfig {
+	mapperConfig := common.MapperConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		InputTopic: 		inputTopic,
-		FunbizFilters:		funbizFilters,
 		FuncitJoiners:		funcitJoiners,
 	}
 
-	aggregator := common.NewAggregator(aggregatorConfig)
-	aggregator.Run()
-	aggregator.Stop()
+	mapper := common.NewMapper(mapperConfig)
+	mapper.Run()
+	mapper.Stop()
 }

@@ -3,7 +3,7 @@ funbiz_mappers: 2
 citbiz_mappers: 2
 funbiz_filters: 2
 funbiz_aggregators: 2
-funbiz_joiners: 2
+funcit_joiners: 2
 
 # Weekday histogram flow.
 weekday_mappers: 2
