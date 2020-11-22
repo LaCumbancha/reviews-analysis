@@ -105,16 +105,16 @@ services:
     networks:
     - testing_net
     restart: on-failure
-  histogram_mapper:
-    container_name: histogram_mapper
+  histogram_prettier:
+    container_name: histogram_prettier
     depends_on:
     - sink
-    entrypoint: /mapper
+    entrypoint: /prettier
     environment:
-    - HISTOMAP_RABBITMQ_IP=rabbitmq
-    - HISTOMAP_RABBITMQ_PORT=5672
-    - HISTOMAP_WEEKDAY_AGGREGATORS=7
-    image: histogram_mapper:latest
+    - HISTOPRE_RABBITMQ_IP=rabbitmq
+    - HISTOPRE_RABBITMQ_PORT=5672
+    - HISTOPRE_WEEKDAY_AGGREGATORS=7
+    image: histogram_prettier:latest
     links:
     - rabbitmq
     networks:
@@ -194,7 +194,7 @@ services:
   user_aggregator0:
     container_name: user_aggregator0
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - USERAGG_RABBITMQ_IP=rabbitmq
@@ -211,7 +211,7 @@ services:
   user_aggregator1:
     container_name: user_aggregator1
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - USERAGG_RABBITMQ_IP=rabbitmq
@@ -290,7 +290,7 @@ services:
   weekday_aggregator0:
     container_name: weekday_aggregator0
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -306,7 +306,7 @@ services:
   weekday_aggregator1:
     container_name: weekday_aggregator1
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -322,7 +322,7 @@ services:
   weekday_aggregator2:
     container_name: weekday_aggregator2
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -338,7 +338,7 @@ services:
   weekday_aggregator3:
     container_name: weekday_aggregator3
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -354,7 +354,7 @@ services:
   weekday_aggregator4:
     container_name: weekday_aggregator4
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -370,7 +370,7 @@ services:
   weekday_aggregator5:
     container_name: weekday_aggregator5
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
@@ -386,7 +386,7 @@ services:
   weekday_aggregator6:
     container_name: weekday_aggregator6
     depends_on:
-    - histogram_mapper
+    - histogram_prettier
     entrypoint: /aggregator
     environment:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq

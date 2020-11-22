@@ -17,7 +17,7 @@ file['services'] = {}
 # Services dependencies
 # TODO: Change to ['rabbitmq']
 SINK_DEPS = ['mock_receiver0']
-HISTOMAP_DEPS = ['sink']
+HISTOPRE_DEPS = ['sink']
 
 FUNBIZAGG_DEPS = ['sink']
 USERAGG_DEPS = []
@@ -113,16 +113,16 @@ file['services']['sink'] = {
 	'networks': ['testing_net']
 }
 
-## Output Mappers
-WEEKDAYAGG_DEPS += ['histogram_mapper']
-file['services']['histogram_mapper'] = {
-	'container_name': 'histogram_mapper',
-	'image': 'histogram_mapper:latest',
-	'entrypoint': '/mapper',
+## Prettiers
+WEEKDAYAGG_DEPS += ['histogram_prettier']
+file['services']['histogram_prettier'] = {
+	'container_name': 'histogram_prettier',
+	'image': 'histogram_prettier:latest',
+	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['HISTOMAP_RABBITMQ_IP=rabbitmq', 'HISTOMAP_RABBITMQ_PORT=5672', f'HISTOMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+	'environment': ['HISTOPRE_RABBITMQ_IP=rabbitmq', 'HISTOPRE_RABBITMQ_PORT=5672', f'HISTOPRE_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
 	'links': ['rabbitmq'],
-	'depends_on': list(HISTOMAP_DEPS),
+	'depends_on': list(HISTOPRE_DEPS),
 	'networks': ['testing_net']
 }
 

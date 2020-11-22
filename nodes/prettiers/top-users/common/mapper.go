@@ -6,7 +6,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/histogram/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/rabbitmq"
 )
 
 type MapperConfig struct {

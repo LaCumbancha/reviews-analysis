@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/histogram/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/rabbitmq"
 )
 
 type Builder struct {

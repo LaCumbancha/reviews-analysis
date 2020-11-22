@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/histogram/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/histogram/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/weekday-histogram/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {

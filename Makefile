@@ -20,7 +20,6 @@ build: deps
 	# Mappers
 	GOOS=linux go build -o bin/funbiz-mapper $(GIT_REMOTE)/nodes/mappers/funbiz-mapper
 	GOOS=linux go build -o bin/weekday-mapper $(GIT_REMOTE)/nodes/mappers/weekday
-	GOOS=linux go build -o bin/histogram-mapper $(GIT_REMOTE)/nodes/mappers/histogram
 	GOOS=linux go build -o bin/user-mapper $(GIT_REMOTE)/nodes/mappers/user
 
 	# Filters
@@ -30,6 +29,9 @@ build: deps
 	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-mapper
 	GOOS=linux go build -o bin/weekday-aggregator $(GIT_REMOTE)/nodes/aggregators/weekday
 	GOOS=linux go build -o bin/user-aggregator $(GIT_REMOTE)/nodes/aggregators/user
+
+	# Prettiers
+	GOOS=linux go build -o bin/weekday-histogram $(GIT_REMOTE)/nodes/prettiers/weekday-histogram
 
 	# Outputs
 	GOOS=linux go build -o bin/sink $(GIT_REMOTE)/nodes/outputs/sink
@@ -46,7 +48,6 @@ docker-image:
 	# Mappers
 	docker build -f ./nodes/mappers/funny-business/Dockerfile -t "funbiz_mapper:latest" .
 	docker build -f ./nodes/mappers/weekday/Dockerfile -t "weekday_mapper:latest" .
-	docker build -f ./nodes/mappers/histogram/Dockerfile -t "histogram_mapper:latest" .
 	docker build -f ./nodes/mappers/user/Dockerfile -t "user_mapper:latest" .
 
 	# Filters
@@ -57,6 +58,9 @@ docker-image:
 	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .
 	docker build -f ./nodes/aggregators/weekday/Dockerfile -t "weekday_aggregator:latest" .
 	docker build -f ./nodes/aggregators/user/Dockerfile -t "user_aggregator:latest" .
+
+	# Prettiers
+	docker build -f ./nodes/prettiers/weekday-histogram/Dockerfile -t "histogram_prettier:latest" .
 
 	# Outputs
 	docker build -f ./nodes/outputs/sink/Dockerfile -t "sink:latest" .
