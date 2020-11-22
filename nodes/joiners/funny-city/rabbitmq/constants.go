@@ -1,8 +1,9 @@
 package rabbitmq
 
 // Queues
-const INPUT_QUEUE_NAME = "FunnyBusinessMapper"
-const OUTPUT_EXCHANGE_NAME = "FunnyBusinessFilter"
+const INPUT_EXCHANGE1_NAME = "FunnyBusinessAggregator"
+const INPUT_EXCHANGE2_NAME = "CityBusinessMapper"
+const OUTPUT_EXCHANGE_NAME = "FunnyCityJoiner"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"

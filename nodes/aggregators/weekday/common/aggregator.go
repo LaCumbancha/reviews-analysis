@@ -114,8 +114,8 @@ func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.Weekday
 		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
 		aggregator.outputQueue.PublishData(data)
-		wg.Done()
 	}
+	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {

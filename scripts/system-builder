@@ -20,7 +20,9 @@ SINK_DEPS = ['mock_receiver0']
 HISTOPRE_DEPS = ['sink']
 TOPUSERPRE_DEPS = ['sink']
 
-FUNBIZAGG_DEPS = ['sink']
+FUNCITJOIN_DEPS = ['sink']
+
+FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
 
@@ -71,7 +73,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=CityBusinessJoiner', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyCityJoiner', 'MOCK_TOPIC=0'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -82,7 +84,7 @@ file['services']['mock_receiver1'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=CityBusinessJoiner', 'MOCK_TOPIC=1'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyCityJoiner', 'MOCK_TOPIC=1'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -116,129 +118,19 @@ file['services']['sink'] = {
 	'networks': ['testing_net']
 }
 
-## Prettiers
-WEEKDAYAGG_DEPS += ['weekday_histogram_prettier']
-file['services']['weekday_histogram_prettier'] = {
-	'container_name': 'weekday_histogram_prettier',
-	'image': 'weekday_histogram_prettier:latest',
-	'entrypoint': '/prettier',
-	'restart': 'on-failure',
-	'environment': ['HISTOPRE_RABBITMQ_IP=rabbitmq', 'HISTOPRE_RABBITMQ_PORT=5672', f'HISTOPRE_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
-	'links': ['rabbitmq'],
-	'depends_on': list(HISTOPRE_DEPS),
-	'networks': ['testing_net']
-}
-
-USERFIL_DEPS += ['top_users_prettier']
-file['services']['top_users_prettier'] = {
-	'container_name': 'top_users_prettier',
-	'image': 'top_users_prettier:latest',
-	'entrypoint': '/prettier',
-	'restart': 'on-failure',
-	'environment': ['TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
-	'links': ['rabbitmq'],
-	'depends_on': list(TOPUSERPRE_DEPS),
-	'networks': ['testing_net']
-}
-
-## Aggregators
-for idx in range(0, input_yaml['funbiz_aggregators']):
-	container_name = f'funbiz_aggregator{idx}'
-	FUNBIZFIL_DEPS += [container_name]
+## Funniest Cities flow
+for idx in range(0, input_yaml['funcit_joiners']):
+	container_name = f'funcit_joiner{idx}'
+	CITBIZMAP_DEPS += [container_name]
+	FUNBIZAGG_DEPS += [container_name]
 	file['services'][container_name] = {
 		'container_name': container_name,
-		'image': 'funbiz_aggregator:latest',
-		'entrypoint': '/aggregator',
+		'image': 'funcit_joiner:latest',
+		'entrypoint': '/joiner',
 		'restart': 'on-failure',
-		'environment': ['FUNBIZAGG_RABBITMQ_IP=rabbitmq', 'FUNBIZAGG_RABBITMQ_PORT=5672', f'FUNBIZAGG_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}', f'FUNBIZAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNBIZAGG_INPUT_TOPIC={idx}'],
+		'environment': ['FUNCITJOIN_RABBITMQ_IP=rabbitmq', 'FUNCITJOIN_RABBITMQ_PORT=5672', f'FUNCITJOIN_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}', f'FUNCITJOIN_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}', f'FUNCITJOIN_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}', f'FUNCITJOIN_INPUT_TOPIC={idx}'],
 		'links': ['rabbitmq'],
-		'depends_on': list(FUNBIZAGG_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['weekday_aggregators']):
-	container_name = f'weekday_aggregator{idx}'
-	WEEKDAYMAP_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'weekday_aggregator:latest',
-		'entrypoint': '/aggregator',
-		'restart': 'on-failure',
-		'environment': ['WEEKDAYAGG_RABBITMQ_IP=rabbitmq', 'WEEKDAYAGG_RABBITMQ_PORT=5672', f'WEEKDAYAGG_INPUT_TOPIC={idx}', f'WEEKDAYAGG_WEEKDAY_MAPPERS={input_yaml["weekday_mappers"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(WEEKDAYAGG_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['user_aggregators']):
-	container_name = f'user_aggregator{idx}'
-	USERMAP_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'user_aggregator:latest',
-		'entrypoint': '/aggregator',
-		'restart': 'on-failure',
-		'environment': ['USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(WEEKDAYAGG_DEPS),
-		'networks': ['testing_net']
-	}
-
-## Filters
-for idx in range(0, input_yaml['funbiz_filters']):
-	container_name = f'funbiz_filter{idx}'
-	FUNBIZMAP_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'funbiz_filter:latest',
-		'entrypoint': '/filter',
-		'restart': 'on-failure',
-		'environment': ['FUNBIZFIL_RABBITMQ_IP=rabbitmq', 'FUNBIZFIL_RABBITMQ_PORT=5672', f'FUNBIZFIL_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'FUNBIZFIL_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(FUNBIZFIL_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['user_filters']):
-	container_name = f'user_filter{idx}'
-	USERAGG_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'user_filter:latest',
-		'entrypoint': '/filter',
-		'restart': 'on-failure',
-		'environment': ['USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(USERFIL_DEPS),
-		'networks': ['testing_net']
-	}
-
-## Mappers
-for idx in range(0, input_yaml['weekday_mappers']):
-	container_name = f'weekday_mapper{idx}'
-	RVWSCA_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'weekday_mapper:latest',
-		'entrypoint': '/mapper',
-		'restart': 'on-failure',
-		'environment': ['WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(WEEKDAYMAP_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['funbiz_mappers']):
-	container_name = f'funbiz_mapper{idx}'
-	RVWSCA_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'funbiz_mapper:latest',
-		'entrypoint': '/mapper',
-		'restart': 'on-failure',
-		'environment': ['FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(FUNBIZMAP_DEPS),
+		'depends_on': list(FUNCITJOIN_DEPS),
 		'networks': ['testing_net']
 	}
 
@@ -256,6 +148,142 @@ for idx in range(0, input_yaml['citbiz_mappers']):
 		'networks': ['testing_net']
 	}
 
+file['services']['biz_scatter'] = {
+	'container_name': 'biz_scatter',
+	'image': 'biz_scatter:latest',
+	'entrypoint': '/scatter',
+	'restart': 'on-failure',
+	'environment': ['BIZSCA_BUSINESS_DATA=/data/test-business.json', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(BIZSCA_DEPS),
+	'networks': ['testing_net'],
+	'volumes': ['business_dataset:/data']
+}
+
+for idx in range(0, input_yaml['funbiz_aggregators']):
+	container_name = f'funbiz_aggregator{idx}'
+	FUNBIZFIL_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funbiz_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': ['FUNBIZAGG_RABBITMQ_IP=rabbitmq', 'FUNBIZAGG_RABBITMQ_PORT=5672', f'FUNBIZAGG_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}', f'FUNBIZAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNBIZAGG_INPUT_TOPIC={idx}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['funbiz_filters']):
+	container_name = f'funbiz_filter{idx}'
+	FUNBIZMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funbiz_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': ['FUNBIZFIL_RABBITMQ_IP=rabbitmq', 'FUNBIZFIL_RABBITMQ_PORT=5672', f'FUNBIZFIL_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'FUNBIZFIL_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['funbiz_mappers']):
+	container_name = f'funbiz_mapper{idx}'
+	RVWSCA_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funbiz_mapper:latest',
+		'entrypoint': '/mapper',
+		'restart': 'on-failure',
+		'environment': ['FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZMAP_DEPS),
+		'networks': ['testing_net']
+	}
+
+## Weekday Histogram flow.
+WEEKDAYAGG_DEPS += ['weekday_histogram_prettier']
+file['services']['weekday_histogram_prettier'] = {
+	'container_name': 'weekday_histogram_prettier',
+	'image': 'weekday_histogram_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['HISTOPRE_RABBITMQ_IP=rabbitmq', 'HISTOPRE_RABBITMQ_PORT=5672', f'HISTOPRE_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(HISTOPRE_DEPS),
+	'networks': ['testing_net']
+}
+
+for idx in range(0, input_yaml['weekday_aggregators']):
+	container_name = f'weekday_aggregator{idx}'
+	WEEKDAYMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'weekday_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': ['WEEKDAYAGG_RABBITMQ_IP=rabbitmq', 'WEEKDAYAGG_RABBITMQ_PORT=5672', f'WEEKDAYAGG_INPUT_TOPIC={idx}', f'WEEKDAYAGG_WEEKDAY_MAPPERS={input_yaml["weekday_mappers"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(WEEKDAYAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['weekday_mappers']):
+	container_name = f'weekday_mapper{idx}'
+	RVWSCA_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'weekday_mapper:latest',
+		'entrypoint': '/mapper',
+		'restart': 'on-failure',
+		'environment': ['WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(WEEKDAYMAP_DEPS),
+		'networks': ['testing_net']
+	}
+
+## Top Users flow.
+USERFIL_DEPS += ['top_users_prettier']
+file['services']['top_users_prettier'] = {
+	'container_name': 'top_users_prettier',
+	'image': 'top_users_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(TOPUSERPRE_DEPS),
+	'networks': ['testing_net']
+}
+
+for idx in range(0, input_yaml['user_filters']):
+	container_name = f'user_filter{idx}'
+	USERAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'user_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': ['USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(USERFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['user_aggregators']):
+	container_name = f'user_aggregator{idx}'
+	USERMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'user_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': ['USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(WEEKDAYAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['user_mappers']):
 	container_name = f'user_mapper{idx}'
 	RVWSCA_DEPS += [container_name]
@@ -270,7 +298,7 @@ for idx in range(0, input_yaml['user_mappers']):
 		'networks': ['testing_net']
 	}
 
-## Input Data
+## Reviews Scatter
 file['services']['rvw_scatter'] = {
 	'container_name': 'rvw_scatter',
 	'image': 'rvw_scatter:latest',
@@ -283,17 +311,6 @@ file['services']['rvw_scatter'] = {
 	'volumes': ['reviews_dataset:/data']
 }
 
-file['services']['biz_scatter'] = {
-	'container_name': 'biz_scatter',
-	'image': 'biz_scatter:latest',
-	'entrypoint': '/scatter',
-	'restart': 'on-failure',
-	'environment': ['BIZSCA_BUSINESS_DATA=/data/test-business.json', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
-	'links': ['rabbitmq'],
-	'depends_on': list(BIZSCA_DEPS),
-	'networks': ['testing_net'],
-	'volumes': ['business_dataset:/data']
-}
 
 #### VOLUMES
 file['volumes'] = {

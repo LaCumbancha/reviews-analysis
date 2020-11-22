@@ -50,22 +50,26 @@ func (direct *RabbitOutputDirect) PublishData(data []byte, userId string) {
 	partition := direct.partitionMap[string(userId[0])]
 	log.Debugf("Exchange %s partition calculated for %s: %s.", direct.exchange, userId, partition)
 
-	err := direct.channel.Publish(
-  		direct.exchange, 						// Exchange
-  		partition,    							// Routing Key
-  		false,  								// Mandatory
-  		false,  								// Immediate
-  		amqp.Publishing{
-  		    ContentType: 	"text/plain",
-  		    Body:        	data,
-  		},
-  	)
+	if partition != "" {
+		err := direct.channel.Publish(
+  			direct.exchange, 						// Exchange
+  			partition,    							// Routing Key
+  			false,  								// Mandatory
+  			false,  								// Immediate
+  			amqp.Publishing{
+  			    ContentType: 	"text/plain",
+  			    Body:        	data,
+  			},
+  		)
 
-	if err != nil {
-		log.Errorf("Error sending data from user %s to direct-exchange %s (partition %s). Err: '%s'", userId, direct.exchange, partition, err)
+		if err != nil {
+			log.Errorf("Error sending data from user %s to direct-exchange %s (partition %s). Err: '%s'", userId, direct.exchange, partition, err)
+		} else {
+			log.Infof("Data from user %s sent to direct-exchange %s (partition %s).", userId, direct.exchange, partition)
+		}	
 	} else {
-		log.Infof("Data from user %s sent to direct-exchange %s (partition %s).", userId, direct.exchange, partition)
-	}	
+		log.Errorf("Couldn't calculate partition for user %s", userId)
+	}
 }
 
 func (direct *RabbitOutputDirect) PublishFinish() {

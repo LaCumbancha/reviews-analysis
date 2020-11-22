@@ -46,10 +46,10 @@ func (direct *RabbitOutputDirect) initialize() {
 	log.Tracef("Partition map generated for direct-exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
-func (direct *RabbitOutputDirect) PublishData(data []byte, businessId string) {
-	partition := direct.partitionMap[string(businessId[0])]
-	log.Debugf("Exchange %s partition calculated for %s: %s.", direct.exchange, businessId, partition)
-	
+func (direct *RabbitOutputDirect) PublishData(data []byte, city string) {
+	partition := direct.partitionMap[string(city[0])]
+	log.Debugf("Exchange %s partition calculated for %s: %s.", direct.exchange, city, partition)
+
 	if partition != "" {
 		err := direct.channel.Publish(
   			direct.exchange, 						// Exchange
@@ -63,14 +63,13 @@ func (direct *RabbitOutputDirect) PublishData(data []byte, businessId string) {
   		)
 
 		if err != nil {
-			log.Errorf("Error sending funny data from business %s to direct-exchange %s (partition %s). Err: '%s'", businessId, direct.exchange, partition, err)
+			log.Errorf("Error sending funny city data '%s' to direct-exchange %s (partition %s). Err: '%s'", string(data), direct.exchange, partition, err)
 		} else {
-			log.Infof("Funny data from business %s sent to direct-exchange %s (partition %s).", businessId, direct.exchange, partition)
+			log.Infof("Funny city data '%s' sent to direct-exchange %s (partition %s).", string(data), direct.exchange, partition)
 		}	
 	} else {
-		log.Errorf("Couldn't calculate partition for business %s", businessId)
+		log.Errorf("Couldn't calculate partition for city %s", city)
 	}
-	
 }
 
 func (direct *RabbitOutputDirect) PublishFinish() {

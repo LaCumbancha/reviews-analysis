@@ -115,8 +115,8 @@ func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.FunnyBu
 		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
 		aggregator.outputDirect.PublishData(data, aggregatedData.BusinessId)
-		wg.Done()
 	}
+	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {

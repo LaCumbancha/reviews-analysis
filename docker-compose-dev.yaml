@@ -26,9 +26,7 @@ services:
     - business_dataset:/data
   citbiz_mapper0:
     container_name: citbiz_mapper0
-    depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
+    depends_on: []
     entrypoint: /mapper
     environment:
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
@@ -42,9 +40,7 @@ services:
     restart: on-failure
   citbiz_mapper1:
     container_name: citbiz_mapper1
-    depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
+    depends_on: []
     entrypoint: /mapper
     environment:
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
@@ -59,7 +55,8 @@ services:
   funbiz_aggregator0:
     container_name: funbiz_aggregator0
     depends_on:
-    - sink
+    - funcit_joiner0
+    - funcit_joiner1
     entrypoint: /aggregator
     environment:
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
@@ -76,7 +73,8 @@ services:
   funbiz_aggregator1:
     container_name: funbiz_aggregator1
     depends_on:
-    - sink
+    - funcit_joiner0
+    - funcit_joiner1
     entrypoint: /aggregator
     environment:
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
@@ -156,6 +154,42 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  funcit_joiner0:
+    container_name: funcit_joiner0
+    depends_on:
+    - sink
+    entrypoint: /joiner
+    environment:
+    - FUNCITJOIN_RABBITMQ_IP=rabbitmq
+    - FUNCITJOIN_RABBITMQ_PORT=5672
+    - FUNCITJOIN_FUNBIZ_AGGREGATORS=2
+    - FUNCITJOIN_CITBIZ_MAPPERS=2
+    - FUNCITJOIN_FUNCIT_AGGREGATORS=2
+    - FUNCITJOIN_INPUT_TOPIC=0
+    image: funcit_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funcit_joiner1:
+    container_name: funcit_joiner1
+    depends_on:
+    - sink
+    entrypoint: /joiner
+    environment:
+    - FUNCITJOIN_RABBITMQ_IP=rabbitmq
+    - FUNCITJOIN_RABBITMQ_PORT=5672
+    - FUNCITJOIN_FUNBIZ_AGGREGATORS=2
+    - FUNCITJOIN_CITBIZ_MAPPERS=2
+    - FUNCITJOIN_FUNCIT_AGGREGATORS=2
+    - FUNCITJOIN_INPUT_TOPIC=1
+    image: funcit_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   mock_receiver0:
     container_name: mock_receiver0
     depends_on:
@@ -165,7 +199,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=CityBusinessJoiner
+    - MOCK_EXCHANGE=FunnyCityJoiner
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -182,7 +216,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=CityBusinessJoiner
+    - MOCK_EXCHANGE=FunnyCityJoiner
     - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
@@ -207,10 +241,10 @@ services:
   rvw_scatter:
     container_name: rvw_scatter
     depends_on:
-    - weekday_mapper0
-    - weekday_mapper1
     - funbiz_mapper0
     - funbiz_mapper1
+    - weekday_mapper0
+    - weekday_mapper1
     - user_mapper0
     - user_mapper1
     entrypoint: /scatter

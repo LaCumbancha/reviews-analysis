@@ -50,22 +50,26 @@ func (direct *RabbitOutputDirect) PublishData(data []byte, weekday string) {
 	partition := direct.partitionMap[weekday]
 	log.Debugf("Exchange %s partition calculated for weekday #%s: %s.", direct.exchange, weekday, partition)
 
-	err := direct.channel.Publish(
-  		direct.exchange, 						// Exchange
-  		partition,    							// Routing Key
-  		false,  								// Mandatory
-  		false,  								// Immediate
-  		amqp.Publishing{
-  		    ContentType: 	"text/plain",
-  		    Body:        	data,
-  		},
-  	)
+	if partition != "" {
+		err := direct.channel.Publish(
+  			direct.exchange, 						// Exchange
+  			partition,    							// Routing Key
+  			false,  								// Mandatory
+  			false,  								// Immediate
+  			amqp.Publishing{
+  			    ContentType: 	"text/plain",
+  			    Body:        	data,
+  			},
+  		)
 
-	if err != nil {
-		log.Errorf("Error sending weekday #%s review to direct-exchange %s (partition %s). Err: '%s'", weekday, direct.exchange, partition, err)
+		if err != nil {
+			log.Errorf("Error sending weekday #%s review to direct-exchange %s (partition %s). Err: '%s'", weekday, direct.exchange, partition, err)
+		} else {
+			log.Infof("Weekday #%s review sent to direct-exchange %s (partition %s).", weekday, direct.exchange, partition)
+		}	
 	} else {
-		log.Infof("Weekday #%s review sent to direct-exchange %s (partition %s).", weekday, direct.exchange, partition)
-	}	
+		log.Errorf("Couldn't calculate partition for weekday %s", weekday)
+	}
 }
 
 func (direct *RabbitOutputDirect) PublishFinish() {

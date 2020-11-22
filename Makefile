@@ -32,6 +32,9 @@ build: deps
 	GOOS=linux go build -o bin/weekday-aggregator $(GIT_REMOTE)/nodes/aggregators/weekday
 	GOOS=linux go build -o bin/user-aggregator $(GIT_REMOTE)/nodes/aggregators/user
 
+	# Joiners
+	GOOS=linux go build -o bin/funcit-joiner $(GIT_REMOTE)/nodes/joiners/funny-city
+
 	# Prettiers
 	GOOS=linux go build -o bin/weekday-histogram $(GIT_REMOTE)/nodes/prettiers/weekday-histogram
 	GOOS=linux go build -o bin/top-users $(GIT_REMOTE)/nodes/prettiers/top-users
@@ -63,6 +66,9 @@ docker-image:
 	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .
 	docker build -f ./nodes/aggregators/weekday/Dockerfile -t "weekday_aggregator:latest" .
 	docker build -f ./nodes/aggregators/user/Dockerfile -t "user_aggregator:latest" .
+
+	# Joiners
+	docker build -f ./nodes/joiners/funny-city/Dockerfile -t "funcit_joiner:latest" .
 
 	# Prettiers
 	docker build -f ./nodes/prettiers/weekday-histogram/Dockerfile -t "weekday_histogram_prettier:latest" .
