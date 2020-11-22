@@ -46,9 +46,9 @@ func (direct *RabbitOutputDirect) initialize() {
 	log.Tracef("Partition map generated for direct-exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
-func (direct *RabbitOutputDirect) PublishData(data []byte, businessId string) {
-	partition := direct.partitionMap[string(businessId[0])]
-	log.Debugf("Exchange %s partition calculated for %s: %s.", direct.exchange, businessId, partition)
+func (direct *RabbitOutputDirect) PublishData(data []byte, userId string) {
+	partition := direct.partitionMap[string(userId[0])]
+	log.Debugf("Exchange %s partition calculated for %s: %s.", direct.exchange, userId, partition)
 
 	err := direct.channel.Publish(
   		direct.exchange, 						// Exchange
@@ -62,9 +62,9 @@ func (direct *RabbitOutputDirect) PublishData(data []byte, businessId string) {
   	)
 
 	if err != nil {
-		log.Errorf("Error sending funny data from business %s to direct-exchange %s (partition %s). Err: '%s'", businessId, direct.exchange, partition, err)
+		log.Errorf("Error sending data from user %s to direct-exchange %s (partition %s). Err: '%s'", userId, direct.exchange, partition, err)
 	} else {
-		log.Infof("Funny data from business %s sent to direct-exchange %s (partition %s).", businessId, direct.exchange, partition)
+		log.Infof("Data from user %s sent to direct-exchange %s (partition %s).", userId, direct.exchange, partition)
 	}	
 }
 

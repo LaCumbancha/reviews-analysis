@@ -17,12 +17,18 @@ file['services'] = {}
 # Services dependencies
 # TODO: Change to ['rabbitmq']
 SINK_DEPS = ['mock_receiver0']
-HISTOMAP_DEPS = ['sink']
+
+
 FUNBIZAGG_DEPS = ['sink']
 WEEKDAYAGG_DEPS = ['histogram_mapper']
+
 FUNBIZFIL_DEPS = []
+
+USERMAP_DEPS = ['sink']
 FUNBIZMAP_DEPS = []
 WEEKDAYMAP_DEPS = []
+HISTOMAP_DEPS = ['sink']
+
 RVWSCA_DEPS = []
 
 file['services']['rabbitmq'] = {
@@ -61,7 +67,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=UserMapper', 'MOCK_TOPIC=0'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -72,7 +78,7 @@ file['services']['mock_receiver1'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyBusinessJoiner', 'MOCK_TOPIC=1'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=UserMapper', 'MOCK_TOPIC=1'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -187,12 +193,26 @@ for idx in range(0, input_yaml['funbiz_mappers']):
 		'networks': ['testing_net']
 	}
 
+for idx in range(0, input_yaml['user_mappers']):
+	container_name = f'user_mapper{idx}'
+	RVWSCA_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'user_mapper:latest',
+		'entrypoint': '/mapper',
+		'restart': 'on-failure',
+		'environment': ['USERMAP_RABBITMQ_IP=rabbitmq', 'USERMAP_RABBITMQ_PORT=5672', f'USERMAP_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNBIZMAP_DEPS),
+		'networks': ['testing_net']
+	}
+
 file['services']['rvw_scatter'] = {
 	'container_name': 'rvw_scatter',
 	'image': 'rvw_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hashes_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["users_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
+	'environment': ['RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hashes_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["user_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(RVWSCA_DEPS),
 	'networks': ['testing_net'],

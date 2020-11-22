@@ -129,7 +129,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_EXCHANGE=UserMapper
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -146,7 +146,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=FunnyBusinessJoiner
+    - MOCK_EXCHANGE=UserMapper
     - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
@@ -175,6 +175,8 @@ services:
     - weekday_mapper1
     - funbiz_mapper0
     - funbiz_mapper1
+    - user_mapper0
+    - user_mapper1
     entrypoint: /scatter
     environment:
     - RVWSCA_REVIEWS_DATA=/data/test-reviews.json
@@ -183,7 +185,7 @@ services:
     - RVWSCA_FUNBIZ_MAPPERS=2
     - RVWSCA_WEEKDAYS_MAPPERS=2
     - RVWSCA_HASHES_MAPPERS=1
-    - RVWSCA_USERS_MAPPERS=1
+    - RVWSCA_USERS_MAPPERS=2
     - RVWSCA_STARS_MAPPERS=1
     image: rvw_scatter:latest
     links:
@@ -202,6 +204,38 @@ services:
     - SINK_RABBITMQ_IP=rabbitmq
     - SINK_RABBITMQ_PORT=5672
     image: sink:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  user_mapper0:
+    container_name: user_mapper0
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - USERMAP_RABBITMQ_IP=rabbitmq
+    - USERMAP_RABBITMQ_PORT=5672
+    - USERMAP_USER_AGGREGATORS=2
+    image: user_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  user_mapper1:
+    container_name: user_mapper1
+    depends_on:
+    - funbiz_filter0
+    - funbiz_filter1
+    entrypoint: /mapper
+    environment:
+    - USERMAP_RABBITMQ_IP=rabbitmq
+    - USERMAP_RABBITMQ_PORT=5672
+    - USERMAP_USER_AGGREGATORS=2
+    image: user_mapper:latest
     links:
     - rabbitmq
     networks:

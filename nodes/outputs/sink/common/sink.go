@@ -54,22 +54,24 @@ func (sink *Sink) Run() {
 	// TODO: Use this same logic for this and the other queues.
 	go func() {
 		for message := range sink.funniestCitiesQueue.ConsumeData() {
+			messageBody := string(message.Body)
 			if messageBody == rabbitmq.END_MESSAGE {
 				log.Infof("End-Message received from the Funniest Cities flow.")
 				wg.Done()
 			} else {
-				log.Infof(string(message.Body))
+				log.Infof(messageBody)
 			}
 		}
 	}()
 
 	go func() {
 		for message := range sink.weekdayHistogramQueue.ConsumeData() {
+			messageBody := string(message.Body)
 			if messageBody == rabbitmq.END_MESSAGE {
 				log.Infof("End-Message received from the Weekday Histogram flow.")
 				wg.Done()
 			} else {
-				log.Infof(string(message.Body))
+				log.Infof(messageBody)
 			}
 		}
 	}()
