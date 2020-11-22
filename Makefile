@@ -16,6 +16,7 @@ deps:
 build: deps
 	# Inputs
 	GOOS=linux go build -o bin/review-scatter $(GIT_REMOTE)/nodes/inputs/reviews-scatter
+	GOOS=linux go build -o bin/business-scatter $(GIT_REMOTE)/nodes/inputs/business-scatter
 
 	# Mappers
 	GOOS=linux go build -o bin/funbiz-mapper $(GIT_REMOTE)/nodes/mappers/funbiz-mapper
@@ -45,6 +46,7 @@ docker-image:
 
 	# Inputs
 	docker build -f ./nodes/inputs/reviews-scatter/Dockerfile -t "rvw_scatter:latest" .
+	docker build -f ./nodes/inputs/business-scatter/Dockerfile -t "biz_scatter:latest" .
 
 	# Mappers
 	docker build -f ./nodes/mappers/funny-business/Dockerfile -t "funbiz_mapper:latest" .

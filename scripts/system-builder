@@ -31,6 +31,7 @@ USERMAP_DEPS = []
 FUNBIZMAP_DEPS = []
 WEEKDAYMAP_DEPS = []
 
+BIZSCA_DEPS = ['sink']
 RVWSCA_DEPS = []
 
 file['services']['rabbitmq'] = {
@@ -58,7 +59,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=TopUsersMapper'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BusinessScatter'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -265,6 +266,18 @@ file['services']['rvw_scatter'] = {
 	'depends_on': list(RVWSCA_DEPS),
 	'networks': ['testing_net'],
 	'volumes': ['reviews_dataset:/data']
+}
+
+file['services']['biz_scatter'] = {
+	'container_name': 'biz_scatter',
+	'image': 'biz_scatter:latest',
+	'entrypoint': '/scatter',
+	'restart': 'on-failure',
+	'environment': ['BIZSCA_BUSINESS_DATA=/data/test-business.json', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(BIZSCA_DEPS),
+	'networks': ['testing_net'],
+	'volumes': ['business_dataset:/data']
 }
 
 #### VOLUMES

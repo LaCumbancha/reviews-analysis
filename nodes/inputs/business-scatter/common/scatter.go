@@ -8,26 +8,22 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/rabbitmq"
 )
 
 type ScatterConfig struct {
 	Data				string
 	RabbitIp			string
 	RabbitPort			string
-	FunbizMappers		int
-	WeekdaysMappers		int
-	HashesMappers		int
-	UsersMappers		int
-	StarsMappers		int
+	CitbizMappers		int
 }
 
 type Scatter struct {
 	data 				string
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
-	outputDirect 		*rabbitmq.RabbitOutputDirect
+	outputQueue 		*rabbitmq.RabbitOutputQueue
 }
 
 func NewScatter(config ScatterConfig) *Scatter {
@@ -45,21 +41,13 @@ func NewScatter(config ScatterConfig) *Scatter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	scatterDirect := rabbitmq.NewRabbitOutputDirect(
-		rabbitmq.OUTPUT_EXCHANGE_NAME, 
-		config.FunbizMappers, 
-		config.WeekdaysMappers, 
-		config.HashesMappers, 
-		config.UsersMappers, 
-		config.StarsMappers, 
-		ch,
-	)
+	scatterDirect := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.CitbizMappers, ch)
 	
 	scatter := &Scatter {
 		data: 				config.Data,
 		connection:			conn,
 		channel:			ch,
-		outputDirect:		scatterDirect,
+		outputQueue:		scatterDirect,
 	}
 
 	return scatter
@@ -68,7 +56,7 @@ func NewScatter(config ScatterConfig) *Scatter {
 func (scatter *Scatter) Run() {
 	file, err := os.Open(scatter.data)
     if err != nil {
-        log.Fatalf("Error opening reviews data file. Err: '%s'", err)
+        log.Fatalf("Error opening business data file. Err: '%s'", err)
     }
     defer file.Close()
 
@@ -80,25 +68,25 @@ func (scatter *Scatter) Run() {
     	// Publishing asynchronously with Goroutines.
     	wg.Add(1)
     	go func() {
-    		reviewId := utils.GetReviewId(review)
-    		scatter.outputDirect.PublishReview(review, reviewId)
+    		reviewId := utils.GetBusinessId(review)
+    		scatter.outputQueue.PublishBusiness(review, reviewId)
     		wg.Done()
     	}()
     }
 
     if err := scanner.Err(); err != nil {
-        log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
+        log.Fatalf("Error reading business data from file %s. Err: '%s'", scatter.data, err)
     }
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
     // Publishing end messages.
-    scatter.outputDirect.PublishFinish()
+    scatter.outputQueue.PublishFinish()
 }
 
 func (scatter *Scatter) Stop() {
-	log.Infof("Closing Reviews-Scatter connections.")
+	log.Infof("Closing Business-Scatter connections.")
 	scatter.connection.Close()
 	scatter.channel.Close()
 }

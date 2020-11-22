@@ -5,6 +5,24 @@ networks:
       - subnet: 172.25.125.0/24
       driver: default
 services:
+  biz_scatter:
+    container_name: biz_scatter
+    depends_on:
+    - sink
+    entrypoint: /scatter
+    environment:
+    - BIZSCA_BUSINESS_DATA=/data/test-business.json
+    - BIZSCA_RABBITMQ_IP=rabbitmq
+    - BIZSCA_RABBITMQ_PORT=5672
+    - BIZSCA_CITBIZ_MAPPERS=2
+    image: biz_scatter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+    volumes:
+    - business_dataset:/data
   funbiz_aggregator0:
     container_name: funbiz_aggregator0
     depends_on:
@@ -114,7 +132,7 @@ services:
     - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=TopUsersMapper
+    - MOCK_QUEUE=BusinessScatter
     image: mock_receiver:latest
     links:
     - rabbitmq

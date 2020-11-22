@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -16,17 +16,13 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 
 	// Configure viper to read env variables with the RVWSCA_ prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("rvwsca")
+	configEnv.SetEnvPrefix("bizsca")
 
 	// Add env variables supported
-	configEnv.BindEnv("reviews", "data")
+	configEnv.BindEnv("business", "data")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("funbiz", "mappers")
-	configEnv.BindEnv("weekdays", "mappers")
-	configEnv.BindEnv("hashes", "mappers")
-	configEnv.BindEnv("users", "mappers")
-	configEnv.BindEnv("stars", "mappers")
+	configEnv.BindEnv("citbiz", "mappers")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -55,10 +51,10 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
-	reviewsData := utils.GetConfigString(configEnv, configFile, "reviews_data")
+	businessData := utils.GetConfigString(configEnv, configFile, "business_data")
 	
-	if reviewsData == "" {
-		log.Fatalf("ReviewsData variable missing")
+	if businessData == "" {
+		log.Fatalf("BusinessData variable missing")
 	}
 
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
@@ -73,45 +69,17 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	funbizMappers := utils.GetConfigInt(configEnv, configFile, "funbiz_mappers")
+	citbizMappers := utils.GetConfigInt(configEnv, configFile, "citbiz_mappers")
 	
-	if funbizMappers == 0 {
-		log.Fatalf("FunbizMappers variable missing")
-	}
-
-	weekdaysMappers := utils.GetConfigInt(configEnv, configFile, "weekdays_mappers")
-	
-	if weekdaysMappers == 0 {
-		log.Fatalf("WeekdaysMappers variable missing")
-	}
-
-	hashesMappers := utils.GetConfigInt(configEnv, configFile, "hashes_mappers")
-	
-	if hashesMappers == 0 {
-		log.Fatalf("HashesMappers variable missing")
-	}
-
-	usersMappers := utils.GetConfigInt(configEnv, configFile, "users_mappers")
-	
-	if usersMappers == 0 {
-		log.Fatalf("UsersMappers variable missing")
-	}
-
-	starsMappers := utils.GetConfigInt(configEnv, configFile, "stars_mappers")
-	
-	if starsMappers == 0 {
-		log.Fatalf("StarsMappers variable missing")
+	if citbizMappers == 0 {
+		log.Fatalf("CitbizMappers variable missing")
 	}
 
 	scatterConfig := common.ScatterConfig {
-		Data:					reviewsData,
+		Data:					businessData,
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,
-		FunbizMappers:			funbizMappers,
-		WeekdaysMappers:		weekdaysMappers,
-		HashesMappers:			hashesMappers,
-		UsersMappers:			usersMappers,
-		StarsMappers:			starsMappers,
+		CitbizMappers:			citbizMappers,
 	}
 
 	scatter := common.NewScatter(scatterConfig)

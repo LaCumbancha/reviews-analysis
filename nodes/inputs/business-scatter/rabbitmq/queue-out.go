@@ -39,7 +39,7 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(data []byte) {
+func (queue *RabbitOutputQueue) PublishBusiness(data string, businessId string) {
 	err := queue.channel.Publish(
 		"",     							// Exchange
 		queue.name, 						// Routing Key
@@ -47,13 +47,13 @@ func (queue *RabbitOutputQueue) PublishData(data []byte) {
 		false,  							// Immediate
 		amqp.Publishing{
 			ContentType: 	"text/plain",
-			Body:        	data,
+			Body:        	[]byte(data),
 		})
 
 	if err != nil {
-		log.Errorf("Error sending mapped data (%s) to queue %s. Err: '%s'", data, queue.name, err)
+		log.Errorf("Error sending business %s data (%s) to queue %s. Err: '%s'", businessId, data, queue.name, err)
 	} else {
-		log.Debugf("Mapped data (%s) sent.", data)
+		log.Debugf("Business %s data (%s) sent.", businessId, data)
 	}
 }
 
