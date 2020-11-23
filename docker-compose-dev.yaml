@@ -280,6 +280,22 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  mock_receiver0:
+    container_name: mock_receiver0
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=QUEUE
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_QUEUE=StarsMapper
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   rabbitmq:
     container_name: rabbitmq
     healthcheck:
@@ -303,6 +319,8 @@ services:
     - weekday_mapper1
     - user_mapper0
     - user_mapper1
+    - stars_mapper0
+    - stars_mapper1
     entrypoint: /scatter
     environment:
     - RVWSCA_INSTANCE=0
@@ -313,7 +331,7 @@ services:
     - RVWSCA_WEEKDAYS_MAPPERS=2
     - RVWSCA_HASHES_MAPPERS=1
     - RVWSCA_USERS_MAPPERS=2
-    - RVWSCA_STARS_MAPPERS=1
+    - RVWSCA_STARS_MAPPERS=2
     image: rvw_scatter:latest
     links:
     - rabbitmq
@@ -325,12 +343,46 @@ services:
   sink:
     container_name: sink
     depends_on:
-    - rabbitmq
+    - mock_receiver0
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq
     - SINK_RABBITMQ_PORT=5672
     image: sink:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  stars_mapper0:
+    container_name: stars_mapper0
+    depends_on:
+    - sink
+    entrypoint: /mapper
+    environment:
+    - STARSMAP_INSTANCE=0
+    - STARSMAP_RABBITMQ_IP=rabbitmq
+    - STARSMAP_RABBITMQ_PORT=5672
+    - STARSMAP_REVIEWS_INPUTS=1
+    - STARSMAP_STARS_FILTERS=2
+    image: stars_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  stars_mapper1:
+    container_name: stars_mapper1
+    depends_on:
+    - sink
+    entrypoint: /mapper
+    environment:
+    - STARSMAP_INSTANCE=1
+    - STARSMAP_RABBITMQ_IP=rabbitmq
+    - STARSMAP_RABBITMQ_PORT=5672
+    - STARSMAP_REVIEWS_INPUTS=1
+    - STARSMAP_STARS_FILTERS=2
+    image: stars_mapper:latest
     links:
     - rabbitmq
     networks:

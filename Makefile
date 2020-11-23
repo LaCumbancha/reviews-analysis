@@ -23,6 +23,7 @@ build: deps
 	GOOS=linux go build -o bin/funcit-mapper $(GIT_REMOTE)/nodes/mappers/citbiz-mapper
 	GOOS=linux go build -o bin/weekday-mapper $(GIT_REMOTE)/nodes/mappers/weekday
 	GOOS=linux go build -o bin/user-mapper $(GIT_REMOTE)/nodes/mappers/user
+	GOOS=linux go build -o bin/stars-mapper $(GIT_REMOTE)/nodes/mappers/stars
 
 	# Filters
 	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/nodes/filters/funbiz-filter
@@ -61,6 +62,7 @@ docker-image:
 	docker build -f ./nodes/mappers/city-business/Dockerfile -t "citbiz_mapper:latest" .
 	docker build -f ./nodes/mappers/weekday/Dockerfile -t "weekday_mapper:latest" .
 	docker build -f ./nodes/mappers/user/Dockerfile -t "user_mapper:latest" .
+	docker build -f ./nodes/mappers/stars/Dockerfile -t "stars_mapper:latest" .
 
 	# Filters
 	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
