@@ -331,10 +331,47 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  hash_aggregator0:
+    container_name: hash_aggregator0
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - HASHAGG_INSTANCE=0
+    - HASHAGG_RABBITMQ_IP=rabbitmq
+    - HASHAGG_RABBITMQ_PORT=5672
+    - HASHAGG_INPUT_TOPIC=0
+    - HASHAGG_HASH_MAPPERS=2
+    - HASHAGG_USERHASH_AGGREGATORS=2
+    image: hash_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  hash_aggregator1:
+    container_name: hash_aggregator1
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - HASHAGG_INSTANCE=1
+    - HASHAGG_RABBITMQ_IP=rabbitmq
+    - HASHAGG_RABBITMQ_PORT=5672
+    - HASHAGG_INPUT_TOPIC=1
+    - HASHAGG_HASH_MAPPERS=2
+    - HASHAGG_USERHASH_AGGREGATORS=2
+    image: hash_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   hash_mapper0:
     container_name: hash_mapper0
     depends_on:
-    - sink
+    - hash_aggregator0
+    - hash_aggregator1
     entrypoint: /mapper
     environment:
     - HASHMAP_INSTANCE=0
@@ -351,7 +388,8 @@ services:
   hash_mapper1:
     container_name: hash_mapper1
     depends_on:
-    - sink
+    - hash_aggregator0
+    - hash_aggregator1
     entrypoint: /mapper
     environment:
     - HASHMAP_INSTANCE=1
@@ -374,7 +412,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=HashMapper
+    - MOCK_EXCHANGE=HashAggregator
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -391,7 +429,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=HashMapper
+    - MOCK_EXCHANGE=HashAggregator
     - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
