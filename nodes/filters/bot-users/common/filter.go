@@ -7,7 +7,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/filters/user/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/bot-users/rabbitmq"
 )
 
 type FilterConfig struct {
@@ -16,7 +16,7 @@ type FilterConfig struct {
 	RabbitPort			string
 	MinReviews			int
 	UserAggregators		int
-	StarsJoiners		int
+	DishashJoiners		int
 }
 
 type Filter struct {
@@ -24,8 +24,7 @@ type Filter struct {
 	channel 		*amqp.Channel
 	minReviews 		int
 	inputQueue 		*rabbitmq.RabbitInputQueue
-	outputQueue 	*rabbitmq.RabbitOutputQueue
-	outputDirect	*rabbitmq.RabbitOutputDirect
+	outputDirect 	*rabbitmq.RabbitOutputDirect
 	endSignals		int
 }
 
@@ -45,14 +44,12 @@ func NewFilter(config FilterConfig) *Filter {
 	}
 
 	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.StarsJoiners, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.DishashJoiners, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
 		minReviews:		config.MinReviews,
 		inputQueue:		inputQueue,
-		outputQueue:	outputQueue,
 		outputDirect:	outputDirect,
 		endSignals:		config.UserAggregators,
 	}
@@ -61,7 +58,7 @@ func NewFilter(config FilterConfig) *Filter {
 }
 
 func (filter *Filter) Run() {
-	log.Infof("Starting to listen for user reviews data.")
+	log.Infof("Starting to listen for funny-business data.")
 
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
@@ -92,7 +89,6 @@ func (filter *Filter) Run() {
     wg.Wait()
 
     // Publishing end messages.
-    filter.outputQueue.PublishFinish()
     filter.outputDirect.PublishFinish()
 }
 
@@ -121,7 +117,6 @@ func (filter *Filter) filterFunnyBusiness(rawData string) {
 		if err != nil {
 			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedUserData, err)
 		}
-		filter.outputQueue.PublishData(data, mappedUserData.UserId)
 		filter.outputDirect.PublishData(data, mappedUserData.UserId)
 	} else {
 		log.Infof("Data '%s' filtered due to not having enough reviews.", rawData)
@@ -129,7 +124,7 @@ func (filter *Filter) filterFunnyBusiness(rawData string) {
 }
 
 func (filter *Filter) Stop() {
-	log.Infof("Closing User Filter connections.")
+	log.Infof("Closing Bot-Users Filter connections.")
 	filter.connection.Close()
 	filter.channel.Close()
 }

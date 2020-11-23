@@ -3,6 +3,7 @@ reviews_streaming: false
 
 # System configuration:
 users_min_reviews: 50
+bots_min_reviews: 5
 
 # Funniest cities flow.
 citbiz_mappers: 2

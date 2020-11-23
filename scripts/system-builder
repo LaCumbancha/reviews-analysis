@@ -40,6 +40,7 @@ FUNCITFIL_DEPS = []
 USERFIL_DEPS = []
 STARSFIL_DEPS = []
 DISHASHFIL_DEPS = ['sink']
+BOTUSERFIL_DEPS = ['sink']
 
 USERMAP_DEPS = []
 STARSMAP_DEPS = []
@@ -71,38 +72,38 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-file['services']['mock_receiver0'] = {
-	'container_name': 'mock_receiver0',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BotUserAggregator'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
 #file['services']['mock_receiver0'] = {
 #	'container_name': 'mock_receiver0',
 #	'image': 'mock_receiver:latest',
 #	'entrypoint': '/receiver',
 #	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserAggregator', 'MOCK_TOPIC=0'],
+#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BotUserAggregator'],
 #	'links': ['rabbitmq'],
 #	'depends_on': ['rabbitmq'],
 #	'networks': ['testing_net']
 #}
-#
-#file['services']['mock_receiver1'] = {
-#	'container_name': 'mock_receiver1',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserAggregator', 'MOCK_TOPIC=1'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
+
+file['services']['mock_receiver0'] = {
+	'container_name': 'mock_receiver0',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=0'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
+
+file['services']['mock_receiver1'] = {
+	'container_name': 'mock_receiver1',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=1'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
 
 
 
@@ -297,6 +298,134 @@ for idx in range(0, input_yaml['weekday_mappers']):
 		'networks': ['testing_net']
 	}
 
+for idx in range(0, input_yaml['bestuser_joiners']):
+	container_name = f'bestuser_joiner{idx}'
+	USERFIL_DEPS += [container_name]
+	STARSAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'bestuser_joiner:latest',
+		'entrypoint': '/joiner',
+		'restart': 'on-failure',
+		'environment': [f'BESTUSERJOIN_INSTANCE={idx}', 'BESTUSERJOIN_RABBITMQ_IP=rabbitmq', 'BESTUSERJOIN_RABBITMQ_PORT=5672', f'BESTUSERJOIN_INPUT_TOPIC={idx}', f'BESTUSERJOIN_STARS_AGGREGATORS={input_yaml["stars_aggregators"]}', f'BESTUSERJOIN_USER_FILTERS={input_yaml["user_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(BESTUSERJOIN_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['stars_aggregators']):
+	container_name = f'stars_aggregator{idx}'
+	STARSFIL_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'stars_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': [f'STARSAGG_INSTANCE={idx}', 'STARSAGG_RABBITMQ_IP=rabbitmq', 'STARSAGG_RABBITMQ_PORT=5672', f'STARSAGG_INPUT_TOPIC={idx}', f'STARSAGG_STARS_FILTERS={input_yaml["stars_filters"]}', f'STARSAGG_STARS_JOINERS={input_yaml["bestuser_joiners"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(STARSAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['stars_filters']):
+	container_name = f'stars_filter{idx}'
+	STARSMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'stars_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': [f'STARSFIL_INSTANCE={idx}', 'STARSFIL_RABBITMQ_IP=rabbitmq', 'STARSFIL_RABBITMQ_PORT=5672', f'STARSFIL_STARS_MAPPERS={input_yaml["stars_mappers"]}', f'STARSFIL_STARS_AGGREGATORS={input_yaml["stars_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(STARSFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['stars_mappers']):
+	container_name = f'stars_mapper{idx}'
+	RVWSCA_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'stars_mapper:latest',
+		'entrypoint': '/mapper',
+		'restart': 'on-failure',
+		'environment': [f'STARSMAP_INSTANCE={idx}', 'STARSMAP_RABBITMQ_IP=rabbitmq', 'STARSMAP_RABBITMQ_PORT=5672', f'STARSMAP_REVIEWS_INPUTS={reviews_inputs}', f'STARSMAP_STARS_FILTERS={input_yaml["stars_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(STARSMAP_DEPS),
+		'networks': ['testing_net']
+	}
+
+# Bot Users flow.
+for idx in range(0, input_yaml['botuser_filters']):
+	container_name = f'botuser_filter{idx}'
+	USERAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'botuser_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': [f'BOTUSERFIL_INSTANCE={idx}', 'BOTUSERFIL_RABBITMQ_IP=rabbitmq', 'BOTUSERFIL_RABBITMQ_PORT=5672', f'BOTUSERFIL_MIN_REVIEWS={input_yaml["bots_min_reviews"]}', f'BOTUSERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}', f'BOTUSERFIL_DISHASH_JOINERS={input_yaml["dishash_joiners"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(BOTUSERFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['dishash_filters']):
+	container_name = f'dishash_filter{idx}'
+	DISHASHAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'dishash_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': [f'DISHASHFIL_INSTANCE={idx}', 'DISHASHFIL_RABBITMQ_IP=rabbitmq', 'DISHASHFIL_RABBITMQ_PORT=5672', f'DISHASHFIL_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}', f'DISHASHFIL_DISHASH_JOINERS={input_yaml["dishash_joiners"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(DISHASHFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['dishash_aggregators']):
+	container_name = f'dishash_aggregator{idx}'
+	HASHAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'dishash_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': [f'DISHASHAGG_INSTANCE={idx}', 'DISHASHAGG_RABBITMQ_IP=rabbitmq', 'DISHASHAGG_RABBITMQ_PORT=5672', f'DISHASHAGG_INPUT_TOPIC={idx}', f'DISHASHAGG_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}', f'DISHASHAGG_DISHASH_FILTERS={input_yaml["dishash_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(DISHASHAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['hash_aggregators']):
+	container_name = f'hash_aggregator{idx}'
+	HASHMAP_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'hash_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': [f'HASHAGG_INSTANCE={idx}', 'HASHAGG_RABBITMQ_IP=rabbitmq', 'HASHAGG_RABBITMQ_PORT=5672', f'HASHAGG_INPUT_TOPIC={idx}', f'HASHAGG_HASH_MAPPERS={input_yaml["hash_mappers"]}', f'HASHAGG_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(HASHAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
+for idx in range(0, input_yaml['hash_mappers']):
+	container_name = f'hash_mapper{idx}'
+	RVWSCA_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'hash_mapper:latest',
+		'entrypoint': '/mapper',
+		'restart': 'on-failure',
+		'environment': [f'HASHMAP_INSTANCE={idx}', 'HASHMAP_RABBITMQ_IP=rabbitmq', 'HASHMAP_RABBITMQ_PORT=5672', f'HASHMAP_REVIEWS_INPUTS={reviews_inputs}', f'HASHMAP_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(HASHMAP_DEPS),
+		'networks': ['testing_net']
+	}
+
 ## Top Users flow.
 USERFIL_DEPS += ['top_users_prettier']
 file['services']['top_users_prettier'] = {
@@ -364,120 +493,6 @@ file['services']['best_users_prettier'] = {
 	'depends_on': list(BESTUSERPRE_DEPS),
 	'networks': ['testing_net']
 }
-
-for idx in range(0, input_yaml['bestuser_joiners']):
-	container_name = f'bestuser_joiner{idx}'
-	USERFIL_DEPS += [container_name]
-	STARSAGG_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'bestuser_joiner:latest',
-		'entrypoint': '/joiner',
-		'restart': 'on-failure',
-		'environment': [f'BESTUSERJOIN_INSTANCE={idx}', 'BESTUSERJOIN_RABBITMQ_IP=rabbitmq', 'BESTUSERJOIN_RABBITMQ_PORT=5672', f'BESTUSERJOIN_INPUT_TOPIC={idx}', f'BESTUSERJOIN_STARS_AGGREGATORS={input_yaml["stars_aggregators"]}', f'BESTUSERJOIN_USER_FILTERS={input_yaml["user_filters"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(BESTUSERJOIN_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['stars_aggregators']):
-	container_name = f'stars_aggregator{idx}'
-	STARSFIL_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'stars_aggregator:latest',
-		'entrypoint': '/aggregator',
-		'restart': 'on-failure',
-		'environment': [f'STARSAGG_INSTANCE={idx}', 'STARSAGG_RABBITMQ_IP=rabbitmq', 'STARSAGG_RABBITMQ_PORT=5672', f'STARSAGG_INPUT_TOPIC={idx}', f'STARSAGG_STARS_FILTERS={input_yaml["stars_filters"]}', f'STARSAGG_STARS_JOINERS={input_yaml["bestuser_joiners"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(STARSAGG_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['stars_filters']):
-	container_name = f'stars_filter{idx}'
-	STARSMAP_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'stars_filter:latest',
-		'entrypoint': '/filter',
-		'restart': 'on-failure',
-		'environment': [f'STARSFIL_INSTANCE={idx}', 'STARSFIL_RABBITMQ_IP=rabbitmq', 'STARSFIL_RABBITMQ_PORT=5672', f'STARSFIL_STARS_MAPPERS={input_yaml["stars_mappers"]}', f'STARSFIL_STARS_AGGREGATORS={input_yaml["stars_aggregators"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(STARSFIL_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['stars_mappers']):
-	container_name = f'stars_mapper{idx}'
-	RVWSCA_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'stars_mapper:latest',
-		'entrypoint': '/mapper',
-		'restart': 'on-failure',
-		'environment': [f'STARSMAP_INSTANCE={idx}', 'STARSMAP_RABBITMQ_IP=rabbitmq', 'STARSMAP_RABBITMQ_PORT=5672', f'STARSMAP_REVIEWS_INPUTS={reviews_inputs}', f'STARSMAP_STARS_FILTERS={input_yaml["stars_filters"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(STARSMAP_DEPS),
-		'networks': ['testing_net']
-	}
-
-# Bot Users flow.
-for idx in range(0, input_yaml['dishash_filters']):
-	container_name = f'dishash_filter{idx}'
-	DISHASHAGG_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'dishash_filter:latest',
-		'entrypoint': '/filter',
-		'restart': 'on-failure',
-		'environment': [f'DISHASHFIL_INSTANCE={idx}', 'DISHASHFIL_RABBITMQ_IP=rabbitmq', 'DISHASHFIL_RABBITMQ_PORT=5672', f'DISHASHFIL_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}', f'DISHASHFIL_DISHASH_JOINERS={input_yaml["dishash_joiners"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(DISHASHFIL_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['dishash_aggregators']):
-	container_name = f'dishash_aggregator{idx}'
-	HASHAGG_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'dishash_aggregator:latest',
-		'entrypoint': '/aggregator',
-		'restart': 'on-failure',
-		'environment': [f'DISHASHAGG_INSTANCE={idx}', 'DISHASHAGG_RABBITMQ_IP=rabbitmq', 'DISHASHAGG_RABBITMQ_PORT=5672', f'DISHASHAGG_INPUT_TOPIC={idx}', f'DISHASHAGG_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}', f'DISHASHAGG_DISHASH_FILTERS={input_yaml["dishash_filters"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(DISHASHAGG_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['hash_aggregators']):
-	container_name = f'hash_aggregator{idx}'
-	HASHMAP_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'hash_aggregator:latest',
-		'entrypoint': '/aggregator',
-		'restart': 'on-failure',
-		'environment': [f'HASHAGG_INSTANCE={idx}', 'HASHAGG_RABBITMQ_IP=rabbitmq', 'HASHAGG_RABBITMQ_PORT=5672', f'HASHAGG_INPUT_TOPIC={idx}', f'HASHAGG_HASH_MAPPERS={input_yaml["hash_mappers"]}', f'HASHAGG_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(HASHAGG_DEPS),
-		'networks': ['testing_net']
-	}
-
-for idx in range(0, input_yaml['hash_mappers']):
-	container_name = f'hash_mapper{idx}'
-	RVWSCA_DEPS += [container_name]
-	file['services'][container_name] = {
-		'container_name': container_name,
-		'image': 'hash_mapper:latest',
-		'entrypoint': '/mapper',
-		'restart': 'on-failure',
-		'environment': [f'HASHMAP_INSTANCE={idx}', 'HASHMAP_RABBITMQ_IP=rabbitmq', 'HASHMAP_RABBITMQ_PORT=5672', f'HASHMAP_REVIEWS_INPUTS={reviews_inputs}', f'HASHMAP_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}'],
-		'links': ['rabbitmq'],
-		'depends_on': list(HASHMAP_DEPS),
-		'networks': ['testing_net']
-	}
 
 ## Reviews Scatter
 file['services']['rvw_scatter'] = {

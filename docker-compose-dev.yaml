@@ -22,8 +22,7 @@ services:
     restart: on-failure
   bestuser_joiner0:
     container_name: bestuser_joiner0
-    depends_on:
-    - best_users_prettier
+    depends_on: []
     entrypoint: /joiner
     environment:
     - BESTUSERJOIN_INSTANCE=0
@@ -40,8 +39,7 @@ services:
     restart: on-failure
   bestuser_joiner1:
     container_name: bestuser_joiner1
-    depends_on:
-    - best_users_prettier
+    depends_on: []
     entrypoint: /joiner
     environment:
     - BESTUSERJOIN_INSTANCE=1
@@ -75,6 +73,42 @@ services:
     restart: on-failure
     volumes:
     - business_dataset:/data
+  botuser_filter0:
+    container_name: botuser_filter0
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - BOTUSERFIL_INSTANCE=0
+    - BOTUSERFIL_RABBITMQ_IP=rabbitmq
+    - BOTUSERFIL_RABBITMQ_PORT=5672
+    - BOTUSERFIL_MIN_REVIEWS=2
+    - BOTUSERFIL_USER_AGGREGATORS=2
+    - BOTUSERFIL_DISHASH_JOINERS=2
+    image: botuser_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  botuser_filter1:
+    container_name: botuser_filter1
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - BOTUSERFIL_INSTANCE=1
+    - BOTUSERFIL_RABBITMQ_IP=rabbitmq
+    - BOTUSERFIL_RABBITMQ_PORT=5672
+    - BOTUSERFIL_MIN_REVIEWS=2
+    - BOTUSERFIL_USER_AGGREGATORS=2
+    - BOTUSERFIL_DISHASH_JOINERS=2
+    image: botuser_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   citbiz_mapper0:
     container_name: citbiz_mapper0
     depends_on:
@@ -483,10 +517,28 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=QUEUE
+    - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=BotUserAggregator
+    - MOCK_EXCHANGE=BotUserFilter
+    - MOCK_TOPIC=0
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver1:
+    container_name: mock_receiver1
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=BotUserFilter
+    - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -514,12 +566,12 @@ services:
     - funbiz_mapper1
     - weekday_mapper0
     - weekday_mapper1
-    - user_mapper0
-    - user_mapper1
     - stars_mapper0
     - stars_mapper1
     - hash_mapper0
     - hash_mapper1
+    - user_mapper0
+    - user_mapper1
     entrypoint: /scatter
     environment:
     - RVWSCA_INSTANCE=0
@@ -696,6 +748,8 @@ services:
   user_aggregator0:
     container_name: user_aggregator0
     depends_on:
+    - botuser_filter0
+    - botuser_filter1
     - user_filter0
     - user_filter1
     entrypoint: /aggregator
@@ -716,6 +770,8 @@ services:
   user_aggregator1:
     container_name: user_aggregator1
     depends_on:
+    - botuser_filter0
+    - botuser_filter1
     - user_filter0
     - user_filter1
     entrypoint: /aggregator
@@ -736,6 +792,8 @@ services:
   user_filter0:
     container_name: user_filter0
     depends_on:
+    - bestuser_joiner0
+    - bestuser_joiner1
     - top_users_prettier
     entrypoint: /filter
     environment:
@@ -754,6 +812,8 @@ services:
   user_filter1:
     container_name: user_filter1
     depends_on:
+    - bestuser_joiner0
+    - bestuser_joiner1
     - top_users_prettier
     entrypoint: /filter
     environment:
