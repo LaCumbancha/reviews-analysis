@@ -29,7 +29,8 @@ BESTUSERJOIN_DEPS = []
 
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
-HASHAGG_DEPS = ['sink']
+HASHAGG_DEPS = []
+DISHASHAGG_DEPS = ['sink']
 WEEKDAYAGG_DEPS = []
 FUNCITAGG_DEPS = []
 STARSAGG_DEPS = []
@@ -69,38 +70,38 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-#file['services']['mock_receiver0'] = {
-#	'container_name': 'mock_receiver0',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=UserStarsJoiner'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
-
 file['services']['mock_receiver0'] = {
 	'container_name': 'mock_receiver0',
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=HashAggregator', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=DishashAggregator'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
 }
 
-file['services']['mock_receiver1'] = {
-	'container_name': 'mock_receiver1',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=HashAggregator', 'MOCK_TOPIC=1'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
+#file['services']['mock_receiver0'] = {
+#	'container_name': 'mock_receiver0',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashAggregator', 'MOCK_TOPIC=0'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
+#
+#file['services']['mock_receiver1'] = {
+#	'container_name': 'mock_receiver1',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashAggregator', 'MOCK_TOPIC=1'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
 
 
 
@@ -421,6 +422,20 @@ for idx in range(0, input_yaml['stars_mappers']):
 	}
 
 # Bot Users flow.
+for idx in range(0, input_yaml['dishash_aggregators']):
+	container_name = f'dishash_aggregator{idx}'
+	HASHAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'dishash_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': [f'DISHASHAGG_INSTANCE={idx}', 'DISHASHAGG_RABBITMQ_IP=rabbitmq', 'DISHASHAGG_RABBITMQ_PORT=5672', f'DISHASHAGG_INPUT_TOPIC={idx}', f'DISHASHAGG_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}', f'DISHASHAGG_DISHASH_FILTERS={input_yaml["dishash_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(DISHASHAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['hash_aggregators']):
 	container_name = f'hash_aggregator{idx}'
 	HASHMAP_DEPS += [container_name]
@@ -429,7 +444,7 @@ for idx in range(0, input_yaml['hash_aggregators']):
 		'image': 'hash_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': [f'HASHAGG_INSTANCE={idx}', 'HASHAGG_RABBITMQ_IP=rabbitmq', 'HASHAGG_RABBITMQ_PORT=5672', f'HASHAGG_INPUT_TOPIC={idx}', f'HASHAGG_HASH_MAPPERS={input_yaml["hash_mappers"]}', f'HASHAGG_USERHASH_AGGREGATORS={input_yaml["userhash_aggregators"]}'],
+		'environment': [f'HASHAGG_INSTANCE={idx}', 'HASHAGG_RABBITMQ_IP=rabbitmq', 'HASHAGG_RABBITMQ_PORT=5672', f'HASHAGG_INPUT_TOPIC={idx}', f'HASHAGG_HASH_MAPPERS={input_yaml["hash_mappers"]}', f'HASHAGG_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(HASHAGG_DEPS),
 		'networks': ['testing_net']

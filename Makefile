@@ -39,6 +39,7 @@ build: deps
 	GOOS=linux go build -o bin/user-aggregator $(GIT_REMOTE)/nodes/aggregators/user
 	GOOS=linux go build -o bin/stars-aggregator $(GIT_REMOTE)/nodes/aggregators/stars
 	GOOS=linux go build -o bin/hash-aggregator $(GIT_REMOTE)/nodes/aggregators/hash-text
+	GOOS=linux go build -o bin/dishash-aggregator $(GIT_REMOTE)/nodes/aggregators/distinct-hash
 
 	# Joiners
 	GOOS=linux go build -o bin/funcit-joiner $(GIT_REMOTE)/nodes/joiners/funny-city
@@ -84,6 +85,7 @@ docker-image:
 	docker build -f ./nodes/aggregators/user/Dockerfile -t "user_aggregator:latest" .
 	docker build -f ./nodes/aggregators/stars/Dockerfile -t "stars_aggregator:latest" .
 	docker build -f ./nodes/aggregators/hash-text/Dockerfile -t "hash_aggregator:latest" .
+	docker build -f ./nodes/aggregators/distinct-hash/Dockerfile -t "dishash_aggregator:latest" .
 
 	# Joiners
 	docker build -f ./nodes/joiners/funny-city/Dockerfile -t "funcit_joiner:latest" .

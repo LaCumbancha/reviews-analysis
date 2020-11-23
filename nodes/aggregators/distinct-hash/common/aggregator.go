@@ -7,7 +7,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/rabbitmq"
 )
 
 type AggregatorConfig struct {
@@ -15,8 +15,8 @@ type AggregatorConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	InputTopic			string
-	HashMappers 		int
-	DishashAggregators 	int
+	HashAggregators		int
+	DishashFilters		int
 }
 
 type Aggregator struct {
@@ -24,7 +24,7 @@ type Aggregator struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputDirect 	*rabbitmq.RabbitInputDirect
-	outputDirect 	*rabbitmq.RabbitOutputDirect
+	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -44,21 +44,21 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.DishashAggregators, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.DishashFilters, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
 		calculator:		NewCalculator(),
 		inputDirect:	inputDirect,
-		outputDirect:	outputDirect,
-		endSignals:		config.HashMappers,
+		outputQueue:	outputQueue,
+		endSignals:		config.HashAggregators,
 	}
 
 	return aggregator
 }
 
 func (aggregator *Aggregator) Run() {
-	log.Infof("Starting to listen for hashed-text reviews data.")
+	log.Infof("Starting to listen for distinct hashed-texts.")
 
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
@@ -97,7 +97,7 @@ func (aggregator *Aggregator) Run() {
     wg.Wait()
 
     // Sending End-Message to consumers.
-    aggregator.outputDirect.PublishFinish()
+    aggregator.outputQueue.PublishFinish()
 }
 
 func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
@@ -116,18 +116,18 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 	}
 }
 
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.HashedTextData, wg *sync.WaitGroup) {
+func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.DistinctHashesData, wg *sync.WaitGroup) {
 	data, err := json.Marshal(aggregatedData)
 	if err != nil {
 		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
-		aggregator.outputDirect.PublishData(data, aggregatedData.UserId)
+		aggregator.outputQueue.PublishData(data)
 	}
 	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {
-	log.Infof("Closing Hash-Text Aggregator connections.")
+	log.Infof("Closing Distinct-Hash Aggregator connections.")
 	aggregator.connection.Close()
 	aggregator.channel.Close()
 }

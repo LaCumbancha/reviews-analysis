@@ -111,6 +111,42 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  dishash_aggregator0:
+    container_name: dishash_aggregator0
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - DISHASHAGG_INSTANCE=0
+    - DISHASHAGG_RABBITMQ_IP=rabbitmq
+    - DISHASHAGG_RABBITMQ_PORT=5672
+    - DISHASHAGG_INPUT_TOPIC=0
+    - DISHASHAGG_HASH_AGGREGATORS=2
+    - DISHASHAGG_DISHASH_FILTERS=2
+    image: dishash_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  dishash_aggregator1:
+    container_name: dishash_aggregator1
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - DISHASHAGG_INSTANCE=1
+    - DISHASHAGG_RABBITMQ_IP=rabbitmq
+    - DISHASHAGG_RABBITMQ_PORT=5672
+    - DISHASHAGG_INPUT_TOPIC=1
+    - DISHASHAGG_HASH_AGGREGATORS=2
+    - DISHASHAGG_DISHASH_FILTERS=2
+    image: dishash_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   funbiz_aggregator0:
     container_name: funbiz_aggregator0
     depends_on:
@@ -334,7 +370,8 @@ services:
   hash_aggregator0:
     container_name: hash_aggregator0
     depends_on:
-    - sink
+    - dishash_aggregator0
+    - dishash_aggregator1
     entrypoint: /aggregator
     environment:
     - HASHAGG_INSTANCE=0
@@ -342,7 +379,7 @@ services:
     - HASHAGG_RABBITMQ_PORT=5672
     - HASHAGG_INPUT_TOPIC=0
     - HASHAGG_HASH_MAPPERS=2
-    - HASHAGG_USERHASH_AGGREGATORS=2
+    - HASHAGG_DISHASH_AGGREGATORS=2
     image: hash_aggregator:latest
     links:
     - rabbitmq
@@ -352,7 +389,8 @@ services:
   hash_aggregator1:
     container_name: hash_aggregator1
     depends_on:
-    - sink
+    - dishash_aggregator0
+    - dishash_aggregator1
     entrypoint: /aggregator
     environment:
     - HASHAGG_INSTANCE=1
@@ -360,7 +398,7 @@ services:
     - HASHAGG_RABBITMQ_PORT=5672
     - HASHAGG_INPUT_TOPIC=1
     - HASHAGG_HASH_MAPPERS=2
-    - HASHAGG_USERHASH_AGGREGATORS=2
+    - HASHAGG_DISHASH_AGGREGATORS=2
     image: hash_aggregator:latest
     links:
     - rabbitmq
@@ -409,28 +447,10 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=DIRECT
+    - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=HashAggregator
-    - MOCK_TOPIC=0
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver1:
-    container_name: mock_receiver1
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=HashAggregator
-    - MOCK_TOPIC=1
+    - MOCK_QUEUE=DishashAggregator
     image: mock_receiver:latest
     links:
     - rabbitmq

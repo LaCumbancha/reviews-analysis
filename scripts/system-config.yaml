@@ -31,4 +31,5 @@ bestuser_joiners: 2
 # Users w/+5 reviews with same text.
 hash_mappers: 2
 hash_aggregators: 2
-userhash_aggregators: 2
+dishash_aggregators: 2
+dishash_filters: 2

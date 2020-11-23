@@ -6,24 +6,24 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the HASHAGG prefix
+	// Configure viper to read env variables with the DISHASHAGG prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("hashagg")
+	configEnv.SetEnvPrefix("dishashagg")
 
 	// Add env variables supported
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("input", "topic")
-	configEnv.BindEnv("hash", "mappers")
-	configEnv.BindEnv("dishash", "aggregators")
+	configEnv.BindEnv("hash", "aggregators")
+	configEnv.BindEnv("dishash", "filters")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -75,25 +75,25 @@ func main() {
 		log.Fatalf("InputTopic variable missing")
 	}
 
-	hashMappers := utils.GetConfigInt(configEnv, configFile, "hash_mappers")
+	hashAggregators := utils.GetConfigInt(configEnv, configFile, "hash_aggregators")
 	
-	if hashMappers == 0 {
-		log.Fatalf("HashMappers variable missing")
+	if hashAggregators == 0 {
+		log.Fatalf("HashAggregators variable missing")
 	}
 
-	dishashAggregators := utils.GetConfigInt(configEnv, configFile, "dishash_aggregators")
+	dishashFilters := utils.GetConfigInt(configEnv, configFile, "dishash_filters")
 	
-	if dishashAggregators == 0 {
-		log.Fatalf("DistinctAggregators variable missing")
+	if dishashFilters == 0 {
+		log.Fatalf("DishashFilters variable missing")
 	}
 
 	aggregatorConfig := common.AggregatorConfig {
-		Instance:				instance,
-		RabbitIp:				rabbitIp,
-		RabbitPort:				rabbitPort,
-		InputTopic: 			inputTopic,
-		HashMappers:			hashMappers,
-		DishashAggregators:		dishashAggregators,
+		Instance:			instance,
+		RabbitIp:			rabbitIp,
+		RabbitPort:			rabbitPort,
+		InputTopic: 		inputTopic,
+		HashAggregators:	hashAggregators,
+		DishashFilters:		dishashFilters,
 	}
 
 	aggregator := common.NewAggregator(aggregatorConfig)
