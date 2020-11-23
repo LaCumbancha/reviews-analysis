@@ -23,3 +23,7 @@ func GeneratePartitionMap(partitions int) map[string]string {
 
 	return partitionsMap
 }
+
+func IsEndMessage(message string) bool {
+	return (len(message) > 10) && (message[0:11] == END_MESSAGE)
+}

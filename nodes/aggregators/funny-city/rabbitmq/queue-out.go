@@ -6,16 +6,18 @@ import (
 )
 
 type RabbitOutputQueue struct {
-	channel 			*amqp.Channel
-	name 				string
-	endSignals 			int
+	instance		string
+	channel 		*amqp.Channel
+	name 			string
+	endSignals 		int
 }
 
-func NewRabbitOutputQueue(name string, endSignals int, channel *amqp.Channel) *RabbitOutputQueue {
+func NewRabbitOutputQueue(name string, instance string, endSignals int, channel *amqp.Channel) *RabbitOutputQueue {
 	queue := &RabbitOutputQueue {
+		instance:		instance,
 		channel: 		channel,
 		name:			name,
-		endSignals:		endSignals,
+		endSignals:		3*endSignals,
 	}
 
 	queue.initialize()
@@ -66,7 +68,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 	  		false,  						// Immediate
 	  		amqp.Publishing{
 	  		    ContentType: 	"text/plain",
-	  		    Body:        	[]byte(END_MESSAGE),
+	  		    Body:        	[]byte(END_MESSAGE + queue.instance),
 	  		},
 	  	)
 

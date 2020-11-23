@@ -6,6 +6,8 @@ import yaml
 input_yaml_file = open("./scripts/system-config.yaml")
 input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
+reviews_inputs = 2 if input_yaml['reviews_streaming'] else 1
+
 file = {}
 
 #### VERSION
@@ -142,7 +144,7 @@ for idx in range(0, input_yaml['funcit_filters']):
 		'image': 'funcit_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': ['FUNCITFIL_RABBITMQ_IP=rabbitmq', 'FUNCITFIL_RABBITMQ_PORT=5672', f'FUNCITFIL_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
+		'environment': [f'FUNCITFIL_INSTANCE={idx}', 'FUNCITFIL_RABBITMQ_IP=rabbitmq', 'FUNCITFIL_RABBITMQ_PORT=5672', f'FUNCITFIL_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITFIL_DEPS),
 		'networks': ['testing_net']
@@ -156,7 +158,7 @@ for idx in range(0, input_yaml['funcit_aggregators']):
 		'image': 'funcit_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': ['FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_filters"]}', f'FUNCITAGG_INPUT_TOPIC={idx}'],
+		'environment': [f'FUNCITAGG_INSTANCE={idx}', 'FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_filters"]}', f'FUNCITAGG_INPUT_TOPIC={idx}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITAGG_DEPS),
 		'networks': ['testing_net']
@@ -171,7 +173,7 @@ for idx in range(0, input_yaml['funcit_joiners']):
 		'image': 'funcit_joiner:latest',
 		'entrypoint': '/joiner',
 		'restart': 'on-failure',
-		'environment': ['FUNCITJOIN_RABBITMQ_IP=rabbitmq', 'FUNCITJOIN_RABBITMQ_PORT=5672', f'FUNCITJOIN_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}', f'FUNCITJOIN_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}', f'FUNCITJOIN_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}', f'FUNCITJOIN_INPUT_TOPIC={idx}'],
+		'environment': [f'FUNCITJOIN_INSTANCE={idx}', 'FUNCITJOIN_RABBITMQ_IP=rabbitmq', 'FUNCITJOIN_RABBITMQ_PORT=5672', f'FUNCITJOIN_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}', f'FUNCITJOIN_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}', f'FUNCITJOIN_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}', f'FUNCITJOIN_INPUT_TOPIC={idx}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITJOIN_DEPS),
 		'networks': ['testing_net']
@@ -185,7 +187,7 @@ for idx in range(0, input_yaml['citbiz_mappers']):
 		'image': 'citbiz_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': ['CITBIZMAP_RABBITMQ_IP=rabbitmq', 'CITBIZMAP_RABBITMQ_PORT=5672', f'CITBIZMAP_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}'],
+		'environment': [f'CITBIZMAP_INSTANCE={idx}', 'CITBIZMAP_RABBITMQ_IP=rabbitmq', 'CITBIZMAP_RABBITMQ_PORT=5672', 'CITBIZMAP_BUSINESSES_INPUTS=1', f'CITBIZMAP_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(CITBIZMAP_DEPS),
 		'networks': ['testing_net']
@@ -211,7 +213,7 @@ for idx in range(0, input_yaml['funbiz_aggregators']):
 		'image': 'funbiz_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': ['FUNBIZAGG_RABBITMQ_IP=rabbitmq', 'FUNBIZAGG_RABBITMQ_PORT=5672', f'FUNBIZAGG_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}', f'FUNBIZAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNBIZAGG_INPUT_TOPIC={idx}'],
+		'environment': [f'FUNBIZAGG_INSTANCE={idx}', 'FUNBIZAGG_RABBITMQ_IP=rabbitmq', 'FUNBIZAGG_RABBITMQ_PORT=5672', f'FUNBIZAGG_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}', f'FUNBIZAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNBIZAGG_INPUT_TOPIC={idx}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNBIZAGG_DEPS),
 		'networks': ['testing_net']
@@ -225,7 +227,7 @@ for idx in range(0, input_yaml['funbiz_filters']):
 		'image': 'funbiz_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': ['FUNBIZFIL_RABBITMQ_IP=rabbitmq', 'FUNBIZFIL_RABBITMQ_PORT=5672', f'FUNBIZFIL_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'FUNBIZFIL_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}'],
+		'environment': [f'FUNBIZFIL_INSTANCE={idx}', 'FUNBIZFIL_RABBITMQ_IP=rabbitmq', 'FUNBIZFIL_RABBITMQ_PORT=5672', f'FUNBIZFIL_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'FUNBIZFIL_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNBIZFIL_DEPS),
 		'networks': ['testing_net']
@@ -239,7 +241,7 @@ for idx in range(0, input_yaml['funbiz_mappers']):
 		'image': 'funbiz_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': ['FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
+		'environment': [f'FUNBIZMAP_INSTANCE={idx}', 'FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_REVIEWS_INPUTS={reviews_inputs}', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNBIZMAP_DEPS),
 		'networks': ['testing_net']
@@ -252,7 +254,7 @@ file['services']['weekday_histogram_prettier'] = {
 	'image': 'weekday_histogram_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['HISTOPRE_RABBITMQ_IP=rabbitmq', 'HISTOPRE_RABBITMQ_PORT=5672', f'HISTOPRE_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+	'environment': ['HISTOPRE=0', 'HISTOPRE_RABBITMQ_IP=rabbitmq', 'HISTOPRE_RABBITMQ_PORT=5672', f'HISTOPRE_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(HISTOPRE_DEPS),
 	'networks': ['testing_net']
@@ -266,7 +268,7 @@ for idx in range(0, input_yaml['weekday_aggregators']):
 		'image': 'weekday_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': ['WEEKDAYAGG_RABBITMQ_IP=rabbitmq', 'WEEKDAYAGG_RABBITMQ_PORT=5672', f'WEEKDAYAGG_INPUT_TOPIC={idx}', f'WEEKDAYAGG_WEEKDAY_MAPPERS={input_yaml["weekday_mappers"]}'],
+		'environment': [f'WEEKDAYAGG_INSTANCE={idx}', 'WEEKDAYAGG_RABBITMQ_IP=rabbitmq', 'WEEKDAYAGG_RABBITMQ_PORT=5672', f'WEEKDAYAGG_INPUT_TOPIC={idx}', f'WEEKDAYAGG_WEEKDAY_MAPPERS={input_yaml["weekday_mappers"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(WEEKDAYAGG_DEPS),
 		'networks': ['testing_net']
@@ -280,7 +282,7 @@ for idx in range(0, input_yaml['weekday_mappers']):
 		'image': 'weekday_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': ['WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+		'environment': [f'WEEKDAYMAP_INSTANCE={idx}', 'WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_REVIEWS_INPUTS={reviews_inputs}', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(WEEKDAYMAP_DEPS),
 		'networks': ['testing_net']
@@ -307,7 +309,7 @@ for idx in range(0, input_yaml['user_filters']):
 		'image': 'user_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': ['USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'environment': [f'USERFIL_INSTANCE={idx}', 'USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERFIL_DEPS),
 		'networks': ['testing_net']
@@ -321,7 +323,7 @@ for idx in range(0, input_yaml['user_aggregators']):
 		'image': 'user_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': ['USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
+		'environment': [f'USERAGG_INSTANCE={idx}', 'USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERAGG_DEPS),
 		'networks': ['testing_net']
@@ -335,7 +337,7 @@ for idx in range(0, input_yaml['user_mappers']):
 		'image': 'user_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': ['USERMAP_RABBITMQ_IP=rabbitmq', 'USERMAP_RABBITMQ_PORT=5672', f'USERMAP_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'environment': [f'USERMAP_INSTANCE={idx}', 'USERMAP_RABBITMQ_IP=rabbitmq', 'USERMAP_RABBITMQ_PORT=5672', f'USERMAP_REVIEWS_INPUTS={reviews_inputs}', f'USERMAP_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERMAP_DEPS),
 		'networks': ['testing_net']
@@ -347,12 +349,24 @@ file['services']['rvw_scatter'] = {
 	'image': 'rvw_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hashes_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["user_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
+	'environment': ['RVWSCA_INSTANCE=0', 'RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hashes_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["user_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(RVWSCA_DEPS),
 	'networks': ['testing_net'],
 	'volumes': ['reviews_dataset:/data']
 }
+
+if input_yaml['reviews_streaming']:
+	file['services']['rvw_streaming'] = {
+		'container_name': 'rvw_streaming',
+		'image': 'rvw_streaming:latest',
+		'entrypoint': '/streaming',
+		'restart': 'on-failure',
+		'environment': ['RVWSTR_INSTANCE=1', 'RVWSTR_RABBITMQ_IP=rabbitmq', 'RVWSTR_RABBITMQ_PORT=5672', f'RVWSTR_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSTR_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSTR_HASHES_MAPPERS={input_yaml["hashes_mappers"]}', f'RVWSTR_USERS_MAPPERS={input_yaml["user_mappers"]}', f'RVWSTR_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(RVWSCA_DEPS),
+		'networks': ['testing_net'],
+	}
 
 
 #### VOLUMES

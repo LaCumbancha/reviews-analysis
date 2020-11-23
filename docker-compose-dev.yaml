@@ -31,8 +31,10 @@ services:
     - funcit_joiner1
     entrypoint: /mapper
     environment:
+    - CITBIZMAP_INSTANCE=0
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
     - CITBIZMAP_RABBITMQ_PORT=5672
+    - CITBIZMAP_BUSINESSES_INPUTS=1
     - CITBIZMAP_FUNCIT_JOINERS=2
     image: citbiz_mapper:latest
     links:
@@ -47,8 +49,10 @@ services:
     - funcit_joiner1
     entrypoint: /mapper
     environment:
+    - CITBIZMAP_INSTANCE=1
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
     - CITBIZMAP_RABBITMQ_PORT=5672
+    - CITBIZMAP_BUSINESSES_INPUTS=1
     - CITBIZMAP_FUNCIT_JOINERS=2
     image: citbiz_mapper:latest
     links:
@@ -63,6 +67,7 @@ services:
     - funcit_joiner1
     entrypoint: /aggregator
     environment:
+    - FUNBIZAGG_INSTANCE=0
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
     - FUNBIZAGG_RABBITMQ_PORT=5672
     - FUNBIZAGG_FUNBIZ_FILTERS=2
@@ -81,6 +86,7 @@ services:
     - funcit_joiner1
     entrypoint: /aggregator
     environment:
+    - FUNBIZAGG_INSTANCE=1
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
     - FUNBIZAGG_RABBITMQ_PORT=5672
     - FUNBIZAGG_FUNBIZ_FILTERS=2
@@ -99,6 +105,7 @@ services:
     - funbiz_aggregator1
     entrypoint: /filter
     environment:
+    - FUNBIZFIL_INSTANCE=0
     - FUNBIZFIL_RABBITMQ_IP=rabbitmq
     - FUNBIZFIL_RABBITMQ_PORT=5672
     - FUNBIZFIL_FUNBIZ_MAPPERS=2
@@ -116,6 +123,7 @@ services:
     - funbiz_aggregator1
     entrypoint: /filter
     environment:
+    - FUNBIZFIL_INSTANCE=1
     - FUNBIZFIL_RABBITMQ_IP=rabbitmq
     - FUNBIZFIL_RABBITMQ_PORT=5672
     - FUNBIZFIL_FUNBIZ_MAPPERS=2
@@ -133,8 +141,10 @@ services:
     - funbiz_filter1
     entrypoint: /mapper
     environment:
+    - FUNBIZMAP_INSTANCE=0
     - FUNBIZMAP_RABBITMQ_IP=rabbitmq
     - FUNBIZMAP_RABBITMQ_PORT=5672
+    - FUNBIZMAP_REVIEWS_INPUTS=1
     - FUNBIZMAP_FUNBIZ_FILTERS=2
     image: funbiz_mapper:latest
     links:
@@ -149,8 +159,10 @@ services:
     - funbiz_filter1
     entrypoint: /mapper
     environment:
+    - FUNBIZMAP_INSTANCE=1
     - FUNBIZMAP_RABBITMQ_IP=rabbitmq
     - FUNBIZMAP_RABBITMQ_PORT=5672
+    - FUNBIZMAP_REVIEWS_INPUTS=1
     - FUNBIZMAP_FUNBIZ_FILTERS=2
     image: funbiz_mapper:latest
     links:
@@ -165,6 +177,7 @@ services:
     - funcit_filter1
     entrypoint: /aggregator
     environment:
+    - FUNCITAGG_INSTANCE=0
     - FUNCITAGG_RABBITMQ_IP=rabbitmq
     - FUNCITAGG_RABBITMQ_PORT=5672
     - FUNCITAGG_FUNCIT_JOINERS=2
@@ -183,6 +196,7 @@ services:
     - funcit_filter1
     entrypoint: /aggregator
     environment:
+    - FUNCITAGG_INSTANCE=1
     - FUNCITAGG_RABBITMQ_IP=rabbitmq
     - FUNCITAGG_RABBITMQ_PORT=5672
     - FUNCITAGG_FUNCIT_JOINERS=2
@@ -200,6 +214,7 @@ services:
     - top_funniest_cities_prettier
     entrypoint: /filter
     environment:
+    - FUNCITFIL_INSTANCE=0
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
     - FUNCITFIL_RABBITMQ_PORT=5672
     - FUNCITFIL_FUNCIT_AGGREGATORS=2
@@ -215,6 +230,7 @@ services:
     - top_funniest_cities_prettier
     entrypoint: /filter
     environment:
+    - FUNCITFIL_INSTANCE=1
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
     - FUNCITFIL_RABBITMQ_PORT=5672
     - FUNCITFIL_FUNCIT_AGGREGATORS=2
@@ -231,6 +247,7 @@ services:
     - funcit_aggregator1
     entrypoint: /joiner
     environment:
+    - FUNCITJOIN_INSTANCE=0
     - FUNCITJOIN_RABBITMQ_IP=rabbitmq
     - FUNCITJOIN_RABBITMQ_PORT=5672
     - FUNCITJOIN_FUNBIZ_AGGREGATORS=2
@@ -250,6 +267,7 @@ services:
     - funcit_aggregator1
     entrypoint: /joiner
     environment:
+    - FUNCITJOIN_INSTANCE=1
     - FUNCITJOIN_RABBITMQ_IP=rabbitmq
     - FUNCITJOIN_RABBITMQ_PORT=5672
     - FUNCITJOIN_FUNBIZ_AGGREGATORS=2
@@ -287,6 +305,7 @@ services:
     - user_mapper1
     entrypoint: /scatter
     environment:
+    - RVWSCA_INSTANCE=0
     - RVWSCA_REVIEWS_DATA=/data/test-reviews.json
     - RVWSCA_RABBITMQ_IP=rabbitmq
     - RVWSCA_RABBITMQ_PORT=5672
@@ -354,6 +373,7 @@ services:
     - user_filter1
     entrypoint: /aggregator
     environment:
+    - USERAGG_INSTANCE=0
     - USERAGG_RABBITMQ_IP=rabbitmq
     - USERAGG_RABBITMQ_PORT=5672
     - USERAGG_INPUT_TOPIC=0
@@ -372,6 +392,7 @@ services:
     - user_filter1
     entrypoint: /aggregator
     environment:
+    - USERAGG_INSTANCE=1
     - USERAGG_RABBITMQ_IP=rabbitmq
     - USERAGG_RABBITMQ_PORT=5672
     - USERAGG_INPUT_TOPIC=1
@@ -389,6 +410,7 @@ services:
     - top_users_prettier
     entrypoint: /filter
     environment:
+    - USERFIL_INSTANCE=0
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
     - USERFIL_USER_AGGREGATORS=2
@@ -404,6 +426,7 @@ services:
     - top_users_prettier
     entrypoint: /filter
     environment:
+    - USERFIL_INSTANCE=1
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
     - USERFIL_USER_AGGREGATORS=2
@@ -420,8 +443,10 @@ services:
     - user_aggregator1
     entrypoint: /mapper
     environment:
+    - USERMAP_INSTANCE=0
     - USERMAP_RABBITMQ_IP=rabbitmq
     - USERMAP_RABBITMQ_PORT=5672
+    - USERMAP_REVIEWS_INPUTS=1
     - USERMAP_USER_AGGREGATORS=2
     image: user_mapper:latest
     links:
@@ -436,8 +461,10 @@ services:
     - user_aggregator1
     entrypoint: /mapper
     environment:
+    - USERMAP_INSTANCE=1
     - USERMAP_RABBITMQ_IP=rabbitmq
     - USERMAP_RABBITMQ_PORT=5672
+    - USERMAP_REVIEWS_INPUTS=1
     - USERMAP_USER_AGGREGATORS=2
     image: user_mapper:latest
     links:
@@ -451,6 +478,7 @@ services:
     - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
+    - WEEKDAYAGG_INSTANCE=0
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
     - WEEKDAYAGG_RABBITMQ_PORT=5672
     - WEEKDAYAGG_INPUT_TOPIC=0
@@ -467,6 +495,7 @@ services:
     - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
+    - WEEKDAYAGG_INSTANCE=1
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
     - WEEKDAYAGG_RABBITMQ_PORT=5672
     - WEEKDAYAGG_INPUT_TOPIC=1
@@ -483,6 +512,7 @@ services:
     - sink
     entrypoint: /prettier
     environment:
+    - HISTOPRE=0
     - HISTOPRE_RABBITMQ_IP=rabbitmq
     - HISTOPRE_RABBITMQ_PORT=5672
     - HISTOPRE_WEEKDAY_AGGREGATORS=2
@@ -499,8 +529,10 @@ services:
     - weekday_aggregator1
     entrypoint: /mapper
     environment:
+    - WEEKDAYMAP_INSTANCE=0
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
+    - WEEKDAYMAP_REVIEWS_INPUTS=1
     - WEEKDAYMAP_WEEKDAY_AGGREGATORS=2
     image: weekday_mapper:latest
     links:
@@ -515,8 +547,10 @@ services:
     - weekday_aggregator1
     entrypoint: /mapper
     environment:
+    - WEEKDAYMAP_INSTANCE=1
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
+    - WEEKDAYMAP_REVIEWS_INPUTS=1
     - WEEKDAYMAP_WEEKDAY_AGGREGATORS=2
     image: weekday_mapper:latest
     links:

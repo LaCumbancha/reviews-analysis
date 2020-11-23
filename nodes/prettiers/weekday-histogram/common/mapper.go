@@ -57,7 +57,7 @@ func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for weekday reviews data.")
 
 	var endSignalsMutex = &sync.Mutex{}
-	var endSignalsReceived = 0
+	var endSignals = make(map[string]int)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -65,18 +65,8 @@ func (mapper *Mapper) Run() {
 		for message := range mapper.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if messageBody == rabbitmq.END_MESSAGE {
-				// Waiting for the total needed End-Signals to send the own End-Message.
-				endSignalsMutex.Lock()
-				endSignalsReceived++
-				endSignalsMutex.Unlock()
-				log.Infof("End-Message #%d received.", endSignalsReceived)
-
-				if (endSignalsReceived == mapper.endSignals) {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-				
+			if rabbitmq.IsEndMessage(messageBody) {
+				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Weekday reviews '%s' received.", messageBody)
@@ -98,6 +88,22 @@ func (mapper *Mapper) Run() {
 
     // Publishing end messages.
     mapper.outputQueue.PublishFinish()
+}
+
+func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	endSignals[newMessage] = endSignals[newMessage] + 1
+	newSignal := endSignals[newMessage] == 1
+	signalsReceived := len(endSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == mapper.endSignals) && newSignal {
+		log.Infof("All End-Messages were received.")
+		wg.Done()
+	}
 }
 
 func (mapper *Mapper) sendResults() {

@@ -1,3 +1,6 @@
+# Streaming mode.
+reviews_streaming: false
+
 # Funniest cities flow.
 citbiz_mappers: 2
 funbiz_mappers: 2

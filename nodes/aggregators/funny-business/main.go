@@ -18,6 +18,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.SetEnvPrefix("funbizagg")
 
 	// Add env variables supported
+	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("input", "topic")
@@ -48,6 +49,12 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
+	}
+
+	instance := utils.GetConfigString(configEnv, configFile, "instance")
+	
+	if instance == "" {
+		log.Fatalf("Instance variable missing")
 	}
 
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
@@ -81,6 +88,7 @@ func main() {
 	}
 
 	aggregatorConfig := common.AggregatorConfig {
+		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		InputTopic: 		inputTopic,

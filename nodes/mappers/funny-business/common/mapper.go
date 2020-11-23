@@ -12,8 +12,10 @@ import (
 )
 
 type MapperConfig struct {
+	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	ReviewsInputs		int
 	FunbizFilters 		int
 }
 
@@ -22,6 +24,7 @@ type Mapper struct {
 	channel 		*amqp.Channel
 	inputDirect 	*rabbitmq.RabbitInputDirect
 	outputQueue 	*rabbitmq.RabbitOutputQueue
+	endSignals		int
 }
 
 func NewMapper(config MapperConfig) *Mapper {
@@ -40,12 +43,13 @@ func NewMapper(config MapperConfig) *Mapper {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.FunbizFilters, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.FunbizFilters, ch)
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,
 		inputDirect:	inputDirect,
 		outputQueue:	outputQueue,
+		endSignals:		config.ReviewsInputs,
 	}
 
 	return mapper
@@ -54,15 +58,17 @@ func NewMapper(config MapperConfig) *Mapper {
 func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for reviews.")
 
+	var endSignalsMutex = &sync.Mutex{}
+	var endSignals = make(map[string]int)
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		for message := range mapper.inputDirect.ConsumeReviews() {
 			messageBody := string(message.Body)
 
-			if messageBody == rabbitmq.END_MESSAGE {
-				log.Infof("End-Message received.")
-				wg.Done()
+			if rabbitmq.IsEndMessage(messageBody) {
+				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				review := messageBody
@@ -83,6 +89,22 @@ func (mapper *Mapper) Run() {
 
     // Publishing end messages.
     mapper.outputQueue.PublishFinish()
+}
+
+func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	endSignals[newMessage] = endSignals[newMessage] + 1
+	newSignal := endSignals[newMessage] == 1
+	signalsReceived := len(endSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == mapper.endSignals) && newSignal {
+		log.Infof("All End-Messages were received.")
+		wg.Done()
+	}
 }
 
 func (mapper *Mapper) processReview(rawReview string) {

@@ -11,6 +11,7 @@ import (
 )
 
 type FilterConfig struct {
+	Instance			string
 	RabbitIp			string
 	RabbitPort			string
 	FuncitAggregators	int
@@ -41,7 +42,7 @@ func NewFilter(config FilterConfig) *Filter {
 	}
 
 	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
@@ -58,7 +59,7 @@ func (filter *Filter) Run() {
 	log.Infof("Starting to listen for funny-city data.")
 
 	var endSignalsMutex = &sync.Mutex{}
-	var endSignalsReceived = 0
+	var endSignals = make(map[string]int)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -66,18 +67,8 @@ func (filter *Filter) Run() {
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if messageBody == rabbitmq.END_MESSAGE {
-				// Waiting for the total needed End-Signals to send the own End-Message.
-				endSignalsMutex.Lock()
-				endSignalsReceived++
-				endSignalsMutex.Unlock()
-				log.Infof("End-Message #%d received.", endSignalsReceived)
-
-				if (endSignalsReceived == filter.endSignals) {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-				
+			if rabbitmq.IsEndMessage(messageBody) {
+				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
@@ -105,6 +96,22 @@ func (filter *Filter) Run() {
 
     // Sending End-Message to consumers.
     filter.outputQueue.PublishFinish()
+}
+
+func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	endSignals[newMessage] = endSignals[newMessage] + 1
+	newSignal := endSignals[newMessage] == 1
+	signalsReceived := len(endSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == filter.endSignals) && newSignal {
+		log.Infof("All End-Messages were received.")
+		wg.Done()
+	}
 }
 
 func (filter *Filter) sendTopTenData(topTenData rabbitmq.FunnyCityData, wg *sync.WaitGroup) {

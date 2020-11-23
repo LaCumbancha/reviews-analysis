@@ -11,6 +11,7 @@ import (
 )
 
 type AggregatorConfig struct {
+	Instance			string
 	RabbitIp			string
 	RabbitPort			string
 	InputTopic			string
@@ -42,7 +43,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
@@ -59,7 +60,7 @@ func (aggregator *Aggregator) Run() {
 	log.Infof("Starting to listen for weekday data.")
 
 	var endSignalsMutex = &sync.Mutex{}
-	var endSignalsReceived = 0
+	var endSignals = make(map[string]int)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -67,18 +68,8 @@ func (aggregator *Aggregator) Run() {
 		for message := range aggregator.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if messageBody == rabbitmq.END_MESSAGE {
-				// Waiting for the total needed End-Signals to send the own End-Message.
-				endSignalsMutex.Lock()
-				endSignalsReceived++
-				endSignalsMutex.Unlock()
-				log.Infof("End-Message #%d received.", endSignalsReceived)
-
-				if (endSignalsReceived == aggregator.endSignals) {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-				
+			if rabbitmq.IsEndMessage(messageBody) {
+				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
@@ -106,6 +97,22 @@ func (aggregator *Aggregator) Run() {
 
     // Sending End-Message to consumers.
     aggregator.outputQueue.PublishFinish()
+}
+
+func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	endSignals[newMessage] = endSignals[newMessage] + 1
+	newSignal := endSignals[newMessage] == 1
+	signalsReceived := len(endSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == aggregator.endSignals) && newSignal {
+		log.Infof("All End-Messages were received.")
+		wg.Done()
+	}
 }
 
 func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.WeekdayData, wg *sync.WaitGroup) {

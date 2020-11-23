@@ -13,6 +13,7 @@ import (
 )
 
 type ScatterConfig struct {
+	Instance			string
 	Data				string
 	RabbitIp			string
 	RabbitPort			string
@@ -46,7 +47,8 @@ func NewScatter(config ScatterConfig) *Scatter {
 	}
 
 	scatterDirect := rabbitmq.NewRabbitOutputDirect(
-		rabbitmq.OUTPUT_EXCHANGE_NAME, 
+		rabbitmq.OUTPUT_EXCHANGE_NAME,
+		config.Instance,
 		config.FunbizMappers, 
 		config.WeekdaysMappers, 
 		config.HashesMappers, 

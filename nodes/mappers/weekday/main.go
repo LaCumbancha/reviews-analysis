@@ -18,8 +18,10 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.SetEnvPrefix("weekdaymap")
 
 	// Add env variables supported
+	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("reviews", "inputs")
 	configEnv.BindEnv("weekday", "aggregators")
 	configEnv.BindEnv("config", "file")
 
@@ -49,6 +51,12 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
+	instance := utils.GetConfigString(configEnv, configFile, "instance")
+	
+	if instance == "" {
+		log.Fatalf("Instance variable missing")
+	}
+
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
@@ -61,6 +69,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	reviewsInputs := utils.GetConfigInt(configEnv, configFile, "reviews_inputs")
+	
+	if reviewsInputs == 0 {
+		log.Fatalf("ReviewsInputs variable missing")
+	}
+
 	weekdayAggregators := utils.GetConfigInt(configEnv, configFile, "weekday_aggregators")
 	
 	if weekdayAggregators == 0 {
@@ -68,8 +82,10 @@ func main() {
 	}
 
 	mapperConfig := common.MapperConfig {
+		Instance:				instance,
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,
+		ReviewsInputs:			reviewsInputs,
 		WeekdayAggregators:		weekdayAggregators,
 	}
 

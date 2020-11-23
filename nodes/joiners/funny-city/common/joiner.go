@@ -11,6 +11,7 @@ import (
 )
 
 type JoinerConfig struct {
+	Instance			string
 	RabbitIp			string
 	RabbitPort			string
 	InputTopic			string
@@ -47,7 +48,7 @@ func NewJoiner(config JoinerConfig) *Joiner {
 
 	inputDirect1 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE1_NAME, config.InputTopic, ch)
 	inputDirect2 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE2_NAME, config.InputTopic, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.FuncitAggregators, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.FuncitAggregators, ch)
 	joiner := &Joiner {
 		connection:		conn,
 		channel:		ch,
@@ -66,8 +67,8 @@ func (joiner *Joiner) Run() {
 	var endSignals1Mutex = &sync.Mutex{}
 	var endSignals2Mutex = &sync.Mutex{}
 
-	var endSignals1Received = 0
-	var endSignals2Received = 0
+	var endSignals1 = make(map[string]int)
+	var endSignals2 = make(map[string]int)
 
 	var inputWg sync.WaitGroup
 
@@ -78,18 +79,8 @@ func (joiner *Joiner) Run() {
 		for message := range joiner.inputDirect1.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if messageBody == rabbitmq.END_MESSAGE {
-				// Waiting for the total needed End-Signals to send the own End-Message.
-				endSignals1Mutex.Lock()
-				endSignals1Received++
-				endSignals1Mutex.Unlock()
-				log.Infof("End-Message #%d received from Funny-Business flow.", endSignals1Received)
-
-				if (endSignals1Received == joiner.endSignals1) {
-					log.Infof("All End-Messages were received from the Funny-Business flow.")
-					inputWg.Done()
-				}
-				
+			if rabbitmq.IsEndMessage(messageBody) {
+				joiner.processEndSignal(messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
@@ -111,18 +102,8 @@ func (joiner *Joiner) Run() {
 		for message := range joiner.inputDirect2.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if messageBody == rabbitmq.END_MESSAGE {
-				// Waiting for the total needed End-Signals to send the own End-Message.
-				endSignals2Mutex.Lock()
-				endSignals2Received++
-				endSignals2Mutex.Unlock()
-				log.Infof("End-Message #%d received from City-Business flow.", endSignals2Received)
-
-				if (endSignals2Received == joiner.endSignals2) {
-					log.Infof("All End-Messages were received from the City-Business flow.")
-					inputWg.Done()
-				}
-				
+			if rabbitmq.IsEndMessage(messageBody) {
+				joiner.processEndSignal(messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
@@ -184,6 +165,22 @@ func (joiner *Joiner) Run() {
 
     // Sending End-Message to consumers.
     joiner.outputDirect.PublishFinish()
+}
+
+func (joiner *Joiner) processEndSignal(newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
+	newSignal := receivedEndSignals[newMessage] == 1
+	signalsReceived := len(receivedEndSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == expectedEndSignals) && newSignal {
+		log.Infof("All End-Messages were received.", signalsReceived)
+		wg.Done()
+	}
 }
 
 func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.FunnyCityData, wg *sync.WaitGroup) {

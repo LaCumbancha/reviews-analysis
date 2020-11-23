@@ -13,7 +13,7 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the WEEKDAYMAP prefix
+	// Configure viper to read env variables with the HISTOPRE prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("histopre")
 

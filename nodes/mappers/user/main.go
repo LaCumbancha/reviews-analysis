@@ -13,13 +13,15 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the FUNBIZMAP prefix
+	// Configure viper to read env variables with the USERMAP prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("usermap")
 
 	// Add env variables supported
+	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("reviews", "inputs")
 	configEnv.BindEnv("user", "aggregators")
 	configEnv.BindEnv("config", "file")
 
@@ -49,6 +51,12 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
+	instance := utils.GetConfigString(configEnv, configFile, "instance")
+	
+	if instance == "" {
+		log.Fatalf("Instance variable missing")
+	}
+
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
@@ -61,6 +69,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	reviewsInputs := utils.GetConfigInt(configEnv, configFile, "reviews_inputs")
+	
+	if reviewsInputs == 0 {
+		log.Fatalf("ReviewsInputs variable missing")
+	}
+
 	userAggregators := utils.GetConfigInt(configEnv, configFile, "user_aggregators")
 	
 	if userAggregators == 0 {
@@ -68,9 +82,11 @@ func main() {
 	}
 
 	mapperConfig := common.MapperConfig {
+		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		UserAggregators:		userAggregators,
+		ReviewsInputs:		reviewsInputs,
+		UserAggregators:	userAggregators,
 	}
 
 	mapper := common.NewMapper(mapperConfig)

@@ -13,13 +13,15 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the FUNBIZMAP prefix
+	// Configure viper to read env variables with the CITBIZMAP prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("citbizmap")
 
 	// Add env variables supported
+	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("businesses", "inputs")
 	configEnv.BindEnv("funcit", "joiners")
 	configEnv.BindEnv("config", "file")
 
@@ -49,6 +51,12 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
+	instance := utils.GetConfigString(configEnv, configFile, "instance")
+	
+	if instance == "" {
+		log.Fatalf("Instance variable missing")
+	}
+
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
@@ -61,6 +69,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	businessesInputs := utils.GetConfigInt(configEnv, configFile, "businesses_inputs")
+	
+	if businessesInputs == 0 {
+		log.Fatalf("BusinessesInputs variable missing")
+	}
+
 	funcitJoiners := utils.GetConfigInt(configEnv, configFile, "funcit_joiners")
 	
 	if funcitJoiners == 0 {
@@ -68,8 +82,10 @@ func main() {
 	}
 
 	mapperConfig := common.MapperConfig {
+		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
+		BusinessesInputs:		businessesInputs,
 		FuncitJoiners:		funcitJoiners,
 	}
 

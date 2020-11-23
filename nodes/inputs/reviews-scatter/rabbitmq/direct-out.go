@@ -6,13 +6,15 @@ import (
 )
 
 type RabbitOutputDirect struct {
+	instance		string
 	channel 		*amqp.Channel
 	exchange 		string
 	endSignalsMap 	map[string]int
 }
 
-func NewRabbitOutputDirect(name string, funbizSigs int, weekdaysSigs int, hashesSigs int, usersSigs int, starsSigs int, channel *amqp.Channel) *RabbitOutputDirect {
+func NewRabbitOutputDirect(name string, instance string, funbizSigs int, weekdaysSigs int, hashesSigs int, usersSigs int, starsSigs int, channel *amqp.Channel) *RabbitOutputDirect {
 	rabbitDirect := &RabbitOutputDirect {
+		instance:			instance,
 		channel: 			channel,
 		exchange:			name,
 		endSignalsMap:		GenerateSignalsMap(funbizSigs, weekdaysSigs, hashesSigs, usersSigs, starsSigs),
@@ -71,7 +73,7 @@ func (direct *RabbitOutputDirect) PublishFinish() {
 	  			false,  								// Immediate
 	  			amqp.Publishing{
 	  			    ContentType: 	"text/plain",
-	  			    Body:        	[]byte(END_MESSAGE),
+	  			    Body:        	[]byte(END_MESSAGE + direct.instance),
 	  			},
 	  		)
 

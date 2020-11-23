@@ -19,6 +19,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.SetEnvPrefix("rvwsca")
 
 	// Add env variables supported
+	configEnv.BindEnv("instance")
 	configEnv.BindEnv("reviews", "data")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
@@ -53,6 +54,12 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
+	}
+
+	instance := utils.GetConfigString(configEnv, configFile, "instance")
+	
+	if instance == "" {
+		log.Fatalf("Instance variable missing")
 	}
 
 	reviewsData := utils.GetConfigString(configEnv, configFile, "reviews_data")
@@ -104,6 +111,7 @@ func main() {
 	}
 
 	scatterConfig := common.ScatterConfig {
+		Instance:				instance,
 		Data:					reviewsData,
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,

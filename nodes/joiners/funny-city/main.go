@@ -13,11 +13,12 @@ import (
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the FUNBIZAGG prefix
+	// Configure viper to read env variables with the FUNCITJOIN prefix
 	configEnv.AutomaticEnv()
 	configEnv.SetEnvPrefix("funcitjoin")
 
 	// Add env variables supported
+	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("input", "topic")
@@ -49,6 +50,12 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
+	}
+
+	instance := utils.GetConfigString(configEnv, configFile, "instance")
+	
+	if instance == "" {
+		log.Fatalf("Instance variable missing")
 	}
 
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
@@ -88,6 +95,7 @@ func main() {
 	}
 
 	joinerConfig := common.JoinerConfig {
+		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		InputTopic: 		inputTopic,

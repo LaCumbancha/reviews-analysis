@@ -7,14 +7,16 @@ import (
 )
 
 type RabbitOutputDirect struct {
+	instance		string
 	channel 		*amqp.Channel
 	exchange 		string
 	partitions 		int
 	partitionMap	map[string]string
 }
 
-func NewRabbitOutputDirect(name string, partitions int, channel *amqp.Channel) *RabbitOutputDirect {
+func NewRabbitOutputDirect(name string, instance string, partitions int, channel *amqp.Channel) *RabbitOutputDirect {
 	rabbitDirect := &RabbitOutputDirect {
+		instance:		instance,
 		channel: 		channel,
 		exchange:		name,
 		partitions:		partitions,
@@ -81,7 +83,7 @@ func (direct *RabbitOutputDirect) PublishFinish() {
   			false,  							// Immediate
   			amqp.Publishing{
   			    ContentType: 	"text/plain",
-  			    Body:        	[]byte(END_MESSAGE),
+  			    Body:        	[]byte(END_MESSAGE + direct.instance),
   			},
   		)
 
