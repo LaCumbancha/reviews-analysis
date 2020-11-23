@@ -331,6 +331,74 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  hash_mapper0:
+    container_name: hash_mapper0
+    depends_on:
+    - sink
+    entrypoint: /mapper
+    environment:
+    - HASHMAP_INSTANCE=0
+    - HASHMAP_RABBITMQ_IP=rabbitmq
+    - HASHMAP_RABBITMQ_PORT=5672
+    - HASHMAP_REVIEWS_INPUTS=1
+    - HASHMAP_HASH_AGGREGATORS=2
+    image: hash_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  hash_mapper1:
+    container_name: hash_mapper1
+    depends_on:
+    - sink
+    entrypoint: /mapper
+    environment:
+    - HASHMAP_INSTANCE=1
+    - HASHMAP_RABBITMQ_IP=rabbitmq
+    - HASHMAP_RABBITMQ_PORT=5672
+    - HASHMAP_REVIEWS_INPUTS=1
+    - HASHMAP_HASH_AGGREGATORS=2
+    image: hash_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver0:
+    container_name: mock_receiver0
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=HashMapper
+    - MOCK_TOPIC=0
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver1:
+    container_name: mock_receiver1
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=HashMapper
+    - MOCK_TOPIC=1
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   rabbitmq:
     container_name: rabbitmq
     healthcheck:
@@ -356,6 +424,8 @@ services:
     - user_mapper1
     - stars_mapper0
     - stars_mapper1
+    - hash_mapper0
+    - hash_mapper1
     entrypoint: /scatter
     environment:
     - RVWSCA_INSTANCE=0
@@ -364,7 +434,7 @@ services:
     - RVWSCA_RABBITMQ_PORT=5672
     - RVWSCA_FUNBIZ_MAPPERS=2
     - RVWSCA_WEEKDAYS_MAPPERS=2
-    - RVWSCA_HASHES_MAPPERS=1
+    - RVWSCA_HASHES_MAPPERS=2
     - RVWSCA_USERS_MAPPERS=2
     - RVWSCA_STARS_MAPPERS=2
     image: rvw_scatter:latest
@@ -378,7 +448,7 @@ services:
   sink:
     container_name: sink
     depends_on:
-    - rabbitmq
+    - mock_receiver0
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq
@@ -576,7 +646,7 @@ services:
     - USERFIL_INSTANCE=0
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
-    - USERFIL_MIN_REVIEWS=1
+    - USERFIL_MIN_REVIEWS=50
     - USERFIL_USER_AGGREGATORS=2
     - USERFIL_STARS_JOINERS=2
     image: user_filter:latest
@@ -594,7 +664,7 @@ services:
     - USERFIL_INSTANCE=1
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
-    - USERFIL_MIN_REVIEWS=1
+    - USERFIL_MIN_REVIEWS=50
     - USERFIL_USER_AGGREGATORS=2
     - USERFIL_STARS_JOINERS=2
     image: user_filter:latest

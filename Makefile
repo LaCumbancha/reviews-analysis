@@ -24,6 +24,7 @@ build: deps
 	GOOS=linux go build -o bin/weekday-mapper $(GIT_REMOTE)/nodes/mappers/weekday
 	GOOS=linux go build -o bin/user-mapper $(GIT_REMOTE)/nodes/mappers/user
 	GOOS=linux go build -o bin/stars-mapper $(GIT_REMOTE)/nodes/mappers/stars
+	GOOS=linux go build -o bin/hash-mapper $(GIT_REMOTE)/nodes/mappers/hash-text
 
 	# Filters
 	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/nodes/filters/funbiz-filter
@@ -67,6 +68,7 @@ docker-image:
 	docker build -f ./nodes/mappers/weekday/Dockerfile -t "weekday_mapper:latest" .
 	docker build -f ./nodes/mappers/user/Dockerfile -t "user_mapper:latest" .
 	docker build -f ./nodes/mappers/stars/Dockerfile -t "stars_mapper:latest" .
+	docker build -f ./nodes/mappers/hash-text/Dockerfile -t "hash_mapper:latest" .
 
 	# Filters
 	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
