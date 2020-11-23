@@ -7,7 +7,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/rabbitmq"
 )
 
 type JoinerConfig struct {
@@ -15,8 +15,8 @@ type JoinerConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	InputTopic			string
-	StarsAggregators	int
-	UserFilters 		int
+	DishashFilters		int
+	BotUsersFilters 	int
 }
 
 type Joiner struct {
@@ -55,8 +55,8 @@ func NewJoiner(config JoinerConfig) *Joiner {
 		inputDirect1:	inputDirect1,
 		inputDirect2:	inputDirect2,
 		outputQueue:	outputQueue,
-		endSignals1:	config.StarsAggregators,
-		endSignals2:	config.UserFilters,
+		endSignals1:	config.DishashFilters,
+		endSignals2:	config.BotUsersFilters,
 	}
 
 	return joiner
@@ -74,19 +74,19 @@ func (joiner *Joiner) Run() {
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
 	go func() {
-		log.Infof("Starting to listen for users 5-stars reviews data.")
+		log.Infof("Starting to listen for bot users with only one text.")
 		for message := range joiner.inputDirect1.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal("5-stars reviews", messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
+				joiner.processEndSignal("bot reviews", messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
-					joiner.calculator.AddBestUser(messageBody)
+					joiner.calculator.AddBotUser(messageBody)
 					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
@@ -193,7 +193,7 @@ func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.UserData, wg *sync.Wait
 }
 
 func (joiner *Joiner) Stop() {
-	log.Infof("Closing Best-Users Joiner connections.")
+	log.Infof("Closing Bot-Users Joiner connections.")
 	joiner.connection.Close()
 	joiner.channel.Close()
 }

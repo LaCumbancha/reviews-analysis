@@ -26,6 +26,7 @@ BESTUSERPRE_DEPS = ['sink']
 
 FUNCITJOIN_DEPS = []
 BESTUSERJOIN_DEPS = []
+BOTUSERJOIN_DEPS = ['sink']
 
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
@@ -39,8 +40,8 @@ FUNBIZFIL_DEPS = []
 FUNCITFIL_DEPS = []
 USERFIL_DEPS = []
 STARSFIL_DEPS = []
-DISHASHFIL_DEPS = ['sink']
-BOTUSERFIL_DEPS = ['sink']
+DISHASHFIL_DEPS = []
+BOTUSERFIL_DEPS = []
 
 USERMAP_DEPS = []
 STARSMAP_DEPS = []
@@ -72,38 +73,38 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-#file['services']['mock_receiver0'] = {
-#	'container_name': 'mock_receiver0',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BotUserAggregator'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
-
 file['services']['mock_receiver0'] = {
 	'container_name': 'mock_receiver0',
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BotUsersJoiner'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
 }
 
-file['services']['mock_receiver1'] = {
-	'container_name': 'mock_receiver1',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=1'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
+#file['services']['mock_receiver0'] = {
+#	'container_name': 'mock_receiver0',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=0'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
+#
+#file['services']['mock_receiver1'] = {
+#	'container_name': 'mock_receiver1',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=1'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
 
 
 
@@ -356,6 +357,21 @@ for idx in range(0, input_yaml['stars_mappers']):
 	}
 
 # Bot Users flow.
+for idx in range(0, input_yaml['botuser_joiners']):
+	container_name = f'botuser_joiner{idx}'
+	DISHASHFIL_DEPS += [container_name]
+	BOTUSERFIL_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'botuser_joiner:latest',
+		'entrypoint': '/joiner',
+		'restart': 'on-failure',
+		'environment': [f'BOTUSERJOIN_INSTANCE={idx}', 'BOTUSERJOIN_RABBITMQ_IP=rabbitmq', 'BOTUSERJOIN_RABBITMQ_PORT=5672', f'BOTUSERJOIN_INPUT_TOPIC={idx}', f'BOTUSERJOIN_DISHASH_FILTERS={input_yaml["dishash_filters"]}', f'BOTUSERJOIN_BOTUSERS_FILTERS={input_yaml["botuser_filters"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(BOTUSERJOIN_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['botuser_filters']):
 	container_name = f'botuser_filter{idx}'
 	USERAGG_DEPS += [container_name]
@@ -364,7 +380,7 @@ for idx in range(0, input_yaml['botuser_filters']):
 		'image': 'botuser_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': [f'BOTUSERFIL_INSTANCE={idx}', 'BOTUSERFIL_RABBITMQ_IP=rabbitmq', 'BOTUSERFIL_RABBITMQ_PORT=5672', f'BOTUSERFIL_MIN_REVIEWS={input_yaml["bots_min_reviews"]}', f'BOTUSERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}', f'BOTUSERFIL_DISHASH_JOINERS={input_yaml["dishash_joiners"]}'],
+		'environment': [f'BOTUSERFIL_INSTANCE={idx}', 'BOTUSERFIL_RABBITMQ_IP=rabbitmq', 'BOTUSERFIL_RABBITMQ_PORT=5672', f'BOTUSERFIL_MIN_REVIEWS={input_yaml["bots_min_reviews"]}', f'BOTUSERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}', f'BOTUSERFIL_DISHASH_JOINERS={input_yaml["botuser_joiners"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(BOTUSERFIL_DEPS),
 		'networks': ['testing_net']
@@ -378,7 +394,7 @@ for idx in range(0, input_yaml['dishash_filters']):
 		'image': 'dishash_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': [f'DISHASHFIL_INSTANCE={idx}', 'DISHASHFIL_RABBITMQ_IP=rabbitmq', 'DISHASHFIL_RABBITMQ_PORT=5672', f'DISHASHFIL_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}', f'DISHASHFIL_DISHASH_JOINERS={input_yaml["dishash_joiners"]}'],
+		'environment': [f'DISHASHFIL_INSTANCE={idx}', 'DISHASHFIL_RABBITMQ_IP=rabbitmq', 'DISHASHFIL_RABBITMQ_PORT=5672', f'DISHASHFIL_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}', f'DISHASHFIL_DISHASH_JOINERS={input_yaml["botuser_joiners"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(DISHASHFIL_DEPS),
 		'networks': ['testing_net']

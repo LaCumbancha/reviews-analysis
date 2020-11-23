@@ -76,7 +76,8 @@ services:
   botuser_filter0:
     container_name: botuser_filter0
     depends_on:
-    - sink
+    - botuser_joiner0
+    - botuser_joiner1
     entrypoint: /filter
     environment:
     - BOTUSERFIL_INSTANCE=0
@@ -94,7 +95,8 @@ services:
   botuser_filter1:
     container_name: botuser_filter1
     depends_on:
-    - sink
+    - botuser_joiner0
+    - botuser_joiner1
     entrypoint: /filter
     environment:
     - BOTUSERFIL_INSTANCE=1
@@ -104,6 +106,42 @@ services:
     - BOTUSERFIL_USER_AGGREGATORS=2
     - BOTUSERFIL_DISHASH_JOINERS=2
     image: botuser_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  botuser_joiner0:
+    container_name: botuser_joiner0
+    depends_on:
+    - sink
+    entrypoint: /joiner
+    environment:
+    - BOTUSERJOIN_INSTANCE=0
+    - BOTUSERJOIN_RABBITMQ_IP=rabbitmq
+    - BOTUSERJOIN_RABBITMQ_PORT=5672
+    - BOTUSERJOIN_INPUT_TOPIC=0
+    - BOTUSERJOIN_DISHASH_FILTERS=2
+    - BOTUSERJOIN_BOTUSERS_FILTERS=2
+    image: botuser_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  botuser_joiner1:
+    container_name: botuser_joiner1
+    depends_on:
+    - sink
+    entrypoint: /joiner
+    environment:
+    - BOTUSERJOIN_INSTANCE=1
+    - BOTUSERJOIN_RABBITMQ_IP=rabbitmq
+    - BOTUSERJOIN_RABBITMQ_PORT=5672
+    - BOTUSERJOIN_INPUT_TOPIC=1
+    - BOTUSERJOIN_DISHASH_FILTERS=2
+    - BOTUSERJOIN_BOTUSERS_FILTERS=2
+    image: botuser_joiner:latest
     links:
     - rabbitmq
     networks:
@@ -186,7 +224,8 @@ services:
   dishash_filter0:
     container_name: dishash_filter0
     depends_on:
-    - sink
+    - botuser_joiner0
+    - botuser_joiner1
     entrypoint: /filter
     environment:
     - DISHASHFIL_INSTANCE=0
@@ -203,7 +242,8 @@ services:
   dishash_filter1:
     container_name: dishash_filter1
     depends_on:
-    - sink
+    - botuser_joiner0
+    - botuser_joiner1
     entrypoint: /filter
     environment:
     - DISHASHFIL_INSTANCE=1
@@ -517,28 +557,10 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=DIRECT
+    - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=BotUserFilter
-    - MOCK_TOPIC=0
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver1:
-    container_name: mock_receiver1
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=BotUserFilter
-    - MOCK_TOPIC=1
+    - MOCK_QUEUE=BotUsersJoiner
     image: mock_receiver:latest
     links:
     - rabbitmq
