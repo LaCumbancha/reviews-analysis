@@ -25,10 +25,12 @@ build: deps
 	GOOS=linux go build -o bin/user-mapper $(GIT_REMOTE)/nodes/mappers/user
 
 	# Filters
-	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/nodes/filters/funbiz-mapper
+	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/nodes/filters/funbiz-filter
+	GOOS=linux go build -o bin/funcit-filter $(GIT_REMOTE)/nodes/filters/funcit-filter
+	GOOS=linux go build -o bin/user-filter $(GIT_REMOTE)/nodes/filters/user
 
 	# Aggregators
-	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-mapper
+	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-aggregator
 	GOOS=linux go build -o bin/funcit-aggregator $(GIT_REMOTE)/nodes/aggregators/funcit-aggregator
 	GOOS=linux go build -o bin/weekday-aggregator $(GIT_REMOTE)/nodes/aggregators/weekday
 	GOOS=linux go build -o bin/user-aggregator $(GIT_REMOTE)/nodes/aggregators/user
@@ -61,6 +63,7 @@ docker-image:
 
 	# Filters
 	docker build -f ./nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
+	docker build -f ./nodes/filters/funny-city/Dockerfile -t "funcit_filter:latest" .
 	docker build -f ./nodes/filters/user/Dockerfile -t "user_filter:latest" .
 
 	# Aggregators

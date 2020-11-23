@@ -157,7 +157,8 @@ services:
   funcit_aggregator0:
     container_name: funcit_aggregator0
     depends_on:
-    - sink
+    - funcit_filter0
+    - funcit_filter1
     entrypoint: /aggregator
     environment:
     - FUNCITAGG_RABBITMQ_IP=rabbitmq
@@ -174,7 +175,8 @@ services:
   funcit_aggregator1:
     container_name: funcit_aggregator1
     depends_on:
-    - sink
+    - funcit_filter0
+    - funcit_filter1
     entrypoint: /aggregator
     environment:
     - FUNCITAGG_RABBITMQ_IP=rabbitmq
@@ -183,6 +185,36 @@ services:
     - FUNCITAGG_FUNCIT_FILTERS=2
     - FUNCITAGG_INPUT_TOPIC=1
     image: funcit_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funcit_filter0:
+    container_name: funcit_filter0
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - FUNCITFIL_RABBITMQ_IP=rabbitmq
+    - FUNCITFIL_RABBITMQ_PORT=5672
+    - FUNCITFIL_FUNCIT_AGGREGATORS=2
+    image: funcit_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funcit_filter1:
+    container_name: funcit_filter1
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - FUNCITFIL_RABBITMQ_IP=rabbitmq
+    - FUNCITFIL_RABBITMQ_PORT=5672
+    - FUNCITFIL_FUNCIT_AGGREGATORS=2
+    image: funcit_filter:latest
     links:
     - rabbitmq
     networks:
@@ -235,7 +267,7 @@ services:
     - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=FunnyCityAggregator
+    - MOCK_QUEUE=FunnyCityFilter
     image: mock_receiver:latest
     links:
     - rabbitmq

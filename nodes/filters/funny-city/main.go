@@ -6,23 +6,20 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the FUNBIZAGG prefix
+	// Configure viper to read env variables with the FUNCITFIL prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("funcitjoin")
+	configEnv.SetEnvPrefix("funcitfil")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("input", "topic")
-	configEnv.BindEnv("funbiz", "aggregators")
-	configEnv.BindEnv("citbiz", "mappers")
 	configEnv.BindEnv("funcit", "aggregators")
 
 	// Read config file if it's present
@@ -44,7 +41,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 }
 
 func main() {
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(log.TraceLevel)
 	configEnv, configFile, err := InitConfig()
 
 	if err != nil {
@@ -63,40 +60,19 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
-	
-	if inputTopic == "" {
-		log.Fatalf("InputTopic variable missing")
-	}
-
-	funbizAggregators := utils.GetConfigInt(configEnv, configFile, "funbiz_aggregators")
-	
-	if funbizAggregators == 0 {
-		log.Fatalf("FunbizAggregators variable missing")
-	}
-
-	citbizMappers := utils.GetConfigInt(configEnv, configFile, "citbiz_mappers")
-	
-	if citbizMappers == 0 {
-		log.Fatalf("CitbizMappers variable missing")
-	}
-
 	funcitAggregators := utils.GetConfigInt(configEnv, configFile, "funcit_aggregators")
 	
 	if funcitAggregators == 0 {
 		log.Fatalf("FuncitAggregators variable missing")
 	}
 
-	joinerConfig := common.JoinerConfig {
+	filterConfig := common.FilterConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		InputTopic: 		inputTopic,
-		FunbizAggregators:	funbizAggregators,
-		CitbizMappers:		citbizMappers,
 		FuncitAggregators:	funcitAggregators,
 	}
 
-	joiner := common.NewJoiner(joinerConfig)
-	joiner.Run()
-	joiner.Stop()
+	filter := common.NewFilter(filterConfig)
+	filter.Run()
+	filter.Stop()
 }

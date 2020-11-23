@@ -25,9 +25,10 @@ FUNCITJOIN_DEPS = []
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
-FUNCITAGG_DEPS = ['sink']
+FUNCITAGG_DEPS = []
 
 FUNBIZFIL_DEPS = []
+FUNCITFIL_DEPS = ['sink']
 USERFIL_DEPS = []
 
 USERMAP_DEPS = []
@@ -63,7 +64,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=FunnyCityAggregator'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=FunnyCityFilter'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -120,6 +121,20 @@ file['services']['sink'] = {
 }
 
 ## Funniest Cities flow
+for idx in range(0, input_yaml['funcit_filters']):
+	container_name = f'funcit_filter{idx}'
+	FUNCITAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funcit_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': ['FUNCITFIL_RABBITMQ_IP=rabbitmq', 'FUNCITFIL_RABBITMQ_PORT=5672', f'FUNCITFIL_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNCITFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['funcit_aggregators']):
 	container_name = f'funcit_aggregator{idx}'
 	FUNCITJOIN_DEPS += [container_name]
