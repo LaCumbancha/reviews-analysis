@@ -31,6 +31,7 @@ build: deps
 	GOOS=linux go build -o bin/funcit-filter $(GIT_REMOTE)/nodes/filters/funcit-filter
 	GOOS=linux go build -o bin/user-filter $(GIT_REMOTE)/nodes/filters/user
 	GOOS=linux go build -o bin/stars-filter $(GIT_REMOTE)/nodes/filters/stars
+	GOOS=linux go build -o bin/dishash-filter $(GIT_REMOTE)/nodes/filters/distinct-hash
 
 	# Aggregators
 	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-aggregator
@@ -77,6 +78,7 @@ docker-image:
 	docker build -f ./nodes/filters/funny-city/Dockerfile -t "funcit_filter:latest" .
 	docker build -f ./nodes/filters/user/Dockerfile -t "user_filter:latest" .
 	docker build -f ./nodes/filters/stars/Dockerfile -t "stars_filter:latest" .
+	docker build -f ./nodes/filters/distinct-hash/Dockerfile -t "dishash_filter:latest" .
 
 	# Aggregators
 	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .

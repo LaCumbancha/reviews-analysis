@@ -30,7 +30,7 @@ BESTUSERJOIN_DEPS = []
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
 HASHAGG_DEPS = []
-DISHASHAGG_DEPS = ['sink']
+DISHASHAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
 FUNCITAGG_DEPS = []
 STARSAGG_DEPS = []
@@ -39,6 +39,7 @@ FUNBIZFIL_DEPS = []
 FUNCITFIL_DEPS = []
 USERFIL_DEPS = []
 STARSFIL_DEPS = []
+DISHASHFIL_DEPS = ['sink']
 
 USERMAP_DEPS = []
 STARSMAP_DEPS = []
@@ -70,38 +71,38 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-file['services']['mock_receiver0'] = {
-	'container_name': 'mock_receiver0',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=DishashAggregator'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
 #file['services']['mock_receiver0'] = {
 #	'container_name': 'mock_receiver0',
 #	'image': 'mock_receiver:latest',
 #	'entrypoint': '/receiver',
 #	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashAggregator', 'MOCK_TOPIC=0'],
+#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=DishashAggregator'],
 #	'links': ['rabbitmq'],
 #	'depends_on': ['rabbitmq'],
 #	'networks': ['testing_net']
 #}
-#
-#file['services']['mock_receiver1'] = {
-#	'container_name': 'mock_receiver1',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashAggregator', 'MOCK_TOPIC=1'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
+
+file['services']['mock_receiver0'] = {
+	'container_name': 'mock_receiver0',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashFilter', 'MOCK_TOPIC=0'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
+
+file['services']['mock_receiver1'] = {
+	'container_name': 'mock_receiver1',
+	'image': 'mock_receiver:latest',
+	'entrypoint': '/receiver',
+	'restart': 'on-failure',
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashFilter', 'MOCK_TOPIC=1'],
+	'links': ['rabbitmq'],
+	'depends_on': ['rabbitmq'],
+	'networks': ['testing_net']
+}
 
 
 
@@ -422,6 +423,20 @@ for idx in range(0, input_yaml['stars_mappers']):
 	}
 
 # Bot Users flow.
+for idx in range(0, input_yaml['dishash_filters']):
+	container_name = f'dishash_filter{idx}'
+	DISHASHAGG_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'dishash_filter:latest',
+		'entrypoint': '/filter',
+		'restart': 'on-failure',
+		'environment': [f'DISHASHFIL_INSTANCE={idx}', 'DISHASHFIL_RABBITMQ_IP=rabbitmq', 'DISHASHFIL_RABBITMQ_PORT=5672', f'DISHASHFIL_DISHASH_AGGREGATORS={input_yaml["dishash_aggregators"]}', f'DISHASHFIL_DISHASH_JOINERS={input_yaml["dishash_joiners"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(DISHASHFIL_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['dishash_aggregators']):
 	container_name = f'dishash_aggregator{idx}'
 	HASHAGG_DEPS += [container_name]

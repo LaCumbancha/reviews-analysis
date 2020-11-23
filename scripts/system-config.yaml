@@ -33,3 +33,4 @@ hash_mappers: 2
 hash_aggregators: 2
 dishash_aggregators: 2
 dishash_filters: 2
+dishash_joiners: 2

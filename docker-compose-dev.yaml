@@ -114,7 +114,8 @@ services:
   dishash_aggregator0:
     container_name: dishash_aggregator0
     depends_on:
-    - sink
+    - dishash_filter0
+    - dishash_filter1
     entrypoint: /aggregator
     environment:
     - DISHASHAGG_INSTANCE=0
@@ -132,7 +133,8 @@ services:
   dishash_aggregator1:
     container_name: dishash_aggregator1
     depends_on:
-    - sink
+    - dishash_filter0
+    - dishash_filter1
     entrypoint: /aggregator
     environment:
     - DISHASHAGG_INSTANCE=1
@@ -142,6 +144,40 @@ services:
     - DISHASHAGG_HASH_AGGREGATORS=2
     - DISHASHAGG_DISHASH_FILTERS=2
     image: dishash_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  dishash_filter0:
+    container_name: dishash_filter0
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - DISHASHFIL_INSTANCE=0
+    - DISHASHFIL_RABBITMQ_IP=rabbitmq
+    - DISHASHFIL_RABBITMQ_PORT=5672
+    - DISHASHFIL_DISHASH_AGGREGATORS=2
+    - DISHASHFIL_DISHASH_JOINERS=2
+    image: dishash_filter:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  dishash_filter1:
+    container_name: dishash_filter1
+    depends_on:
+    - sink
+    entrypoint: /filter
+    environment:
+    - DISHASHFIL_INSTANCE=1
+    - DISHASHFIL_RABBITMQ_IP=rabbitmq
+    - DISHASHFIL_RABBITMQ_PORT=5672
+    - DISHASHFIL_DISHASH_AGGREGATORS=2
+    - DISHASHFIL_DISHASH_JOINERS=2
+    image: dishash_filter:latest
     links:
     - rabbitmq
     networks:
@@ -447,10 +483,28 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=QUEUE
+    - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=DishashAggregator
+    - MOCK_EXCHANGE=DishashFilter
+    - MOCK_TOPIC=0
+    image: mock_receiver:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  mock_receiver1:
+    container_name: mock_receiver1
+    depends_on:
+    - rabbitmq
+    entrypoint: /receiver
+    environment:
+    - MOCK_TYPE=DIRECT
+    - MOCK_RABBITMQ_IP=rabbitmq
+    - MOCK_RABBITMQ_PORT=5672
+    - MOCK_EXCHANGE=DishashFilter
+    - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
     - rabbitmq
