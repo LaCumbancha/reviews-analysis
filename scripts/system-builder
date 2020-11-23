@@ -17,17 +17,15 @@ file['version'] = '3'
 file['services'] = {}
 
 # Services dependencies
-# SINK_DEPS = ['rabbitmq']
-SINK_DEPS = ['mock_receiver0']
+SINK_DEPS = ['rabbitmq']
 HISTOPRE_DEPS = ['sink']
 TOPUSERPRE_DEPS = ['sink']
 FUNCITPRE_DEPS = ['sink']
 BESTUSERPRE_DEPS = ['sink']
-
+BOTUSERPRE_DEPS = ['sink']
 FUNCITJOIN_DEPS = []
 BESTUSERJOIN_DEPS = []
-BOTUSERJOIN_DEPS = ['sink']
-
+BOTUSERJOIN_DEPS = []
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
 HASHAGG_DEPS = []
@@ -35,24 +33,22 @@ DISHASHAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
 FUNCITAGG_DEPS = []
 STARSAGG_DEPS = []
-
 FUNBIZFIL_DEPS = []
 FUNCITFIL_DEPS = []
 USERFIL_DEPS = []
 STARSFIL_DEPS = []
 DISHASHFIL_DEPS = []
 BOTUSERFIL_DEPS = []
-
 USERMAP_DEPS = []
 STARSMAP_DEPS = []
 HASHMAP_DEPS = []
 FUNBIZMAP_DEPS = []
 CITBIZMAP_DEPS = []
 WEEKDAYMAP_DEPS = []
-
 BIZSCA_DEPS = []
 RVWSCA_DEPS = []
 
+## RabbitMQ
 file['services']['rabbitmq'] = {
 	'container_name': f'rabbitmq',
 	'image': 'rabbitmq:custom',
@@ -68,59 +64,6 @@ file['services']['rabbitmq'] = {
 		'retries': '10'
 	}
 }
-
-
-
-
-# TODO: Remove mocks
-file['services']['mock_receiver0'] = {
-	'container_name': 'mock_receiver0',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BotUsersJoiner'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
-
-#file['services']['mock_receiver0'] = {
-#	'container_name': 'mock_receiver0',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=0'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
-#
-#file['services']['mock_receiver1'] = {
-#	'container_name': 'mock_receiver1',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserFilter', 'MOCK_TOPIC=1'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## Sink
 file['services']['sink'] = {
@@ -299,6 +242,19 @@ for idx in range(0, input_yaml['weekday_mappers']):
 		'networks': ['testing_net']
 	}
 
+## Best Users flow.
+BESTUSERJOIN_DEPS += ['best_users_prettier']
+file['services']['best_users_prettier'] = {
+	'container_name': 'best_users_prettier',
+	'image': 'best_users_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['BESTUSERPRE_RABBITMQ_IP=rabbitmq', 'BESTUSERPRE_RABBITMQ_PORT=5672', f'BESTUSERPRE_BESTUSER_JOINERS={input_yaml["bestuser_joiners"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(BESTUSERPRE_DEPS),
+	'networks': ['testing_net']
+}
+
 for idx in range(0, input_yaml['bestuser_joiners']):
 	container_name = f'bestuser_joiner{idx}'
 	USERFIL_DEPS += [container_name]
@@ -357,6 +313,18 @@ for idx in range(0, input_yaml['stars_mappers']):
 	}
 
 # Bot Users flow.
+BOTUSERJOIN_DEPS += ['bot_users_prettier']
+file['services']['bot_users_prettier'] = {
+	'container_name': 'bot_users_prettier',
+	'image': 'bot_users_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['BOTUSERPRE_RABBITMQ_IP=rabbitmq', 'BOTUSERPRE_RABBITMQ_PORT=5672', f'BOTUSERPRE_BOTUSER_JOINERS={input_yaml["botuser_joiners"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(BOTUSERPRE_DEPS),
+	'networks': ['testing_net']
+}
+
 for idx in range(0, input_yaml['botuser_joiners']):
 	container_name = f'botuser_joiner{idx}'
 	DISHASHFIL_DEPS += [container_name]
@@ -496,19 +464,6 @@ for idx in range(0, input_yaml['user_mappers']):
 		'depends_on': list(USERMAP_DEPS),
 		'networks': ['testing_net']
 	}
-
-## Best Users flow.
-BESTUSERJOIN_DEPS += ['best_users_prettier']
-file['services']['best_users_prettier'] = {
-	'container_name': 'best_users_prettier',
-	'image': 'best_users_prettier:latest',
-	'entrypoint': '/prettier',
-	'restart': 'on-failure',
-	'environment': ['BESTUSERPRE_RABBITMQ_IP=rabbitmq', 'BESTUSERPRE_RABBITMQ_PORT=5672', f'BESTUSERPRE_BESTUSER_JOINERS={input_yaml["bestuser_joiners"]}'],
-	'links': ['rabbitmq'],
-	'depends_on': list(BESTUSERPRE_DEPS),
-	'networks': ['testing_net']
-}
 
 ## Reviews Scatter
 file['services']['rvw_scatter'] = {

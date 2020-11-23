@@ -102,6 +102,7 @@ docker-image:
 	docker build -f ./nodes/prettiers/weekday-histogram/Dockerfile -t "weekday_histogram_prettier:latest" .
 	docker build -f ./nodes/prettiers/top-users/Dockerfile -t "top_users_prettier:latest" .
 	docker build -f ./nodes/prettiers/best-users/Dockerfile -t "best_users_prettier:latest" .
+	docker build -f ./nodes/prettiers/bot-users/Dockerfile -t "bot_users_prettier:latest" .
 
 	# Outputs
 	docker build -f ./nodes/outputs/sink/Dockerfile -t "sink:latest" .

@@ -22,7 +22,8 @@ services:
     restart: on-failure
   bestuser_joiner0:
     container_name: bestuser_joiner0
-    depends_on: []
+    depends_on:
+    - best_users_prettier
     entrypoint: /joiner
     environment:
     - BESTUSERJOIN_INSTANCE=0
@@ -39,7 +40,8 @@ services:
     restart: on-failure
   bestuser_joiner1:
     container_name: bestuser_joiner1
-    depends_on: []
+    depends_on:
+    - best_users_prettier
     entrypoint: /joiner
     environment:
     - BESTUSERJOIN_INSTANCE=1
@@ -73,6 +75,21 @@ services:
     restart: on-failure
     volumes:
     - business_dataset:/data
+  bot_users_prettier:
+    container_name: bot_users_prettier
+    depends_on:
+    - sink
+    entrypoint: /prettier
+    environment:
+    - BOTUSERPRE_RABBITMQ_IP=rabbitmq
+    - BOTUSERPRE_RABBITMQ_PORT=5672
+    - BOTUSERPRE_BOTUSER_JOINERS=2
+    image: bot_users_prettier:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   botuser_filter0:
     container_name: botuser_filter0
     depends_on:
@@ -83,7 +100,7 @@ services:
     - BOTUSERFIL_INSTANCE=0
     - BOTUSERFIL_RABBITMQ_IP=rabbitmq
     - BOTUSERFIL_RABBITMQ_PORT=5672
-    - BOTUSERFIL_MIN_REVIEWS=2
+    - BOTUSERFIL_MIN_REVIEWS=5
     - BOTUSERFIL_USER_AGGREGATORS=2
     - BOTUSERFIL_DISHASH_JOINERS=2
     image: botuser_filter:latest
@@ -102,7 +119,7 @@ services:
     - BOTUSERFIL_INSTANCE=1
     - BOTUSERFIL_RABBITMQ_IP=rabbitmq
     - BOTUSERFIL_RABBITMQ_PORT=5672
-    - BOTUSERFIL_MIN_REVIEWS=2
+    - BOTUSERFIL_MIN_REVIEWS=5
     - BOTUSERFIL_USER_AGGREGATORS=2
     - BOTUSERFIL_DISHASH_JOINERS=2
     image: botuser_filter:latest
@@ -114,7 +131,7 @@ services:
   botuser_joiner0:
     container_name: botuser_joiner0
     depends_on:
-    - sink
+    - bot_users_prettier
     entrypoint: /joiner
     environment:
     - BOTUSERJOIN_INSTANCE=0
@@ -132,7 +149,7 @@ services:
   botuser_joiner1:
     container_name: botuser_joiner1
     depends_on:
-    - sink
+    - bot_users_prettier
     entrypoint: /joiner
     environment:
     - BOTUSERJOIN_INSTANCE=1
@@ -551,22 +568,6 @@ services:
     networks:
     - testing_net
     restart: on-failure
-  mock_receiver0:
-    container_name: mock_receiver0
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=QUEUE
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=BotUsersJoiner
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
   rabbitmq:
     container_name: rabbitmq
     healthcheck:
@@ -616,7 +617,7 @@ services:
   sink:
     container_name: sink
     depends_on:
-    - mock_receiver0
+    - rabbitmq
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq

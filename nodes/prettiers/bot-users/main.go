@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/best-users/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/best-users/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/bot-users/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/bot-users/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -15,12 +15,12 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 
 	// Configure viper to read env variables with the BESTUSER prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("bestuserpre")
+	configEnv.SetEnvPrefix("botuserpre")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("bestuser", "joiners")
+	configEnv.BindEnv("botuser", "joiners")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -61,16 +61,16 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	bestUserJoiners := utils.GetConfigInt(configEnv, configFile, "bestuser_joiners")
+	botUserJoiners := utils.GetConfigInt(configEnv, configFile, "botuser_joiners")
 	
-	if bestUserJoiners == 0 {
-		log.Fatalf("BestUserJoiners variable missing")
+	if botUserJoiners == 0 {
+		log.Fatalf("BotUserJoiners variable missing")
 	}
 
 	mapperConfig := common.MapperConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		BestUserJoiners:		bestUserJoiners,
+		BotUserJoiners:		botUserJoiners,
 	}
 
 	mapper := common.NewMapper(mapperConfig)
