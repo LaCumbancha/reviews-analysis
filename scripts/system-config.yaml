@@ -34,3 +34,4 @@ hash_aggregators: 2
 dishash_aggregators: 2
 dishash_filters: 2
 dishash_joiners: 2
+botuser_filters: 2

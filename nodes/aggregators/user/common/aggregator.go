@@ -17,6 +17,7 @@ type AggregatorConfig struct {
 	InputTopic			string
 	UserMappers 		int
 	UserFilters 		int
+	BotUserFilters		int
 }
 
 type Aggregator struct {
@@ -24,6 +25,7 @@ type Aggregator struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputDirect 	*rabbitmq.RabbitInputDirect
+	outputDirect 	*rabbitmq.RabbitOutputDirect
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals		int
 }
@@ -44,12 +46,14 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.BotUserFilters, ch)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.UserFilters, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
 		calculator:		NewCalculator(),
 		inputDirect:	inputDirect,
+		outputDirect:	outputDirect,
 		outputQueue:	outputQueue,
 		endSignals:		config.UserMappers,
 	}
@@ -98,6 +102,7 @@ func (aggregator *Aggregator) Run() {
 
     // Sending End-Message to consumers.
     aggregator.outputQueue.PublishFinish()
+    aggregator.outputDirect.PublishFinish()
 }
 
 func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
@@ -122,6 +127,7 @@ func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.UserDat
 		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
 		aggregator.outputQueue.PublishData(data)
+		aggregator.outputDirect.PublishData(data, aggregatedData.UserId)
 	}
 	wg.Done()
 }

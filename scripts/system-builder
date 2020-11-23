@@ -87,7 +87,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashFilter', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserAggregatorBotUserAggregator', 'MOCK_TOPIC=0'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -98,7 +98,7 @@ file['services']['mock_receiver1'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=DishashFilter', 'MOCK_TOPIC=1'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=BotUserAggregator', 'MOCK_TOPIC=1'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -332,7 +332,7 @@ for idx in range(0, input_yaml['user_aggregators']):
 		'image': 'user_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': [f'USERAGG_INSTANCE={idx}', 'USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
+		'environment': [f'USERAGG_INSTANCE={idx}', 'USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}', f'USERAGG_BOTUSER_FILTERS={input_yaml["botuser_filters"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERAGG_DEPS),
 		'networks': ['testing_net']

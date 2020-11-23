@@ -486,7 +486,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=DishashFilter
+    - MOCK_EXCHANGE=BotUserAggregatorBotUserAggregator
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -503,7 +503,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=DishashFilter
+    - MOCK_EXCHANGE=BotUserAggregator
     - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
@@ -724,6 +724,7 @@ services:
     - USERAGG_INPUT_TOPIC=0
     - USERAGG_USER_MAPPERS=2
     - USERAGG_USER_FILTERS=2
+    - USERAGG_BOTUSER_FILTERS=2
     image: user_aggregator:latest
     links:
     - rabbitmq
@@ -743,6 +744,7 @@ services:
     - USERAGG_INPUT_TOPIC=1
     - USERAGG_USER_MAPPERS=2
     - USERAGG_USER_FILTERS=2
+    - USERAGG_BOTUSER_FILTERS=2
     image: user_aggregator:latest
     links:
     - rabbitmq

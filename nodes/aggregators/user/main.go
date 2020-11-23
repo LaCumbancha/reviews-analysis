@@ -24,6 +24,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("user", "mappers")
 	configEnv.BindEnv("user", "filters")
+	configEnv.BindEnv("botuser", "filters")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -87,6 +88,12 @@ func main() {
 		log.Fatalf("UserFilters variable missing")
 	}
 
+	botUserFilters := utils.GetConfigInt(configEnv, configFile, "botuser_filters")
+	
+	if botUserFilters == 0 {
+		log.Fatalf("BotUserFilters variable missing")
+	}
+
 	aggregatorConfig := common.AggregatorConfig {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
@@ -94,6 +101,7 @@ func main() {
 		InputTopic: 		inputTopic,
 		UserMappers:		userMappers,
 		UserFilters:		userFilters,
+		BotUserFilters:		botUserFilters,
 	}
 
 	aggregator := common.NewAggregator(aggregatorConfig)
