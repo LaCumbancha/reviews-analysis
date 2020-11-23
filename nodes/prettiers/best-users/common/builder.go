@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/best-users/rabbitmq"
 )
 
 type Builder struct {
@@ -30,7 +30,7 @@ func (builder *Builder) Save(rawData string) {
 	builder.mutex.Lock()
 
 	builder.data[userData.UserId] = userData.Reviews
-	log.Infof("Saved user %s reviews at %d.", userData.UserId, userData.Reviews)
+	log.Infof("Saved user %s 5-star reviews at %d.", userData.UserId, userData.Reviews)
 
 	builder.mutex.Unlock()
 }
@@ -44,7 +44,7 @@ func (builder *Builder) BuildData() string {
 
     responseLength := len(response)
     if responseLength == 0 {
-    	return "No users have +50 reviews."
+    	return "No users have +50 only 5-stars reviews."
     } else {
     	return response[0:responseLength-3]
     }

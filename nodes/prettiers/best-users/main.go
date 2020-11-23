@@ -6,24 +6,22 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/best-users/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/best-users/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the BESTUSRJOIN prefix
+	// Configure viper to read env variables with the BESTUSER prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("bestuserjoin")
+	configEnv.SetEnvPrefix("bestuserpre")
 
 	// Add env variables supported
-	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("input", "topic")
-	configEnv.BindEnv("stars", "aggregators")
-	configEnv.BindEnv("user", "filters")
+	configEnv.BindEnv("bestuser", "joiners")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -51,12 +49,6 @@ func main() {
 		log.Fatalf("Fatal error loading configuration. Err: '%s'", err)
 	}
 
-	instance := utils.GetConfigString(configEnv, configFile, "instance")
-	
-	if instance == "" {
-		log.Fatalf("Instance variable missing")
-	}
-
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	
 	if rabbitIp == "" {
@@ -69,34 +61,19 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
+	bestuserJoiners := utils.GetConfigInt(configEnv, configFile, "bestuser_joiners")
 	
-	if inputTopic == "" {
-		log.Fatalf("InputTopic variable missing")
+	if bestuserJoiners == 0 {
+		log.Fatalf("BestuserJoiners variable missing")
 	}
 
-	starsAggregators := utils.GetConfigInt(configEnv, configFile, "stars_aggregators")
-	
-	if starsAggregators == 0 {
-		log.Fatalf("StarsAggregators variable missing")
-	}
-
-	userFilters := utils.GetConfigInt(configEnv, configFile, "user_filters")
-	
-	if userFilters == 0 {
-		log.Fatalf("UserFilters variable missing")
-	}
-
-	joinerConfig := common.JoinerConfig {
-		Instance:			instance,
+	mapperConfig := common.MapperConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		InputTopic: 		inputTopic,
-		UserFilters:		userFilters,
-		StarsAggregators:	starsAggregators,
+		BestuserJoiners:		bestuserJoiners,
 	}
 
-	joiner := common.NewJoiner(joinerConfig)
-	joiner.Run()
-	joiner.Stop()
+	mapper := common.NewMapper(mapperConfig)
+	mapper.Run()
+	mapper.Stop()
 }

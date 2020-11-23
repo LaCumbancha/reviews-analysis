@@ -5,37 +5,52 @@ networks:
       - subnet: 172.25.125.0/24
       driver: default
 services:
-  bestusr_joiner0:
-    container_name: bestusr_joiner0
+  best_users_prettier:
+    container_name: best_users_prettier
     depends_on:
     - sink
-    entrypoint: /joiner
+    entrypoint: /prettier
     environment:
-    - BESTUSRJOIN_INSTANCE=0
-    - BESTUSRJOIN_RABBITMQ_IP=rabbitmq
-    - BESTUSRJOIN_RABBITMQ_PORT=5672
-    - BESTUSRJOIN_INPUT_TOPIC=0
-    - BESTUSRJOIN_STARS_AGGREGATORS=2
-    - BESTUSRJOIN_USER_FILTERS=2
-    image: bestusr_joiner:latest
+    - BESTUSERPRE_RABBITMQ_IP=rabbitmq
+    - BESTUSERPRE_RABBITMQ_PORT=5672
+    - BESTUSERPRE_BESTUSER_JOINERS=2
+    image: best_users_prettier:latest
     links:
     - rabbitmq
     networks:
     - testing_net
     restart: on-failure
-  bestusr_joiner1:
-    container_name: bestusr_joiner1
+  bestuser_joiner0:
+    container_name: bestuser_joiner0
     depends_on:
-    - sink
+    - best_users_prettier
     entrypoint: /joiner
     environment:
-    - BESTUSRJOIN_INSTANCE=1
-    - BESTUSRJOIN_RABBITMQ_IP=rabbitmq
-    - BESTUSRJOIN_RABBITMQ_PORT=5672
-    - BESTUSRJOIN_INPUT_TOPIC=1
-    - BESTUSRJOIN_STARS_AGGREGATORS=2
-    - BESTUSRJOIN_USER_FILTERS=2
-    image: bestusr_joiner:latest
+    - BESTUSERJOIN_INSTANCE=0
+    - BESTUSERJOIN_RABBITMQ_IP=rabbitmq
+    - BESTUSERJOIN_RABBITMQ_PORT=5672
+    - BESTUSERJOIN_INPUT_TOPIC=0
+    - BESTUSERJOIN_STARS_AGGREGATORS=2
+    - BESTUSERJOIN_USER_FILTERS=2
+    image: bestuser_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  bestuser_joiner1:
+    container_name: bestuser_joiner1
+    depends_on:
+    - best_users_prettier
+    entrypoint: /joiner
+    environment:
+    - BESTUSERJOIN_INSTANCE=1
+    - BESTUSERJOIN_RABBITMQ_IP=rabbitmq
+    - BESTUSERJOIN_RABBITMQ_PORT=5672
+    - BESTUSERJOIN_INPUT_TOPIC=1
+    - BESTUSERJOIN_STARS_AGGREGATORS=2
+    - BESTUSERJOIN_USER_FILTERS=2
+    image: bestuser_joiner:latest
     links:
     - rabbitmq
     networks:
@@ -316,22 +331,6 @@ services:
     networks:
     - testing_net
     restart: on-failure
-  mock_receiver0:
-    container_name: mock_receiver0
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=QUEUE
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=UserStarsJoiner
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
   rabbitmq:
     container_name: rabbitmq
     healthcheck:
@@ -379,7 +378,7 @@ services:
   sink:
     container_name: sink
     depends_on:
-    - mock_receiver0
+    - rabbitmq
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq
@@ -393,8 +392,8 @@ services:
   stars_aggregator0:
     container_name: stars_aggregator0
     depends_on:
-    - bestusr_joiner0
-    - bestusr_joiner1
+    - bestuser_joiner0
+    - bestuser_joiner1
     entrypoint: /aggregator
     environment:
     - STARSAGG_INSTANCE=0
@@ -412,8 +411,8 @@ services:
   stars_aggregator1:
     container_name: stars_aggregator1
     depends_on:
-    - bestusr_joiner0
-    - bestusr_joiner1
+    - bestuser_joiner0
+    - bestuser_joiner1
     entrypoint: /aggregator
     environment:
     - STARSAGG_INSTANCE=1
@@ -577,6 +576,7 @@ services:
     - USERFIL_INSTANCE=0
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
+    - USERFIL_MIN_REVIEWS=1
     - USERFIL_USER_AGGREGATORS=2
     - USERFIL_STARS_JOINERS=2
     image: user_filter:latest
@@ -594,6 +594,7 @@ services:
     - USERFIL_INSTANCE=1
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
+    - USERFIL_MIN_REVIEWS=1
     - USERFIL_USER_AGGREGATORS=2
     - USERFIL_STARS_JOINERS=2
     image: user_filter:latest

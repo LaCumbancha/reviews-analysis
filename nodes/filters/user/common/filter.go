@@ -14,6 +14,7 @@ type FilterConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	MinReviews			int
 	UserAggregators		int
 	StarsJoiners		int
 }
@@ -21,6 +22,7 @@ type FilterConfig struct {
 type Filter struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
+	minReviews 		int
 	inputQueue 		*rabbitmq.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	outputDirect	*rabbitmq.RabbitOutputDirect
@@ -48,6 +50,7 @@ func NewFilter(config FilterConfig) *Filter {
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
+		minReviews:		config.MinReviews,
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
 		outputDirect:	outputDirect,
@@ -113,7 +116,7 @@ func (filter *Filter) filterFunnyBusiness(rawData string) {
 	var mappedUserData rabbitmq.UserData
 	json.Unmarshal([]byte(rawData), &mappedUserData)
 
-	if (mappedUserData.Reviews > 50) {
+	if (mappedUserData.Reviews > filter.minReviews) {
 		data, err := json.Marshal(mappedUserData)
 		if err != nil {
 			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedUserData, err)

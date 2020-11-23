@@ -21,6 +21,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("min", "reviews")
 	configEnv.BindEnv("user", "aggregators")
 	configEnv.BindEnv("stars", "joiners")
 
@@ -68,6 +69,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	minReviews := utils.GetConfigInt(configEnv, configFile, "min_reviews")
+	
+	if minReviews == 0 {
+		log.Fatalf("MinReviews variable missing")
+	}
+
 	userAggregators := utils.GetConfigInt(configEnv, configFile, "user_aggregators")
 	
 	if userAggregators == 0 {
@@ -84,6 +91,7 @@ func main() {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
+		MinReviews:			minReviews,
 		UserAggregators:	userAggregators,
 		StarsJoiners:		starsJoiners,
 	}

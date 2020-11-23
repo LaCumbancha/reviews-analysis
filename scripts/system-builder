@@ -17,14 +17,15 @@ file['version'] = '3'
 file['services'] = {}
 
 # Services dependencies
-# SINK_DEPS = ['rabbitmq']
-SINK_DEPS = ['mock_receiver0']
+SINK_DEPS = ['rabbitmq']
+# SINK_DEPS = ['mock_receiver0']
 HISTOPRE_DEPS = ['sink']
 TOPUSERPRE_DEPS = ['sink']
 FUNCITPRE_DEPS = ['sink']
+BESTUSERPRE_DEPS = ['sink']
 
 FUNCITJOIN_DEPS = []
-BESTUSRJOIN_DEPS = ['sink']
+BESTUSERJOIN_DEPS = []
 
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
@@ -66,16 +67,16 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-file['services']['mock_receiver0'] = {
-	'container_name': 'mock_receiver0',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=UserStarsJoiner'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
+#file['services']['mock_receiver0'] = {
+#	'container_name': 'mock_receiver0',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=UserStarsJoiner'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
 
 #file['services']['mock_receiver0'] = {
 #	'container_name': 'mock_receiver0',
@@ -313,7 +314,7 @@ for idx in range(0, input_yaml['user_filters']):
 		'image': 'user_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': [f'USERFIL_INSTANCE={idx}', 'USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}', f'USERFIL_STARS_JOINERS={input_yaml["bestusr_joiners"]}'],
+		'environment': [f'USERFIL_INSTANCE={idx}', 'USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_MIN_REVIEWS={input_yaml["users_min_reviews"]}', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}', f'USERFIL_STARS_JOINERS={input_yaml["bestuser_joiners"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERFIL_DEPS),
 		'networks': ['testing_net']
@@ -348,18 +349,30 @@ for idx in range(0, input_yaml['user_mappers']):
 	}
 
 ## Best Users flow.
-for idx in range(0, input_yaml['bestusr_joiners']):
-	container_name = f'bestusr_joiner{idx}'
+BESTUSERJOIN_DEPS += ['best_users_prettier']
+file['services']['best_users_prettier'] = {
+	'container_name': 'best_users_prettier',
+	'image': 'best_users_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['BESTUSERPRE_RABBITMQ_IP=rabbitmq', 'BESTUSERPRE_RABBITMQ_PORT=5672', f'BESTUSERPRE_BESTUSER_JOINERS={input_yaml["bestuser_joiners"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(BESTUSERPRE_DEPS),
+	'networks': ['testing_net']
+}
+
+for idx in range(0, input_yaml['bestuser_joiners']):
+	container_name = f'bestuser_joiner{idx}'
 	USERFIL_DEPS += [container_name]
 	STARSAGG_DEPS += [container_name]
 	file['services'][container_name] = {
 		'container_name': container_name,
-		'image': 'bestusr_joiner:latest',
+		'image': 'bestuser_joiner:latest',
 		'entrypoint': '/joiner',
 		'restart': 'on-failure',
-		'environment': [f'BESTUSRJOIN_INSTANCE={idx}', 'BESTUSRJOIN_RABBITMQ_IP=rabbitmq', 'BESTUSRJOIN_RABBITMQ_PORT=5672', f'BESTUSRJOIN_INPUT_TOPIC={idx}', f'BESTUSRJOIN_STARS_AGGREGATORS={input_yaml["stars_aggregators"]}', f'BESTUSRJOIN_USER_FILTERS={input_yaml["user_filters"]}'],
+		'environment': [f'BESTUSERJOIN_INSTANCE={idx}', 'BESTUSERJOIN_RABBITMQ_IP=rabbitmq', 'BESTUSERJOIN_RABBITMQ_PORT=5672', f'BESTUSERJOIN_INPUT_TOPIC={idx}', f'BESTUSERJOIN_STARS_AGGREGATORS={input_yaml["stars_aggregators"]}', f'BESTUSERJOIN_USER_FILTERS={input_yaml["user_filters"]}'],
 		'links': ['rabbitmq'],
-		'depends_on': list(BESTUSRJOIN_DEPS),
+		'depends_on': list(BESTUSERJOIN_DEPS),
 		'networks': ['testing_net']
 	}
 
@@ -371,7 +384,7 @@ for idx in range(0, input_yaml['stars_aggregators']):
 		'image': 'stars_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': [f'STARSAGG_INSTANCE={idx}', 'STARSAGG_RABBITMQ_IP=rabbitmq', 'STARSAGG_RABBITMQ_PORT=5672', f'STARSAGG_INPUT_TOPIC={idx}', f'STARSAGG_STARS_FILTERS={input_yaml["stars_filters"]}', f'STARSAGG_STARS_JOINERS={input_yaml["bestusr_joiners"]}'],
+		'environment': [f'STARSAGG_INSTANCE={idx}', 'STARSAGG_RABBITMQ_IP=rabbitmq', 'STARSAGG_RABBITMQ_PORT=5672', f'STARSAGG_INPUT_TOPIC={idx}', f'STARSAGG_STARS_FILTERS={input_yaml["stars_filters"]}', f'STARSAGG_STARS_JOINERS={input_yaml["bestuser_joiners"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(STARSAGG_DEPS),
 		'networks': ['testing_net']

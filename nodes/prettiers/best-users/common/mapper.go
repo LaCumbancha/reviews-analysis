@@ -6,13 +6,13 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/rabbitmq"
+	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/best-users/rabbitmq"
 )
 
 type MapperConfig struct {
-	RabbitIp		string
-	RabbitPort		string
-	UserFilters 	int
+	RabbitIp			string
+	RabbitPort			string
+	BestuserJoiners 	int
 }
 
 type Mapper struct {
@@ -47,14 +47,14 @@ func NewMapper(config MapperConfig) *Mapper {
 		builder:		NewBuilder(),
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
-		endSignals:		config.UserFilters,
+		endSignals:		config.BestuserJoiners,
 	}
 
 	return mapper
 }
 
 func (mapper *Mapper) Run() {
-	log.Infof("Starting to listen for users with +50 reviews data.")
+	log.Infof("Starting to listen for users with +50 reviews data, only 5-stars.")
 
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
@@ -108,11 +108,11 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 
 func (mapper *Mapper) sendResults() {
 	results := mapper.builder.BuildData()
-	mapper.outputQueue.PublishData(fmt.Sprintf("Users with +50 reviews --- %s", results))
+	mapper.outputQueue.PublishData(fmt.Sprintf("Users with +50 reviews (only 5-stars) --- %s", results))
 }
 
 func (mapper *Mapper) Stop() {
-	log.Infof("Closing Top-Users Prettier connections.")
+	log.Infof("Closing Best-Users Prettier connections.")
 	mapper.connection.Close()
 	mapper.channel.Close()
 }

@@ -1,6 +1,9 @@
 # Streaming mode.
 reviews_streaming: false
 
+# System configuration:
+users_min_reviews: 50
+
 # Funniest cities flow.
 citbiz_mappers: 2
 funbiz_mappers: 2
@@ -23,7 +26,7 @@ user_filters: 2
 stars_mappers: 2
 stars_filters: 2
 stars_aggregators: 2
-bestusr_joiners: 2
+bestuser_joiners: 2
 
 # Users w/+5 reviews with same text.
 hashes_mappers: 1
