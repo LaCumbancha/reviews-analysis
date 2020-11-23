@@ -29,11 +29,12 @@ FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
 FUNCITAGG_DEPS = []
+STARSAGG_DEPS = ['sink']
 
 FUNBIZFIL_DEPS = []
 FUNCITFIL_DEPS = []
 USERFIL_DEPS = []
-STARSFIL_DEPS = ['sink']
+STARSFIL_DEPS = []
 
 USERMAP_DEPS = []
 STARSMAP_DEPS = []
@@ -80,7 +81,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=StarsFilter', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=StarsAggregator', 'MOCK_TOPIC=0'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -91,7 +92,7 @@ file['services']['mock_receiver1'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=StarsFilter', 'MOCK_TOPIC=1'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=StarsAggregator', 'MOCK_TOPIC=1'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -346,6 +347,20 @@ for idx in range(0, input_yaml['user_mappers']):
 	}
 
 ## Best Users flow.
+for idx in range(0, input_yaml['stars_aggregators']):
+	container_name = f'stars_aggregator{idx}'
+	STARSFIL_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'stars_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': [f'STARSAGG_INSTANCE={idx}', 'STARSAGG_RABBITMQ_IP=rabbitmq', 'STARSAGG_RABBITMQ_PORT=5672', f'STARSAGG_INPUT_TOPIC={idx}', f'STARSAGG_STARS_FILTERS={input_yaml["stars_filters"]}', f'STARSAGG_STARS_JOINERS={input_yaml["stars_joiners"]}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(STARSAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['stars_filters']):
 	container_name = f'stars_filter{idx}'
 	STARSMAP_DEPS += [container_name]

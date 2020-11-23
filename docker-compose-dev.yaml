@@ -289,7 +289,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=StarsFilter
+    - MOCK_EXCHANGE=StarsAggregator
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -306,7 +306,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=StarsFilter
+    - MOCK_EXCHANGE=StarsAggregator
     - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
@@ -372,10 +372,47 @@ services:
     networks:
     - testing_net
     restart: on-failure
+  stars_aggregator0:
+    container_name: stars_aggregator0
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - STARSAGG_INSTANCE=0
+    - STARSAGG_RABBITMQ_IP=rabbitmq
+    - STARSAGG_RABBITMQ_PORT=5672
+    - STARSAGG_INPUT_TOPIC=0
+    - STARSAGG_STARS_FILTERS=2
+    - STARSAGG_STARS_JOINERS=2
+    image: stars_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  stars_aggregator1:
+    container_name: stars_aggregator1
+    depends_on:
+    - sink
+    entrypoint: /aggregator
+    environment:
+    - STARSAGG_INSTANCE=1
+    - STARSAGG_RABBITMQ_IP=rabbitmq
+    - STARSAGG_RABBITMQ_PORT=5672
+    - STARSAGG_INPUT_TOPIC=1
+    - STARSAGG_STARS_FILTERS=2
+    - STARSAGG_STARS_JOINERS=2
+    image: stars_aggregator:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   stars_filter0:
     container_name: stars_filter0
     depends_on:
-    - sink
+    - stars_aggregator0
+    - stars_aggregator1
     entrypoint: /filter
     environment:
     - STARSFIL_INSTANCE=0
@@ -392,7 +429,8 @@ services:
   stars_filter1:
     container_name: stars_filter1
     depends_on:
-    - sink
+    - stars_aggregator0
+    - stars_aggregator1
     entrypoint: /filter
     environment:
     - STARSFIL_INSTANCE=1

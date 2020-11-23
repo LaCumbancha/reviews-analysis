@@ -55,7 +55,7 @@ func NewFilter(config FilterConfig) *Filter {
 }
 
 func (filter *Filter) Run() {
-	log.Infof("Starting to listen for user reviews data.")
+	log.Infof("Starting to listen for user stars data.")
 
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
