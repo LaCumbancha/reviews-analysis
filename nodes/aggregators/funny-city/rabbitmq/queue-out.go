@@ -15,7 +15,7 @@ func NewRabbitOutputQueue(name string, endSignals int, channel *amqp.Channel) *R
 	queue := &RabbitOutputQueue {
 		channel: 		channel,
 		name:			name,
-		endSignals:		2 * endSignals,
+		endSignals:		endSignals,
 	}
 
 	queue.initialize()

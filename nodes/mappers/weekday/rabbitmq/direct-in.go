@@ -35,7 +35,7 @@ func (direct *RabbitInputDirect) initialize() {
 	if err != nil {
 		log.Fatalf("Error creating direct-exchange %s. Err: '%s'", direct.exchange, err)
 	} else {
-		log.Debugf("Fanout-Exchange %s created.", direct.exchange)
+		log.Debugf("Direct-Exchange %s created.", direct.exchange)
 	}
 
 	queue, err := direct.channel.QueueDeclare(

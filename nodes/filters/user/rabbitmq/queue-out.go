@@ -8,7 +8,6 @@ import (
 type RabbitOutputQueue struct {
 	channel 			*amqp.Channel
 	name 				string
-	endSignals 			int
 }
 
 func NewRabbitOutputQueue(name string, channel *amqp.Channel) *RabbitOutputQueue {
