@@ -90,6 +90,7 @@ func (filter *Filter) Run() {
 
     // Publishing end messages.
     filter.outputQueue.PublishFinish()
+    filter.outputDirect.PublishFinish()
 }
 
 func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

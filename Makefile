@@ -40,6 +40,7 @@ build: deps
 
 	# Joiners
 	GOOS=linux go build -o bin/funcit-joiner $(GIT_REMOTE)/nodes/joiners/funny-city
+	GOOS=linux go build -o bin/bestusr-joiner $(GIT_REMOTE)/nodes/joiners/best-users
 
 	# Prettiers
 	GOOS=linux go build -o bin/top-funniest-cities $(GIT_REMOTE)/nodes/prettiers/top-funniest-cities
@@ -81,6 +82,7 @@ docker-image:
 
 	# Joiners
 	docker build -f ./nodes/joiners/funny-city/Dockerfile -t "funcit_joiner:latest" .
+	docker build -f ./nodes/joiners/best-users/Dockerfile -t "bestusr_joiner:latest" .
 
 	# Prettiers
 	docker build -f ./nodes/prettiers/funniest-cities/Dockerfile -t "top_funniest_cities_prettier:latest" .

@@ -73,7 +73,7 @@ func (calculator *Calculator) RetrieveData() []rabbitmq.FunnyCityData {
 			list = append(list, joinedData)
 		} else {
 			calculator.mutex2.Unlock()
-			log.Tracef("Still no city join match for businessId %s.", businessId, city, funny)
+			log.Tracef("Still no city join match for businessId %s.", businessId)
 		}
 
 		calculator.mutex1.Lock()

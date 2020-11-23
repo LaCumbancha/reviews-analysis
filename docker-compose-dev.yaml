@@ -5,6 +5,42 @@ networks:
       - subnet: 172.25.125.0/24
       driver: default
 services:
+  bestusr_joiner0:
+    container_name: bestusr_joiner0
+    depends_on:
+    - sink
+    entrypoint: /joiner
+    environment:
+    - BESTUSRJOIN_INSTANCE=0
+    - BESTUSRJOIN_RABBITMQ_IP=rabbitmq
+    - BESTUSRJOIN_RABBITMQ_PORT=5672
+    - BESTUSRJOIN_INPUT_TOPIC=0
+    - BESTUSRJOIN_STARS_AGGREGATORS=2
+    - BESTUSRJOIN_USER_FILTERS=2
+    image: bestusr_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  bestusr_joiner1:
+    container_name: bestusr_joiner1
+    depends_on:
+    - sink
+    entrypoint: /joiner
+    environment:
+    - BESTUSRJOIN_INSTANCE=1
+    - BESTUSRJOIN_RABBITMQ_IP=rabbitmq
+    - BESTUSRJOIN_RABBITMQ_PORT=5672
+    - BESTUSRJOIN_INPUT_TOPIC=1
+    - BESTUSRJOIN_STARS_AGGREGATORS=2
+    - BESTUSRJOIN_USER_FILTERS=2
+    image: bestusr_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
   biz_scatter:
     container_name: biz_scatter
     depends_on:
@@ -286,28 +322,10 @@ services:
     - rabbitmq
     entrypoint: /receiver
     environment:
-    - MOCK_TYPE=DIRECT
+    - MOCK_TYPE=QUEUE
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=UserStarsFilter
-    - MOCK_TOPIC=0
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  mock_receiver1:
-    container_name: mock_receiver1
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=DIRECT
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=UserStarsFilter
-    - MOCK_TOPIC=1
+    - MOCK_QUEUE=UserStarsJoiner
     image: mock_receiver:latest
     links:
     - rabbitmq
@@ -375,7 +393,8 @@ services:
   stars_aggregator0:
     container_name: stars_aggregator0
     depends_on:
-    - sink
+    - bestusr_joiner0
+    - bestusr_joiner1
     entrypoint: /aggregator
     environment:
     - STARSAGG_INSTANCE=0
@@ -393,7 +412,8 @@ services:
   stars_aggregator1:
     container_name: stars_aggregator1
     depends_on:
-    - sink
+    - bestusr_joiner0
+    - bestusr_joiner1
     entrypoint: /aggregator
     environment:
     - STARSAGG_INSTANCE=1
