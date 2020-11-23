@@ -289,7 +289,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=StarsAggregator
+    - MOCK_EXCHANGE=UserStarsFilter
     - MOCK_TOPIC=0
     image: mock_receiver:latest
     links:
@@ -306,7 +306,7 @@ services:
     - MOCK_TYPE=DIRECT
     - MOCK_RABBITMQ_IP=rabbitmq
     - MOCK_RABBITMQ_PORT=5672
-    - MOCK_EXCHANGE=StarsAggregator
+    - MOCK_EXCHANGE=UserStarsFilter
     - MOCK_TOPIC=1
     image: mock_receiver:latest
     links:
@@ -558,6 +558,7 @@ services:
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
     - USERFIL_USER_AGGREGATORS=2
+    - USERFIL_STARS_JOINERS=2
     image: user_filter:latest
     links:
     - rabbitmq
@@ -574,6 +575,7 @@ services:
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
     - USERFIL_USER_AGGREGATORS=2
+    - USERFIL_STARS_JOINERS=2
     image: user_filter:latest
     links:
     - rabbitmq

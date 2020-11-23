@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("user", "aggregators")
+	configEnv.BindEnv("stars", "joiners")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -73,11 +74,18 @@ func main() {
 		log.Fatalf("UserAggregators variable missing")
 	}
 
+	starsJoiners := utils.GetConfigInt(configEnv, configFile, "stars_joiners")
+	
+	if starsJoiners == 0 {
+		log.Fatalf("StarsJoiners variable missing")
+	}
+
 	filterConfig := common.FilterConfig {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		UserAggregators:	userAggregators,
+		StarsJoiners:		starsJoiners,
 	}
 
 	filter := common.NewFilter(filterConfig)

@@ -15,6 +15,7 @@ type FilterConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	UserAggregators		int
+	StarsJoiners		int
 }
 
 type Filter struct {
@@ -22,6 +23,7 @@ type Filter struct {
 	channel 		*amqp.Channel
 	inputQueue 		*rabbitmq.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputDirect	*rabbitmq.RabbitOutputDirect
 	endSignals		int
 }
 
@@ -42,11 +44,13 @@ func NewFilter(config FilterConfig) *Filter {
 
 	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.StarsJoiners, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
+		outputDirect:	outputDirect,
 		endSignals:		config.UserAggregators,
 	}
 
@@ -114,6 +118,7 @@ func (filter *Filter) filterFunnyBusiness(rawData string) {
 			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedUserData, err)
 		}
 		filter.outputQueue.PublishData(data, mappedUserData.UserId)
+		filter.outputDirect.PublishData(data, mappedUserData.UserId)
 	} else {
 		log.Infof("Data '%s' filtered due to not having enough reviews.", rawData)
 	}

@@ -24,6 +24,7 @@ TOPUSERPRE_DEPS = ['sink']
 FUNCITPRE_DEPS = ['sink']
 
 FUNCITJOIN_DEPS = []
+STARSJOIN_DEPS = []
 
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
@@ -81,7 +82,7 @@ file['services']['mock_receiver0'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=StarsAggregator', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=UserStarsFilter', 'MOCK_TOPIC=0'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -92,7 +93,7 @@ file['services']['mock_receiver1'] = {
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=StarsAggregator', 'MOCK_TOPIC=1'],
+	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=UserStarsFilter', 'MOCK_TOPIC=1'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
@@ -307,12 +308,13 @@ file['services']['top_users_prettier'] = {
 for idx in range(0, input_yaml['user_filters']):
 	container_name = f'user_filter{idx}'
 	USERAGG_DEPS += [container_name]
+	STARSJOIN_DEPS += [container_name]
 	file['services'][container_name] = {
 		'container_name': container_name,
 		'image': 'user_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': [f'USERFIL_INSTANCE={idx}', 'USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'environment': [f'USERFIL_INSTANCE={idx}', 'USERFIL_RABBITMQ_IP=rabbitmq', 'USERFIL_RABBITMQ_PORT=5672', f'USERFIL_USER_AGGREGATORS={input_yaml["user_aggregators"]}', f'USERFIL_STARS_JOINERS={input_yaml["stars_joiners"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERFIL_DEPS),
 		'networks': ['testing_net']
