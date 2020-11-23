@@ -22,6 +22,7 @@ user_filters: 2
 # Users w/+50 5-stars reviews.
 stars_mappers: 2
 stars_filters: 2
+stars_aggregators: 2
 
 # Users w/+5 reviews with same text.
 hashes_mappers: 1
