@@ -150,14 +150,14 @@ func (joiner *Joiner) Run() {
     		lastJoinRound := lastCheck
     		lastCheckMutex.Unlock()
 
-    		joinedData := joiner.calculator.RetrieveData()
-    		if len(joinedData) > 0 {
+    		joinMatches := joiner.calculator.RetrieveData()
+    		if len(joinMatches) > 0 {
     			newJoin = true
     		} else {
-    			log.Debugf("No new join match to send in this round. Finishing process.")
+    			log.Tracef("No new join match to send in this round.")
     		}
 
-    		for _, joinedData := range joiner.calculator.RetrieveData() {
+    		for _, joinedData := range joinMatches {
     			joinWg.Add(1)
     			log.Infof("Starting sending joined funny data from city %s.", joinedData.City)
 				go joiner.sendJoinedData(joinedData, &joinWg)

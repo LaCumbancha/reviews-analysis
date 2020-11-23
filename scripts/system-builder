@@ -20,11 +20,12 @@ SINK_DEPS = ['mock_receiver0']
 HISTOPRE_DEPS = ['sink']
 TOPUSERPRE_DEPS = ['sink']
 
-FUNCITJOIN_DEPS = ['sink']
+FUNCITJOIN_DEPS = []
 
 FUNBIZAGG_DEPS = []
 USERAGG_DEPS = []
 WEEKDAYAGG_DEPS = []
+FUNCITAGG_DEPS = ['sink']
 
 FUNBIZFIL_DEPS = []
 USERFIL_DEPS = []
@@ -57,38 +58,38 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-#file['services']['mock_receiver0'] = {
-#	'container_name': 'mock_receiver0',
-#	'image': 'mock_receiver:latest',
-#	'entrypoint': '/receiver',
-#	'restart': 'on-failure',
-#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=BusinessScatter'],
-#	'links': ['rabbitmq'],
-#	'depends_on': ['rabbitmq'],
-#	'networks': ['testing_net']
-#}
-
 file['services']['mock_receiver0'] = {
 	'container_name': 'mock_receiver0',
 	'image': 'mock_receiver:latest',
 	'entrypoint': '/receiver',
 	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyCityJoiner', 'MOCK_TOPIC=0'],
+	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=FunnyCityAggregator'],
 	'links': ['rabbitmq'],
 	'depends_on': ['rabbitmq'],
 	'networks': ['testing_net']
 }
 
-file['services']['mock_receiver1'] = {
-	'container_name': 'mock_receiver1',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyCityJoiner', 'MOCK_TOPIC=1'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
+#file['services']['mock_receiver0'] = {
+#	'container_name': 'mock_receiver0',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyCityAggregator', 'MOCK_TOPIC=0'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
+#
+#file['services']['mock_receiver1'] = {
+#	'container_name': 'mock_receiver1',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=DIRECT', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_EXCHANGE=FunnyCityAggregator', 'MOCK_TOPIC=1'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
 
 
 
@@ -119,6 +120,20 @@ file['services']['sink'] = {
 }
 
 ## Funniest Cities flow
+for idx in range(0, input_yaml['funcit_aggregators']):
+	container_name = f'funcit_aggregator{idx}'
+	FUNCITJOIN_DEPS += [container_name]
+	file['services'][container_name] = {
+		'container_name': container_name,
+		'image': 'funcit_aggregator:latest',
+		'entrypoint': '/aggregator',
+		'restart': 'on-failure',
+		'environment': ['FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_filters"]}', f'FUNCITAGG_INPUT_TOPIC={idx}'],
+		'links': ['rabbitmq'],
+		'depends_on': list(FUNCITAGG_DEPS),
+		'networks': ['testing_net']
+	}
+
 for idx in range(0, input_yaml['funcit_joiners']):
 	container_name = f'funcit_joiner{idx}'
 	CITBIZMAP_DEPS += [container_name]

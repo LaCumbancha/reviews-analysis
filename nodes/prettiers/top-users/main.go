@@ -41,12 +41,6 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	return configEnv, configFile, nil
 }
 
-func failOnError(err error, msg string) {
-  if err != nil {
-    log.Fatalf("%s: %s", msg, err)
-  }
-}
-
 func main() {
 	log.SetLevel(log.TraceLevel)
 	configEnv, configFile, err := InitConfig()

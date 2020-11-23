@@ -6,22 +6,23 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/common"
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-city/common"
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-city/utils"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv := viper.New()
 
-	// Configure viper to read env variables with the WEEKDAYMAP prefix
+	// Configure viper to read env variables with the FUNCITAGG prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("weekdaymap")
+	configEnv.SetEnvPrefix("funcitagg")
 
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
-	configEnv.BindEnv("weekday", "aggregators")
-	configEnv.BindEnv("config", "file")
+	configEnv.BindEnv("input", "topic")
+	configEnv.BindEnv("funcit", "joiners")
+	configEnv.BindEnv("funcit", "filters")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -61,19 +62,33 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
-	weekdayAggregators := utils.GetConfigInt(configEnv, configFile, "weekday_aggregators")
+	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
 	
-	if weekdayAggregators == 0 {
-		log.Fatalf("WeekdayAggregators variable missing")
+	if inputTopic == "" {
+		log.Fatalf("InputTopic variable missing")
 	}
 
-	mapperConfig := common.MapperConfig {
-		RabbitIp:				rabbitIp,
-		RabbitPort:				rabbitPort,
-		WeekdayAggregators:		weekdayAggregators,
+	funcitJoiners := utils.GetConfigInt(configEnv, configFile, "funcit_joiners")
+	
+	if funcitJoiners == 0 {
+		log.Fatalf("FuncitJoiners variable missing")
 	}
 
-	mapper := common.NewMapper(mapperConfig)
-	mapper.Run()
-	mapper.Stop()
+	funcitFilters := utils.GetConfigInt(configEnv, configFile, "funcit_filters")
+	
+	if funcitFilters == 0 {
+		log.Fatalf("FuncitFilters variable missing")
+	}
+
+	aggregatorConfig := common.AggregatorConfig {
+		RabbitIp:			rabbitIp,
+		RabbitPort:			rabbitPort,
+		InputTopic: 		inputTopic,
+		FuncitFilters:		funcitFilters,
+		FuncitJoiners:		funcitJoiners,
+	}
+
+	aggregator := common.NewAggregator(aggregatorConfig)
+	aggregator.Run()
+	aggregator.Stop()
 }

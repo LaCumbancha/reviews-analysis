@@ -11,10 +11,11 @@ type RabbitOutputQueue struct {
 	endSignals 			int
 }
 
-func NewRabbitOutputQueue(name string, channel *amqp.Channel) *RabbitOutputQueue {
+func NewRabbitOutputQueue(name string, endSignals int, channel *amqp.Channel) *RabbitOutputQueue {
 	queue := &RabbitOutputQueue {
 		channel: 		channel,
 		name:			name,
+		endSignals:		endSignals,
 	}
 
 	queue.initialize()
@@ -38,7 +39,7 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(data []byte, userId string) {
+func (queue *RabbitOutputQueue) PublishData(data []byte) {
 	err := queue.channel.Publish(
 		"",     							// Exchange
 		queue.name, 						// Routing Key
@@ -50,27 +51,29 @@ func (queue *RabbitOutputQueue) PublishData(data []byte, userId string) {
 		})
 
 	if err != nil {
-		log.Errorf("Error sending user %s reviews data (%s) to queue %s. Err: '%s'", userId, data, queue.name, err)
+		log.Errorf("Error sending aggregated data (%s) to queue %s. Err: '%s'", data, queue.name, err)
 	} else {
-		log.Debugf("User %s reviews data (%s) sent to queue %s.", userId, data, queue.name)
+		log.Debugf("Aggregated data (%s) sent to queue %s.", data, queue.name)
 	}
 }
 
 func (queue *RabbitOutputQueue) PublishFinish() {
-	err := queue.channel.Publish(
-		"", 							// Exchange
-		queue.name,     				// Routing Key
-		false,  						// Mandatory
-		false,  						// Immediate
-		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:        	[]byte(END_MESSAGE),
-		},
-	)
+	for idx := 1; idx <= queue.endSignals; idx++ {
+		err := queue.channel.Publish(
+  			"", 							// Exchange
+	  		queue.name,     				// Routing Key
+	  		false,  						// Mandatory
+	  		false,  						// Immediate
+	  		amqp.Publishing{
+	  		    ContentType: 	"text/plain",
+	  		    Body:        	[]byte(END_MESSAGE),
+	  		},
+	  	)
 
-	if err != nil {
-		log.Errorf("Error sending End-Message to queue %s. Err: '%s'", queue.name, err)
-	} else {
-		log.Infof("End-Message sent to queue %s.", queue.name)
+		if err != nil {
+			log.Errorf("Error sending End-Message #%d to queue %s. Err: '%s'", idx, queue.name, err)
+		} else {
+			log.Infof("End-Message #%d sent to queue %s.", idx, queue.name)
+		}
 	}
 }

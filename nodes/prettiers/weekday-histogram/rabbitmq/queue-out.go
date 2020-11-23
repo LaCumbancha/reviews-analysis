@@ -51,7 +51,7 @@ func (queue *RabbitOutputQueue) PublishData(data string) {
 	if err != nil {
 		log.Errorf("Error sending mapped data (%s) to queue %s. Err: '%s'", data, queue.name, err)
 	} else {
-		log.Debugf("Mapped data (%s) sent.", data)
+		log.Debugf("Mapped data (%s) sent to queue %s.", data, queue.name)
 	}
 }
 

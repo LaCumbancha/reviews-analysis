@@ -52,7 +52,7 @@ func (queue *RabbitOutputQueue) PublishData(data []byte) {
 	if err != nil {
 		log.Errorf("Error sending weekday data (%s) to queue %s. Err: '%s'", data, queue.name, err)
 	} else {
-		log.Debugf("Weekday data (%s) sent.", data)
+		log.Debugf("Weekday data (%s) sent to queue %s.", data, queue.name)
 	}
 }
 

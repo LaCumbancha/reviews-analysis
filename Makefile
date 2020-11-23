@@ -29,6 +29,7 @@ build: deps
 
 	# Aggregators
 	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/nodes/aggregators/funbiz-mapper
+	GOOS=linux go build -o bin/funcit-aggregator $(GIT_REMOTE)/nodes/aggregators/funcit-aggregator
 	GOOS=linux go build -o bin/weekday-aggregator $(GIT_REMOTE)/nodes/aggregators/weekday
 	GOOS=linux go build -o bin/user-aggregator $(GIT_REMOTE)/nodes/aggregators/user
 
@@ -64,6 +65,7 @@ docker-image:
 
 	# Aggregators
 	docker build -f ./nodes/aggregators/funny-business/Dockerfile -t "funbiz_aggregator:latest" .
+	docker build -f ./nodes/aggregators/funny-city/Dockerfile -t "funcit_aggregator:latest" .
 	docker build -f ./nodes/aggregators/weekday/Dockerfile -t "weekday_aggregator:latest" .
 	docker build -f ./nodes/aggregators/user/Dockerfile -t "user_aggregator:latest" .
 
