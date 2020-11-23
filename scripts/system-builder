@@ -15,10 +15,11 @@ file['version'] = '3'
 file['services'] = {}
 
 # Services dependencies
-# TODO: Change to ['rabbitmq']
-SINK_DEPS = ['mock_receiver0']
+SINK_DEPS = ['rabbitmq']
+# SINK_DEPS = ['mock_receiver0']
 HISTOPRE_DEPS = ['sink']
 TOPUSERPRE_DEPS = ['sink']
+FUNCITPRE_DEPS = ['sink']
 
 FUNCITJOIN_DEPS = []
 
@@ -28,7 +29,7 @@ WEEKDAYAGG_DEPS = []
 FUNCITAGG_DEPS = []
 
 FUNBIZFIL_DEPS = []
-FUNCITFIL_DEPS = ['sink']
+FUNCITFIL_DEPS = []
 USERFIL_DEPS = []
 
 USERMAP_DEPS = []
@@ -59,16 +60,16 @@ file['services']['rabbitmq'] = {
 
 
 # TODO: Remove mocks
-file['services']['mock_receiver0'] = {
-	'container_name': 'mock_receiver0',
-	'image': 'mock_receiver:latest',
-	'entrypoint': '/receiver',
-	'restart': 'on-failure',
-	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=FunnyCityFilter'],
-	'links': ['rabbitmq'],
-	'depends_on': ['rabbitmq'],
-	'networks': ['testing_net']
-}
+#file['services']['mock_receiver0'] = {
+#	'container_name': 'mock_receiver0',
+#	'image': 'mock_receiver:latest',
+#	'entrypoint': '/receiver',
+#	'restart': 'on-failure',
+#	'environment': ['MOCK_TYPE=QUEUE', 'MOCK_RABBITMQ_IP=rabbitmq', 'MOCK_RABBITMQ_PORT=5672', 'MOCK_QUEUE=FunnyCityFilter'],
+#	'links': ['rabbitmq'],
+#	'depends_on': ['rabbitmq'],
+#	'networks': ['testing_net']
+#}
 
 #file['services']['mock_receiver0'] = {
 #	'container_name': 'mock_receiver0',
@@ -121,6 +122,18 @@ file['services']['sink'] = {
 }
 
 ## Funniest Cities flow
+FUNCITFIL_DEPS += ['top_funniest_cities_prettier']
+file['services']['top_funniest_cities_prettier'] = {
+	'container_name': 'top_funniest_cities_prettier',
+	'image': 'top_funniest_cities_prettier:latest',
+	'entrypoint': '/prettier',
+	'restart': 'on-failure',
+	'environment': ['FUNCITPRE_RABBITMQ_IP=rabbitmq', 'FUNCITPRE_RABBITMQ_PORT=5672', f'FUNCITPRE_FUNCIT_FILTERS={input_yaml["funcit_filters"]}'],
+	'links': ['rabbitmq'],
+	'depends_on': list(FUNCITPRE_DEPS),
+	'networks': ['testing_net']
+}
+
 for idx in range(0, input_yaml['funcit_filters']):
 	container_name = f'funcit_filter{idx}'
 	FUNCITAGG_DEPS += [container_name]
@@ -174,7 +187,7 @@ for idx in range(0, input_yaml['citbiz_mappers']):
 		'restart': 'on-failure',
 		'environment': ['CITBIZMAP_RABBITMQ_IP=rabbitmq', 'CITBIZMAP_RABBITMQ_PORT=5672', f'CITBIZMAP_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}'],
 		'links': ['rabbitmq'],
-		'depends_on': list(FUNBIZMAP_DEPS),
+		'depends_on': list(CITBIZMAP_DEPS),
 		'networks': ['testing_net']
 	}
 
@@ -310,7 +323,7 @@ for idx in range(0, input_yaml['user_aggregators']):
 		'restart': 'on-failure',
 		'environment': ['USERAGG_RABBITMQ_IP=rabbitmq', 'USERAGG_RABBITMQ_PORT=5672', f'USERAGG_INPUT_TOPIC={idx}', f'USERAGG_USER_MAPPERS={input_yaml["user_mappers"]}', f'USERAGG_USER_FILTERS={input_yaml["user_filters"]}'],
 		'links': ['rabbitmq'],
-		'depends_on': list(WEEKDAYAGG_DEPS),
+		'depends_on': list(USERAGG_DEPS),
 		'networks': ['testing_net']
 	}
 

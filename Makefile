@@ -39,6 +39,7 @@ build: deps
 	GOOS=linux go build -o bin/funcit-joiner $(GIT_REMOTE)/nodes/joiners/funny-city
 
 	# Prettiers
+	GOOS=linux go build -o bin/top-funniest-cities $(GIT_REMOTE)/nodes/prettiers/top-funniest-cities
 	GOOS=linux go build -o bin/weekday-histogram $(GIT_REMOTE)/nodes/prettiers/weekday-histogram
 	GOOS=linux go build -o bin/top-users $(GIT_REMOTE)/nodes/prettiers/top-users
 
@@ -76,6 +77,7 @@ docker-image:
 	docker build -f ./nodes/joiners/funny-city/Dockerfile -t "funcit_joiner:latest" .
 
 	# Prettiers
+	docker build -f ./nodes/prettiers/funniest-cities/Dockerfile -t "top_funniest_cities_prettier:latest" .
 	docker build -f ./nodes/prettiers/weekday-histogram/Dockerfile -t "weekday_histogram_prettier:latest" .
 	docker build -f ./nodes/prettiers/top-users/Dockerfile -t "top_users_prettier:latest" .
 

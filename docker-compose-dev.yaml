@@ -26,7 +26,9 @@ services:
     - business_dataset:/data
   citbiz_mapper0:
     container_name: citbiz_mapper0
-    depends_on: []
+    depends_on:
+    - funcit_joiner0
+    - funcit_joiner1
     entrypoint: /mapper
     environment:
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
@@ -40,7 +42,9 @@ services:
     restart: on-failure
   citbiz_mapper1:
     container_name: citbiz_mapper1
-    depends_on: []
+    depends_on:
+    - funcit_joiner0
+    - funcit_joiner1
     entrypoint: /mapper
     environment:
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
@@ -193,7 +197,7 @@ services:
   funcit_filter0:
     container_name: funcit_filter0
     depends_on:
-    - sink
+    - top_funniest_cities_prettier
     entrypoint: /filter
     environment:
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
@@ -208,7 +212,7 @@ services:
   funcit_filter1:
     container_name: funcit_filter1
     depends_on:
-    - sink
+    - top_funniest_cities_prettier
     entrypoint: /filter
     environment:
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
@@ -258,22 +262,6 @@ services:
     networks:
     - testing_net
     restart: on-failure
-  mock_receiver0:
-    container_name: mock_receiver0
-    depends_on:
-    - rabbitmq
-    entrypoint: /receiver
-    environment:
-    - MOCK_TYPE=QUEUE
-    - MOCK_RABBITMQ_IP=rabbitmq
-    - MOCK_RABBITMQ_PORT=5672
-    - MOCK_QUEUE=FunnyCityFilter
-    image: mock_receiver:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
   rabbitmq:
     container_name: rabbitmq
     healthcheck:
@@ -318,12 +306,27 @@ services:
   sink:
     container_name: sink
     depends_on:
-    - mock_receiver0
+    - rabbitmq
     entrypoint: /sink
     environment:
     - SINK_RABBITMQ_IP=rabbitmq
     - SINK_RABBITMQ_PORT=5672
     image: sink:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  top_funniest_cities_prettier:
+    container_name: top_funniest_cities_prettier
+    depends_on:
+    - sink
+    entrypoint: /prettier
+    environment:
+    - FUNCITPRE_RABBITMQ_IP=rabbitmq
+    - FUNCITPRE_RABBITMQ_PORT=5672
+    - FUNCITPRE_FUNCIT_FILTERS=2
+    image: top_funniest_cities_prettier:latest
     links:
     - rabbitmq
     networks:
@@ -347,7 +350,8 @@ services:
   user_aggregator0:
     container_name: user_aggregator0
     depends_on:
-    - weekday_histogram_prettier
+    - user_filter0
+    - user_filter1
     entrypoint: /aggregator
     environment:
     - USERAGG_RABBITMQ_IP=rabbitmq
@@ -364,7 +368,8 @@ services:
   user_aggregator1:
     container_name: user_aggregator1
     depends_on:
-    - weekday_histogram_prettier
+    - user_filter0
+    - user_filter1
     entrypoint: /aggregator
     environment:
     - USERAGG_RABBITMQ_IP=rabbitmq
