@@ -25,8 +25,8 @@ type Aggregator struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputDirect 	*rabbitmq.RabbitInputDirect
-	outputDirect 	*rabbitmq.RabbitOutputDirect
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue1 	*rabbitmq.RabbitOutputQueue
+	outputQueue2	*rabbitmq.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -46,15 +46,15 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	}
 
 	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.BotUserFilters, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.UserFilters, ch)
+	outputQueue1 := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE1_NAME, config.Instance, config.UserFilters, ch)
+	outputQueue2 := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE2_NAME, config.Instance, config.BotUserFilters, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
 		calculator:		NewCalculator(),
 		inputDirect:	inputDirect,
-		outputDirect:	outputDirect,
-		outputQueue:	outputQueue,
+		outputQueue1:	outputQueue1,
+		outputQueue2:	outputQueue2,
 		endSignals:		config.UserMappers,
 	}
 
@@ -101,8 +101,8 @@ func (aggregator *Aggregator) Run() {
     wg.Wait()
 
     // Sending End-Message to consumers.
-    aggregator.outputQueue.PublishFinish()
-    aggregator.outputDirect.PublishFinish()
+    aggregator.outputQueue1.PublishFinish()
+    aggregator.outputQueue2.PublishFinish()
 }
 
 func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
@@ -126,8 +126,8 @@ func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.UserDat
 	if err != nil {
 		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
-		aggregator.outputQueue.PublishData(data)
-		aggregator.outputDirect.PublishData(data, aggregatedData.UserId)
+		aggregator.outputQueue1.PublishData(data)
+		aggregator.outputQueue2.PublishData(data)
 	}
 	wg.Done()
 }
