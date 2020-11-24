@@ -3,11 +3,22 @@
 import sys
 import yaml
 
+
 input_yaml_file = open("./scripts/system-config.yaml")
 input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
 reviews_inputs = 2 if input_yaml['reviews_streaming'] else 1
-reviews_data = '/data/test-reviews.json' if input_yaml['development_mode'] else '/data/reviews.json'
+
+if input_yaml['testing_mode']:
+	reviews_data = '/data/test-reviews.json'
+	business_data = '/data/test-business.json'
+
+	import subprocess
+	subprocess.call(['./scripts/test-builder', str(input_yaml["test_file_size"])])
+
+else: 
+	reviews_data = '/data/reviews.json'
+	business_data = '/data/business.json'
 
 file = {}
 
@@ -153,7 +164,7 @@ file['services']['biz_scatter'] = {
 	'image': 'biz_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['BIZSCA_BUSINESS_DATA=/data/business.json', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSVA_WORKERS_POOL={input_yaml["business_pool_size"]}', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
+	'environment': ['BIZSCA_INSTANCE=0', f'BIZSCA_make BUSINESS_DATA={business_data}', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSVA_WORKERS_POOL={input_yaml["business_pool_size"]}', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(BIZSCA_DEPS),
 	'networks': ['testing_net'],

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+SIZE=$1
+
+REVIEWS="datasets/reviews/reviews.json"
+BUSINESSES="datasets/business/business.json"
+
+TEST_REVIEWS="datasets/reviews/test-reviews.json"
+TEST_BUSINESSES="datasets/business/test-business.json"
+
+if [[ -f "$TEST_REVIEWS" ]]; then
+	rm "$TEST_REVIEWS"
+	touch "$TEST_REVIEWS"
+fi
+
+if [[ -f "$TEST_BUSINESSES" ]]; then
+	rm "$TEST_BUSINESSES"
+	touch "$TEST_BUSINESSES"
+fi
+
+head -n"$SIZE" "$REVIEWS" >> "$TEST_REVIEWS"
+
+while read LINE; do
+	BUSINESS_ID=$(echo "$LINE" | sed 's|.*\"business_id\":\"\(.*\)\",\"stars.*|\1|g' | sed 's|^-\(.*\)|\1|g')
+	grep "$BUSINESS_ID" "$BUSINESSES" >> "$TEST_BUSINESSES"
+done < "$TEST_REVIEWS"
