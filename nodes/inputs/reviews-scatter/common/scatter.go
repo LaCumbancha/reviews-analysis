@@ -75,9 +75,10 @@ func NewScatter(config ScatterConfig) *Scatter {
 func (scatter *Scatter) Run() {
 
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go scatter.retrieveReviews(&wg)
+	
 	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
-
 	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
 		go func() {
 			log.Infof("Initializing worker %d.", worker)
@@ -116,6 +117,8 @@ func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
     if err := scanner.Err(); err != nil {
         log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
     }
+
+    wg.Done()
 }
 
 func (scatter *Scatter) Stop() {

@@ -1,38 +1,40 @@
 # System configuration:
-development_mode: true
+development_mode: false
 reviews_streaming: false
+reviews_bulk_size: 100
 reviews_pool_size: 20
+business_pool_size: 20
 users_min_reviews: 50
 bots_min_reviews: 5
 
 # Funniest cities flow.
-citbiz_mappers: 1
-funbiz_mappers: 1
-funbiz_filters: 1
-funbiz_aggregators: 1
-funcit_joiners: 1
-funcit_aggregators: 1
-funcit_filters: 1
+citbiz_mappers: 4
+funbiz_mappers: 4
+funbiz_filters: 4
+funbiz_aggregators: 4
+funcit_joiners: 4
+funcit_aggregators: 4
+funcit_filters: 4
 
 # Weekday histogram flow.
-weekday_mappers: 1
-weekday_aggregators: 1
+weekday_mappers: 3
+weekday_aggregators: 3
 
 # Users w/+50 reviews.
-user_mappers: 1
-user_aggregators: 1
-user_filters: 1
+user_mappers: 6
+user_aggregators: 6
+user_filters: 6
 
 # Users w/+50 5-stars reviews.
-stars_mappers: 1
-stars_filters: 1
-stars_aggregators: 1
-bestuser_joiners: 1
+stars_mappers: 4
+stars_filters: 4
+stars_aggregators: 4
+bestuser_joiners: 4
 
 # Users w/+5 reviews with same text.
-hash_mappers: 1
-hash_aggregators: 1
-dishash_aggregators: 1
-dishash_filters: 1
-botuser_filters: 1
-botuser_joiners: 1
+hash_mappers: 4
+hash_aggregators: 4
+dishash_aggregators: 4
+dishash_filters: 4
+botuser_filters: 4
+botuser_joiners: 4
