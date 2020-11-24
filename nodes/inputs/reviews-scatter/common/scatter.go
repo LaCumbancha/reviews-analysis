@@ -17,6 +17,7 @@ type ScatterConfig struct {
 	Data				string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	FunbizMappers		int
 	WeekdaysMappers		int
 	HashesMappers		int
@@ -28,6 +29,8 @@ type Scatter struct {
 	data 				string
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
+	innerChannel		chan string
+	poolSize			int
 	outputDirect 		*rabbitmq.RabbitOutputDirect
 }
 
@@ -61,6 +64,8 @@ func NewScatter(config ScatterConfig) *Scatter {
 		data: 				config.Data,
 		connection:			conn,
 		channel:			ch,
+		innerChannel:		make(chan string),
+		poolSize:			config.WorkersPool,
 		outputDirect:		scatterDirect,
 	}
 
@@ -68,35 +73,49 @@ func NewScatter(config ScatterConfig) *Scatter {
 }
 
 func (scatter *Scatter) Run() {
-	file, err := os.Open(scatter.data)
-    if err != nil {
-        log.Fatalf("Error opening reviews data file. Err: '%s'", err)
-    }
-    defer file.Close()
 
 	var wg sync.WaitGroup
-    scanner := bufio.NewScanner(file)
-    for scanner.Scan() {
-    	review := scanner.Text()
+	go scatter.retrieveReviews(&wg)
+	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
 
-    	// Publishing asynchronously with Goroutines.
-    	wg.Add(1)
-    	go func() {
-    		reviewId := utils.GetReviewId(review)
-    		scatter.outputDirect.PublishReview(review, reviewId)
-    		wg.Done()
-    	}()
-    }
-
-    if err := scanner.Err(); err != nil {
-        log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
-    }
+	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
+		go func() {
+			log.Infof("Initializing worker %d.", worker)
+			for review := range scatter.innerChannel {
+				reviewId := utils.GetReviewId(review)
+				log.Infof("Processing review %s.", reviewId)
+    			scatter.outputDirect.PublishReview(review, reviewId)
+    			wg.Done()
+			}
+		}()
+	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
     // Publishing end messages.
     scatter.outputDirect.PublishFinish()
+}
+
+func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
+	log.Infof("Starting to load reviews.")
+
+	file, err := os.Open(scatter.data)
+    if err != nil {
+        log.Fatalf("Error opening reviews data file. Err: '%s'", err)
+    }
+    defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		wg.Add(1)
+    	review := scanner.Text()
+    	scatter.innerChannel <- review
+    }
+
+    if err := scanner.Err(); err != nil {
+        log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
+    }
 }
 
 func (scatter *Scatter) Stop() {

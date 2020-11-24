@@ -13,7 +13,7 @@ services:
     environment:
     - BESTUSERPRE_RABBITMQ_IP=rabbitmq
     - BESTUSERPRE_RABBITMQ_PORT=5672
-    - BESTUSERPRE_BESTUSER_JOINERS=2
+    - BESTUSERPRE_BESTUSER_JOINERS=1
     image: best_users_prettier:latest
     links:
     - rabbitmq
@@ -30,26 +30,8 @@ services:
     - BESTUSERJOIN_RABBITMQ_IP=rabbitmq
     - BESTUSERJOIN_RABBITMQ_PORT=5672
     - BESTUSERJOIN_INPUT_TOPIC=0
-    - BESTUSERJOIN_STARS_AGGREGATORS=2
-    - BESTUSERJOIN_USER_FILTERS=2
-    image: bestuser_joiner:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  bestuser_joiner1:
-    container_name: bestuser_joiner1
-    depends_on:
-    - best_users_prettier
-    entrypoint: /joiner
-    environment:
-    - BESTUSERJOIN_INSTANCE=1
-    - BESTUSERJOIN_RABBITMQ_IP=rabbitmq
-    - BESTUSERJOIN_RABBITMQ_PORT=5672
-    - BESTUSERJOIN_INPUT_TOPIC=1
-    - BESTUSERJOIN_STARS_AGGREGATORS=2
-    - BESTUSERJOIN_USER_FILTERS=2
+    - BESTUSERJOIN_STARS_AGGREGATORS=1
+    - BESTUSERJOIN_USER_FILTERS=1
     image: bestuser_joiner:latest
     links:
     - rabbitmq
@@ -60,13 +42,12 @@ services:
     container_name: biz_scatter
     depends_on:
     - citbiz_mapper0
-    - citbiz_mapper1
     entrypoint: /scatter
     environment:
-    - BIZSCA_BUSINESS_DATA=/data/test-business.json
+    - BIZSCA_BUSINESS_DATA=/data/business.json
     - BIZSCA_RABBITMQ_IP=rabbitmq
     - BIZSCA_RABBITMQ_PORT=5672
-    - BIZSCA_CITBIZ_MAPPERS=2
+    - BIZSCA_CITBIZ_MAPPERS=1
     image: biz_scatter:latest
     links:
     - rabbitmq
@@ -83,7 +64,7 @@ services:
     environment:
     - BOTUSERPRE_RABBITMQ_IP=rabbitmq
     - BOTUSERPRE_RABBITMQ_PORT=5672
-    - BOTUSERPRE_BOTUSER_JOINERS=2
+    - BOTUSERPRE_BOTUSER_JOINERS=1
     image: bot_users_prettier:latest
     links:
     - rabbitmq
@@ -94,34 +75,14 @@ services:
     container_name: botuser_filter0
     depends_on:
     - botuser_joiner0
-    - botuser_joiner1
     entrypoint: /filter
     environment:
     - BOTUSERFIL_INSTANCE=0
     - BOTUSERFIL_RABBITMQ_IP=rabbitmq
     - BOTUSERFIL_RABBITMQ_PORT=5672
     - BOTUSERFIL_MIN_REVIEWS=5
-    - BOTUSERFIL_USER_AGGREGATORS=2
-    - BOTUSERFIL_DISHASH_JOINERS=2
-    image: botuser_filter:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  botuser_filter1:
-    container_name: botuser_filter1
-    depends_on:
-    - botuser_joiner0
-    - botuser_joiner1
-    entrypoint: /filter
-    environment:
-    - BOTUSERFIL_INSTANCE=1
-    - BOTUSERFIL_RABBITMQ_IP=rabbitmq
-    - BOTUSERFIL_RABBITMQ_PORT=5672
-    - BOTUSERFIL_MIN_REVIEWS=5
-    - BOTUSERFIL_USER_AGGREGATORS=2
-    - BOTUSERFIL_DISHASH_JOINERS=2
+    - BOTUSERFIL_USER_AGGREGATORS=1
+    - BOTUSERFIL_DISHASH_JOINERS=1
     image: botuser_filter:latest
     links:
     - rabbitmq
@@ -138,26 +99,8 @@ services:
     - BOTUSERJOIN_RABBITMQ_IP=rabbitmq
     - BOTUSERJOIN_RABBITMQ_PORT=5672
     - BOTUSERJOIN_INPUT_TOPIC=0
-    - BOTUSERJOIN_DISHASH_FILTERS=2
-    - BOTUSERJOIN_BOTUSERS_FILTERS=2
-    image: botuser_joiner:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  botuser_joiner1:
-    container_name: botuser_joiner1
-    depends_on:
-    - bot_users_prettier
-    entrypoint: /joiner
-    environment:
-    - BOTUSERJOIN_INSTANCE=1
-    - BOTUSERJOIN_RABBITMQ_IP=rabbitmq
-    - BOTUSERJOIN_RABBITMQ_PORT=5672
-    - BOTUSERJOIN_INPUT_TOPIC=1
-    - BOTUSERJOIN_DISHASH_FILTERS=2
-    - BOTUSERJOIN_BOTUSERS_FILTERS=2
+    - BOTUSERJOIN_DISHASH_FILTERS=1
+    - BOTUSERJOIN_BOTUSERS_FILTERS=1
     image: botuser_joiner:latest
     links:
     - rabbitmq
@@ -168,32 +111,13 @@ services:
     container_name: citbiz_mapper0
     depends_on:
     - funcit_joiner0
-    - funcit_joiner1
     entrypoint: /mapper
     environment:
     - CITBIZMAP_INSTANCE=0
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
     - CITBIZMAP_RABBITMQ_PORT=5672
     - CITBIZMAP_BUSINESSES_INPUTS=1
-    - CITBIZMAP_FUNCIT_JOINERS=2
-    image: citbiz_mapper:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  citbiz_mapper1:
-    container_name: citbiz_mapper1
-    depends_on:
-    - funcit_joiner0
-    - funcit_joiner1
-    entrypoint: /mapper
-    environment:
-    - CITBIZMAP_INSTANCE=1
-    - CITBIZMAP_RABBITMQ_IP=rabbitmq
-    - CITBIZMAP_RABBITMQ_PORT=5672
-    - CITBIZMAP_BUSINESSES_INPUTS=1
-    - CITBIZMAP_FUNCIT_JOINERS=2
+    - CITBIZMAP_FUNCIT_JOINERS=1
     image: citbiz_mapper:latest
     links:
     - rabbitmq
@@ -204,34 +128,14 @@ services:
     container_name: dishash_aggregator0
     depends_on:
     - dishash_filter0
-    - dishash_filter1
     entrypoint: /aggregator
     environment:
     - DISHASHAGG_INSTANCE=0
     - DISHASHAGG_RABBITMQ_IP=rabbitmq
     - DISHASHAGG_RABBITMQ_PORT=5672
     - DISHASHAGG_INPUT_TOPIC=0
-    - DISHASHAGG_HASH_AGGREGATORS=2
-    - DISHASHAGG_DISHASH_FILTERS=2
-    image: dishash_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  dishash_aggregator1:
-    container_name: dishash_aggregator1
-    depends_on:
-    - dishash_filter0
-    - dishash_filter1
-    entrypoint: /aggregator
-    environment:
-    - DISHASHAGG_INSTANCE=1
-    - DISHASHAGG_RABBITMQ_IP=rabbitmq
-    - DISHASHAGG_RABBITMQ_PORT=5672
-    - DISHASHAGG_INPUT_TOPIC=1
-    - DISHASHAGG_HASH_AGGREGATORS=2
-    - DISHASHAGG_DISHASH_FILTERS=2
+    - DISHASHAGG_HASH_AGGREGATORS=1
+    - DISHASHAGG_DISHASH_FILTERS=1
     image: dishash_aggregator:latest
     links:
     - rabbitmq
@@ -242,32 +146,13 @@ services:
     container_name: dishash_filter0
     depends_on:
     - botuser_joiner0
-    - botuser_joiner1
     entrypoint: /filter
     environment:
     - DISHASHFIL_INSTANCE=0
     - DISHASHFIL_RABBITMQ_IP=rabbitmq
     - DISHASHFIL_RABBITMQ_PORT=5672
-    - DISHASHFIL_DISHASH_AGGREGATORS=2
-    - DISHASHFIL_DISHASH_JOINERS=2
-    image: dishash_filter:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  dishash_filter1:
-    container_name: dishash_filter1
-    depends_on:
-    - botuser_joiner0
-    - botuser_joiner1
-    entrypoint: /filter
-    environment:
-    - DISHASHFIL_INSTANCE=1
-    - DISHASHFIL_RABBITMQ_IP=rabbitmq
-    - DISHASHFIL_RABBITMQ_PORT=5672
-    - DISHASHFIL_DISHASH_AGGREGATORS=2
-    - DISHASHFIL_DISHASH_JOINERS=2
+    - DISHASHFIL_DISHASH_AGGREGATORS=1
+    - DISHASHFIL_DISHASH_JOINERS=1
     image: dishash_filter:latest
     links:
     - rabbitmq
@@ -278,34 +163,14 @@ services:
     container_name: funbiz_aggregator0
     depends_on:
     - funcit_joiner0
-    - funcit_joiner1
     entrypoint: /aggregator
     environment:
     - FUNBIZAGG_INSTANCE=0
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
     - FUNBIZAGG_RABBITMQ_PORT=5672
-    - FUNBIZAGG_FUNBIZ_FILTERS=2
-    - FUNBIZAGG_FUNCIT_JOINERS=2
+    - FUNBIZAGG_FUNBIZ_FILTERS=1
+    - FUNBIZAGG_FUNCIT_JOINERS=1
     - FUNBIZAGG_INPUT_TOPIC=0
-    image: funbiz_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funbiz_aggregator1:
-    container_name: funbiz_aggregator1
-    depends_on:
-    - funcit_joiner0
-    - funcit_joiner1
-    entrypoint: /aggregator
-    environment:
-    - FUNBIZAGG_INSTANCE=1
-    - FUNBIZAGG_RABBITMQ_IP=rabbitmq
-    - FUNBIZAGG_RABBITMQ_PORT=5672
-    - FUNBIZAGG_FUNBIZ_FILTERS=2
-    - FUNBIZAGG_FUNCIT_JOINERS=2
-    - FUNBIZAGG_INPUT_TOPIC=1
     image: funbiz_aggregator:latest
     links:
     - rabbitmq
@@ -316,32 +181,13 @@ services:
     container_name: funbiz_filter0
     depends_on:
     - funbiz_aggregator0
-    - funbiz_aggregator1
     entrypoint: /filter
     environment:
     - FUNBIZFIL_INSTANCE=0
     - FUNBIZFIL_RABBITMQ_IP=rabbitmq
     - FUNBIZFIL_RABBITMQ_PORT=5672
-    - FUNBIZFIL_FUNBIZ_MAPPERS=2
-    - FUNBIZFIL_FUNBIZ_AGGREGATORS=2
-    image: funbiz_filter:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funbiz_filter1:
-    container_name: funbiz_filter1
-    depends_on:
-    - funbiz_aggregator0
-    - funbiz_aggregator1
-    entrypoint: /filter
-    environment:
-    - FUNBIZFIL_INSTANCE=1
-    - FUNBIZFIL_RABBITMQ_IP=rabbitmq
-    - FUNBIZFIL_RABBITMQ_PORT=5672
-    - FUNBIZFIL_FUNBIZ_MAPPERS=2
-    - FUNBIZFIL_FUNBIZ_AGGREGATORS=2
+    - FUNBIZFIL_FUNBIZ_MAPPERS=1
+    - FUNBIZFIL_FUNBIZ_AGGREGATORS=1
     image: funbiz_filter:latest
     links:
     - rabbitmq
@@ -352,32 +198,13 @@ services:
     container_name: funbiz_mapper0
     depends_on:
     - funbiz_filter0
-    - funbiz_filter1
     entrypoint: /mapper
     environment:
     - FUNBIZMAP_INSTANCE=0
     - FUNBIZMAP_RABBITMQ_IP=rabbitmq
     - FUNBIZMAP_RABBITMQ_PORT=5672
     - FUNBIZMAP_REVIEWS_INPUTS=1
-    - FUNBIZMAP_FUNBIZ_FILTERS=2
-    image: funbiz_mapper:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funbiz_mapper1:
-    container_name: funbiz_mapper1
-    depends_on:
-    - funbiz_filter0
-    - funbiz_filter1
-    entrypoint: /mapper
-    environment:
-    - FUNBIZMAP_INSTANCE=1
-    - FUNBIZMAP_RABBITMQ_IP=rabbitmq
-    - FUNBIZMAP_RABBITMQ_PORT=5672
-    - FUNBIZMAP_REVIEWS_INPUTS=1
-    - FUNBIZMAP_FUNBIZ_FILTERS=2
+    - FUNBIZMAP_FUNBIZ_FILTERS=1
     image: funbiz_mapper:latest
     links:
     - rabbitmq
@@ -388,34 +215,14 @@ services:
     container_name: funcit_aggregator0
     depends_on:
     - funcit_filter0
-    - funcit_filter1
     entrypoint: /aggregator
     environment:
     - FUNCITAGG_INSTANCE=0
     - FUNCITAGG_RABBITMQ_IP=rabbitmq
     - FUNCITAGG_RABBITMQ_PORT=5672
-    - FUNCITAGG_FUNCIT_JOINERS=2
-    - FUNCITAGG_FUNCIT_FILTERS=2
+    - FUNCITAGG_FUNCIT_JOINERS=1
+    - FUNCITAGG_FUNCIT_FILTERS=1
     - FUNCITAGG_INPUT_TOPIC=0
-    image: funcit_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funcit_aggregator1:
-    container_name: funcit_aggregator1
-    depends_on:
-    - funcit_filter0
-    - funcit_filter1
-    entrypoint: /aggregator
-    environment:
-    - FUNCITAGG_INSTANCE=1
-    - FUNCITAGG_RABBITMQ_IP=rabbitmq
-    - FUNCITAGG_RABBITMQ_PORT=5672
-    - FUNCITAGG_FUNCIT_JOINERS=2
-    - FUNCITAGG_FUNCIT_FILTERS=2
-    - FUNCITAGG_INPUT_TOPIC=1
     image: funcit_aggregator:latest
     links:
     - rabbitmq
@@ -431,23 +238,7 @@ services:
     - FUNCITFIL_INSTANCE=0
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
     - FUNCITFIL_RABBITMQ_PORT=5672
-    - FUNCITFIL_FUNCIT_AGGREGATORS=2
-    image: funcit_filter:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funcit_filter1:
-    container_name: funcit_filter1
-    depends_on:
-    - top_funniest_cities_prettier
-    entrypoint: /filter
-    environment:
-    - FUNCITFIL_INSTANCE=1
-    - FUNCITFIL_RABBITMQ_IP=rabbitmq
-    - FUNCITFIL_RABBITMQ_PORT=5672
-    - FUNCITFIL_FUNCIT_AGGREGATORS=2
+    - FUNCITFIL_FUNCIT_AGGREGATORS=1
     image: funcit_filter:latest
     links:
     - rabbitmq
@@ -458,36 +249,15 @@ services:
     container_name: funcit_joiner0
     depends_on:
     - funcit_aggregator0
-    - funcit_aggregator1
     entrypoint: /joiner
     environment:
     - FUNCITJOIN_INSTANCE=0
     - FUNCITJOIN_RABBITMQ_IP=rabbitmq
     - FUNCITJOIN_RABBITMQ_PORT=5672
-    - FUNCITJOIN_FUNBIZ_AGGREGATORS=2
-    - FUNCITJOIN_CITBIZ_MAPPERS=2
-    - FUNCITJOIN_FUNCIT_AGGREGATORS=2
+    - FUNCITJOIN_FUNBIZ_AGGREGATORS=1
+    - FUNCITJOIN_CITBIZ_MAPPERS=1
+    - FUNCITJOIN_FUNCIT_AGGREGATORS=1
     - FUNCITJOIN_INPUT_TOPIC=0
-    image: funcit_joiner:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funcit_joiner1:
-    container_name: funcit_joiner1
-    depends_on:
-    - funcit_aggregator0
-    - funcit_aggregator1
-    entrypoint: /joiner
-    environment:
-    - FUNCITJOIN_INSTANCE=1
-    - FUNCITJOIN_RABBITMQ_IP=rabbitmq
-    - FUNCITJOIN_RABBITMQ_PORT=5672
-    - FUNCITJOIN_FUNBIZ_AGGREGATORS=2
-    - FUNCITJOIN_CITBIZ_MAPPERS=2
-    - FUNCITJOIN_FUNCIT_AGGREGATORS=2
-    - FUNCITJOIN_INPUT_TOPIC=1
     image: funcit_joiner:latest
     links:
     - rabbitmq
@@ -498,34 +268,14 @@ services:
     container_name: hash_aggregator0
     depends_on:
     - dishash_aggregator0
-    - dishash_aggregator1
     entrypoint: /aggregator
     environment:
     - HASHAGG_INSTANCE=0
     - HASHAGG_RABBITMQ_IP=rabbitmq
     - HASHAGG_RABBITMQ_PORT=5672
     - HASHAGG_INPUT_TOPIC=0
-    - HASHAGG_HASH_MAPPERS=2
-    - HASHAGG_DISHASH_AGGREGATORS=2
-    image: hash_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  hash_aggregator1:
-    container_name: hash_aggregator1
-    depends_on:
-    - dishash_aggregator0
-    - dishash_aggregator1
-    entrypoint: /aggregator
-    environment:
-    - HASHAGG_INSTANCE=1
-    - HASHAGG_RABBITMQ_IP=rabbitmq
-    - HASHAGG_RABBITMQ_PORT=5672
-    - HASHAGG_INPUT_TOPIC=1
-    - HASHAGG_HASH_MAPPERS=2
-    - HASHAGG_DISHASH_AGGREGATORS=2
+    - HASHAGG_HASH_MAPPERS=1
+    - HASHAGG_DISHASH_AGGREGATORS=1
     image: hash_aggregator:latest
     links:
     - rabbitmq
@@ -536,32 +286,13 @@ services:
     container_name: hash_mapper0
     depends_on:
     - hash_aggregator0
-    - hash_aggregator1
     entrypoint: /mapper
     environment:
     - HASHMAP_INSTANCE=0
     - HASHMAP_RABBITMQ_IP=rabbitmq
     - HASHMAP_RABBITMQ_PORT=5672
     - HASHMAP_REVIEWS_INPUTS=1
-    - HASHMAP_HASH_AGGREGATORS=2
-    image: hash_mapper:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  hash_mapper1:
-    container_name: hash_mapper1
-    depends_on:
-    - hash_aggregator0
-    - hash_aggregator1
-    entrypoint: /mapper
-    environment:
-    - HASHMAP_INSTANCE=1
-    - HASHMAP_RABBITMQ_IP=rabbitmq
-    - HASHMAP_RABBITMQ_PORT=5672
-    - HASHMAP_REVIEWS_INPUTS=1
-    - HASHMAP_HASH_AGGREGATORS=2
+    - HASHMAP_HASH_AGGREGATORS=1
     image: hash_mapper:latest
     links:
     - rabbitmq
@@ -586,26 +317,22 @@ services:
     container_name: rvw_scatter
     depends_on:
     - funbiz_mapper0
-    - funbiz_mapper1
     - weekday_mapper0
-    - weekday_mapper1
     - stars_mapper0
-    - stars_mapper1
     - hash_mapper0
-    - hash_mapper1
     - user_mapper0
-    - user_mapper1
     entrypoint: /scatter
     environment:
     - RVWSCA_INSTANCE=0
     - RVWSCA_REVIEWS_DATA=/data/test-reviews.json
     - RVWSCA_RABBITMQ_IP=rabbitmq
     - RVWSCA_RABBITMQ_PORT=5672
-    - RVWSCA_FUNBIZ_MAPPERS=2
-    - RVWSCA_WEEKDAYS_MAPPERS=2
-    - RVWSCA_HASHES_MAPPERS=2
-    - RVWSCA_USERS_MAPPERS=2
-    - RVWSCA_STARS_MAPPERS=2
+    - RVWSCA_WORKERS_POOL=20
+    - RVWSCA_FUNBIZ_MAPPERS=1
+    - RVWSCA_WEEKDAYS_MAPPERS=1
+    - RVWSCA_HASHES_MAPPERS=1
+    - RVWSCA_USERS_MAPPERS=1
+    - RVWSCA_STARS_MAPPERS=1
     image: rvw_scatter:latest
     links:
     - rabbitmq
@@ -632,34 +359,14 @@ services:
     container_name: stars_aggregator0
     depends_on:
     - bestuser_joiner0
-    - bestuser_joiner1
     entrypoint: /aggregator
     environment:
     - STARSAGG_INSTANCE=0
     - STARSAGG_RABBITMQ_IP=rabbitmq
     - STARSAGG_RABBITMQ_PORT=5672
     - STARSAGG_INPUT_TOPIC=0
-    - STARSAGG_STARS_FILTERS=2
-    - STARSAGG_STARS_JOINERS=2
-    image: stars_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  stars_aggregator1:
-    container_name: stars_aggregator1
-    depends_on:
-    - bestuser_joiner0
-    - bestuser_joiner1
-    entrypoint: /aggregator
-    environment:
-    - STARSAGG_INSTANCE=1
-    - STARSAGG_RABBITMQ_IP=rabbitmq
-    - STARSAGG_RABBITMQ_PORT=5672
-    - STARSAGG_INPUT_TOPIC=1
-    - STARSAGG_STARS_FILTERS=2
-    - STARSAGG_STARS_JOINERS=2
+    - STARSAGG_STARS_FILTERS=1
+    - STARSAGG_STARS_JOINERS=1
     image: stars_aggregator:latest
     links:
     - rabbitmq
@@ -670,32 +377,13 @@ services:
     container_name: stars_filter0
     depends_on:
     - stars_aggregator0
-    - stars_aggregator1
     entrypoint: /filter
     environment:
     - STARSFIL_INSTANCE=0
     - STARSFIL_RABBITMQ_IP=rabbitmq
     - STARSFIL_RABBITMQ_PORT=5672
-    - STARSFIL_STARS_MAPPERS=2
-    - STARSFIL_STARS_AGGREGATORS=2
-    image: stars_filter:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  stars_filter1:
-    container_name: stars_filter1
-    depends_on:
-    - stars_aggregator0
-    - stars_aggregator1
-    entrypoint: /filter
-    environment:
-    - STARSFIL_INSTANCE=1
-    - STARSFIL_RABBITMQ_IP=rabbitmq
-    - STARSFIL_RABBITMQ_PORT=5672
-    - STARSFIL_STARS_MAPPERS=2
-    - STARSFIL_STARS_AGGREGATORS=2
+    - STARSFIL_STARS_MAPPERS=1
+    - STARSFIL_STARS_AGGREGATORS=1
     image: stars_filter:latest
     links:
     - rabbitmq
@@ -706,32 +394,13 @@ services:
     container_name: stars_mapper0
     depends_on:
     - stars_filter0
-    - stars_filter1
     entrypoint: /mapper
     environment:
     - STARSMAP_INSTANCE=0
     - STARSMAP_RABBITMQ_IP=rabbitmq
     - STARSMAP_RABBITMQ_PORT=5672
     - STARSMAP_REVIEWS_INPUTS=1
-    - STARSMAP_STARS_FILTERS=2
-    image: stars_mapper:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  stars_mapper1:
-    container_name: stars_mapper1
-    depends_on:
-    - stars_filter0
-    - stars_filter1
-    entrypoint: /mapper
-    environment:
-    - STARSMAP_INSTANCE=1
-    - STARSMAP_RABBITMQ_IP=rabbitmq
-    - STARSMAP_RABBITMQ_PORT=5672
-    - STARSMAP_REVIEWS_INPUTS=1
-    - STARSMAP_STARS_FILTERS=2
+    - STARSMAP_STARS_FILTERS=1
     image: stars_mapper:latest
     links:
     - rabbitmq
@@ -746,7 +415,7 @@ services:
     environment:
     - FUNCITPRE_RABBITMQ_IP=rabbitmq
     - FUNCITPRE_RABBITMQ_PORT=5672
-    - FUNCITPRE_FUNCIT_FILTERS=2
+    - FUNCITPRE_FUNCIT_FILTERS=1
     image: top_funniest_cities_prettier:latest
     links:
     - rabbitmq
@@ -761,7 +430,7 @@ services:
     environment:
     - TOPUSERPRE_RABBITMQ_IP=rabbitmq
     - TOPUSERPRE_RABBITMQ_PORT=5672
-    - TOPUSERPRE_USER_FILTERS=2
+    - TOPUSERPRE_USER_FILTERS=1
     image: top_users_prettier:latest
     links:
     - rabbitmq
@@ -772,40 +441,16 @@ services:
     container_name: user_aggregator0
     depends_on:
     - botuser_filter0
-    - botuser_filter1
     - user_filter0
-    - user_filter1
     entrypoint: /aggregator
     environment:
     - USERAGG_INSTANCE=0
     - USERAGG_RABBITMQ_IP=rabbitmq
     - USERAGG_RABBITMQ_PORT=5672
     - USERAGG_INPUT_TOPIC=0
-    - USERAGG_USER_MAPPERS=2
-    - USERAGG_USER_FILTERS=2
-    - USERAGG_BOTUSER_FILTERS=2
-    image: user_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  user_aggregator1:
-    container_name: user_aggregator1
-    depends_on:
-    - botuser_filter0
-    - botuser_filter1
-    - user_filter0
-    - user_filter1
-    entrypoint: /aggregator
-    environment:
-    - USERAGG_INSTANCE=1
-    - USERAGG_RABBITMQ_IP=rabbitmq
-    - USERAGG_RABBITMQ_PORT=5672
-    - USERAGG_INPUT_TOPIC=1
-    - USERAGG_USER_MAPPERS=2
-    - USERAGG_USER_FILTERS=2
-    - USERAGG_BOTUSER_FILTERS=2
+    - USERAGG_USER_MAPPERS=1
+    - USERAGG_USER_FILTERS=1
+    - USERAGG_BOTUSER_FILTERS=1
     image: user_aggregator:latest
     links:
     - rabbitmq
@@ -816,7 +461,6 @@ services:
     container_name: user_filter0
     depends_on:
     - bestuser_joiner0
-    - bestuser_joiner1
     - top_users_prettier
     entrypoint: /filter
     environment:
@@ -824,28 +468,8 @@ services:
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
     - USERFIL_MIN_REVIEWS=50
-    - USERFIL_USER_AGGREGATORS=2
-    - USERFIL_STARS_JOINERS=2
-    image: user_filter:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  user_filter1:
-    container_name: user_filter1
-    depends_on:
-    - bestuser_joiner0
-    - bestuser_joiner1
-    - top_users_prettier
-    entrypoint: /filter
-    environment:
-    - USERFIL_INSTANCE=1
-    - USERFIL_RABBITMQ_IP=rabbitmq
-    - USERFIL_RABBITMQ_PORT=5672
-    - USERFIL_MIN_REVIEWS=50
-    - USERFIL_USER_AGGREGATORS=2
-    - USERFIL_STARS_JOINERS=2
+    - USERFIL_USER_AGGREGATORS=1
+    - USERFIL_STARS_JOINERS=1
     image: user_filter:latest
     links:
     - rabbitmq
@@ -856,32 +480,13 @@ services:
     container_name: user_mapper0
     depends_on:
     - user_aggregator0
-    - user_aggregator1
     entrypoint: /mapper
     environment:
     - USERMAP_INSTANCE=0
     - USERMAP_RABBITMQ_IP=rabbitmq
     - USERMAP_RABBITMQ_PORT=5672
     - USERMAP_REVIEWS_INPUTS=1
-    - USERMAP_USER_AGGREGATORS=2
-    image: user_mapper:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  user_mapper1:
-    container_name: user_mapper1
-    depends_on:
-    - user_aggregator0
-    - user_aggregator1
-    entrypoint: /mapper
-    environment:
-    - USERMAP_INSTANCE=1
-    - USERMAP_RABBITMQ_IP=rabbitmq
-    - USERMAP_RABBITMQ_PORT=5672
-    - USERMAP_REVIEWS_INPUTS=1
-    - USERMAP_USER_AGGREGATORS=2
+    - USERMAP_USER_AGGREGATORS=1
     image: user_mapper:latest
     links:
     - rabbitmq
@@ -898,24 +503,7 @@ services:
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
     - WEEKDAYAGG_RABBITMQ_PORT=5672
     - WEEKDAYAGG_INPUT_TOPIC=0
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
-    image: weekday_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  weekday_aggregator1:
-    container_name: weekday_aggregator1
-    depends_on:
-    - weekday_histogram_prettier
-    entrypoint: /aggregator
-    environment:
-    - WEEKDAYAGG_INSTANCE=1
-    - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
-    - WEEKDAYAGG_RABBITMQ_PORT=5672
-    - WEEKDAYAGG_INPUT_TOPIC=1
-    - WEEKDAYAGG_WEEKDAY_MAPPERS=2
+    - WEEKDAYAGG_WEEKDAY_MAPPERS=1
     image: weekday_aggregator:latest
     links:
     - rabbitmq
@@ -931,7 +519,7 @@ services:
     - HISTOPRE=0
     - HISTOPRE_RABBITMQ_IP=rabbitmq
     - HISTOPRE_RABBITMQ_PORT=5672
-    - HISTOPRE_WEEKDAY_AGGREGATORS=2
+    - HISTOPRE_WEEKDAY_AGGREGATORS=1
     image: weekday_histogram_prettier:latest
     links:
     - rabbitmq
@@ -942,32 +530,13 @@ services:
     container_name: weekday_mapper0
     depends_on:
     - weekday_aggregator0
-    - weekday_aggregator1
     entrypoint: /mapper
     environment:
     - WEEKDAYMAP_INSTANCE=0
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
     - WEEKDAYMAP_REVIEWS_INPUTS=1
-    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=2
-    image: weekday_mapper:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  weekday_mapper1:
-    container_name: weekday_mapper1
-    depends_on:
-    - weekday_aggregator0
-    - weekday_aggregator1
-    entrypoint: /mapper
-    environment:
-    - WEEKDAYMAP_INSTANCE=1
-    - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
-    - WEEKDAYMAP_RABBITMQ_PORT=5672
-    - WEEKDAYMAP_REVIEWS_INPUTS=1
-    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=2
+    - WEEKDAYMAP_WEEKDAY_AGGREGATORS=1
     image: weekday_mapper:latest
     links:
     - rabbitmq

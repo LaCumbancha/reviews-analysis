@@ -7,6 +7,7 @@ input_yaml_file = open("./scripts/system-config.yaml")
 input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
 reviews_inputs = 2 if input_yaml['reviews_streaming'] else 1
+reviews_data = '/data/test-reviews.json' if input_yaml['development_mode'] else '/data/reviews.json'
 
 file = {}
 
@@ -152,7 +153,7 @@ file['services']['biz_scatter'] = {
 	'image': 'biz_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['BIZSCA_BUSINESS_DATA=/data/test-business.json', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
+	'environment': ['BIZSCA_BUSINESS_DATA=/data/business.json', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(BIZSCA_DEPS),
 	'networks': ['testing_net'],
@@ -471,7 +472,7 @@ file['services']['rvw_scatter'] = {
 	'image': 'rvw_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['RVWSCA_INSTANCE=0', 'RVWSCA_REVIEWS_DATA=/data/test-reviews.json', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hash_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["user_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
+	'environment': ['RVWSCA_INSTANCE=0', f'RVWSCA_REVIEWS_DATA={reviews_data}', 'RVWSCA_RABBITMQ_IP=rabbitmq', 'RVWSCA_RABBITMQ_PORT=5672', f'RVWSCA_WORKERS_POOL={input_yaml["reviews_pool_size"]}', f'RVWSCA_FUNBIZ_MAPPERS={input_yaml["funbiz_mappers"]}', f'RVWSCA_WEEKDAYS_MAPPERS={input_yaml["weekday_mappers"]}', f'RVWSCA_HASHES_MAPPERS={input_yaml["hash_mappers"]}', f'RVWSCA_USERS_MAPPERS={input_yaml["user_mappers"]}', f'RVWSCA_STARS_MAPPERS={input_yaml["stars_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(RVWSCA_DEPS),
 	'networks': ['testing_net'],

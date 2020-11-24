@@ -23,6 +23,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("reviews", "data")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("funbiz", "mappers")
 	configEnv.BindEnv("weekdays", "mappers")
 	configEnv.BindEnv("hashes", "mappers")
@@ -80,6 +81,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
+	
+	if workersPool == 0 {
+		log.Fatalf("WorkersPool variable missing")
+	}
+
 	funbizMappers := utils.GetConfigInt(configEnv, configFile, "funbiz_mappers")
 	
 	if funbizMappers == 0 {
@@ -115,6 +122,7 @@ func main() {
 		Data:					reviewsData,
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
 		FunbizMappers:			funbizMappers,
 		WeekdaysMappers:		weekdaysMappers,
 		HashesMappers:			hashesMappers,
