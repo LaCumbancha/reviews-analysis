@@ -1,14 +1,14 @@
 # Testing
 testing_mode: true
-test_file_size: 100
+test_file_size: 1000
 
 # System configuration
 reviews_streaming: false
 reviews_bulk_size: 100
 reviews_pool_size: 10
 business_pool_size: 10
-users_min_reviews: 3
-bots_min_reviews: 3
+users_min_reviews: 50
+bots_min_reviews: 5
 
 # Funniest cities flow.
 citbiz_mappers: 2

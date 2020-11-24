@@ -164,7 +164,7 @@ file['services']['biz_scatter'] = {
 	'image': 'biz_scatter:latest',
 	'entrypoint': '/scatter',
 	'restart': 'on-failure',
-	'environment': ['BIZSCA_INSTANCE=0', f'BIZSCA_make BUSINESS_DATA={business_data}', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSVA_WORKERS_POOL={input_yaml["business_pool_size"]}', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
+	'environment': ['BIZSCA_INSTANCE=0', f'BIZSCA_BUSINESS_DATA={business_data}', 'BIZSCA_RABBITMQ_IP=rabbitmq', 'BIZSCA_RABBITMQ_PORT=5672', f'BIZSCA_WORKERS_POOL={input_yaml["business_pool_size"]}', f'BIZSCA_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(BIZSCA_DEPS),
 	'networks': ['testing_net'],
@@ -261,7 +261,7 @@ file['services']['best_users_prettier'] = {
 	'image': 'best_users_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['BESTUSERPRE_RABBITMQ_IP=rabbitmq', 'BESTUSERPRE_RABBITMQ_PORT=5672', f'BESTUSERPRE_BESTUSER_JOINERS={input_yaml["bestuser_joiners"]}'],
+	'environment': ['BESTUSERPRE_RABBITMQ_IP=rabbitmq', 'BESTUSERPRE_RABBITMQ_PORT=5672', f'BESTUSERPRE_MIN_REVIEWS={input_yaml["users_min_reviews"]}', f'BESTUSERPRE_BESTUSER_JOINERS={input_yaml["bestuser_joiners"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(BESTUSERPRE_DEPS),
 	'networks': ['testing_net']
@@ -331,7 +331,7 @@ file['services']['bot_users_prettier'] = {
 	'image': 'bot_users_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['BOTUSERPRE_RABBITMQ_IP=rabbitmq', 'BOTUSERPRE_RABBITMQ_PORT=5672', f'BOTUSERPRE_BOTUSER_JOINERS={input_yaml["botuser_joiners"]}'],
+	'environment': ['BOTUSERPRE_RABBITMQ_IP=rabbitmq', 'BOTUSERPRE_RABBITMQ_PORT=5672', f'BOTUSERPRE_MIN_REVIEWS={input_yaml["bots_min_reviews"]}', f'BOTUSERPRE_BOTUSER_JOINERS={input_yaml["botuser_joiners"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(BOTUSERPRE_DEPS),
 	'networks': ['testing_net']
@@ -429,7 +429,7 @@ file['services']['top_users_prettier'] = {
 	'image': 'top_users_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
+	'environment': ['TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_MIN_REVIEWS={input_yaml["users_min_reviews"]}', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(TOPUSERPRE_DEPS),
 	'networks': ['testing_net']

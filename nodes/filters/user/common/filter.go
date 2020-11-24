@@ -80,7 +80,7 @@ func (filter *Filter) Run() {
 
 				wg.Add(1)
 				go func() {
-					filter.filterFunnyBusiness(messageBody)
+					filter.filterActiveUsers(messageBody)
 					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
@@ -112,7 +112,7 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (filter *Filter) filterFunnyBusiness(rawData string) {
+func (filter *Filter) filterActiveUsers(rawData string) {
 	var mappedUserData rabbitmq.UserData
 	json.Unmarshal([]byte(rawData), &mappedUserData)
 

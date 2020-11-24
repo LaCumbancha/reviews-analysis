@@ -20,6 +20,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("min", "reviews")
 	configEnv.BindEnv("bestuser", "joiners")
 	configEnv.BindEnv("config", "file")
 
@@ -61,6 +62,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	minReviews := utils.GetConfigInt(configEnv, configFile, "min_reviews")
+	
+	if minReviews == 0 {
+		log.Fatalf("MinReviews variable missing")
+	}
+
 	bestUserJoiners := utils.GetConfigInt(configEnv, configFile, "bestuser_joiners")
 	
 	if bestUserJoiners == 0 {
@@ -70,7 +77,8 @@ func main() {
 	mapperConfig := common.MapperConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
-		BestUserJoiners:		bestUserJoiners,
+		MinReviews:			minReviews,
+		BestUserJoiners:	bestUserJoiners,
 	}
 
 	mapper := common.NewMapper(mapperConfig)

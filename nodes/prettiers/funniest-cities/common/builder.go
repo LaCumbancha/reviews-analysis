@@ -50,15 +50,14 @@ func (builder *Builder) BuildTopTen() string {
 		topTenCities = builder.data[0:funnyCities]
 	}
 
-	response := ""
+	response := "Top Funniest Cities: "
 	for _, funnyCity := range topTenCities {
-		response += fmt.Sprintf("%s w/ %d ; ", funnyCity.City, funnyCity.Funny)
+		response += fmt.Sprintf("%s w/ %dp ; ", funnyCity.City, funnyCity.Funny)
     }
 
-    responseLength := len(response)
-    if responseLength == 0 {
-    	return "No cities have funny points."
+    if len(topTenCities) == 0 {
+    	return "no cities have funny points."
     } else {
-    	return response[0:responseLength-3]
+    	return response[0:len(response)-3]
     }
 }

@@ -12,6 +12,7 @@ import (
 type MapperConfig struct {
 	RabbitIp			string
 	RabbitPort			string
+	MinReviews			int
 	BestUserJoiners 	int
 }
 
@@ -44,7 +45,7 @@ func NewMapper(config MapperConfig) *Mapper {
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,
-		builder:		NewBuilder(),
+		builder:		NewBuilder(config.MinReviews),
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
 		endSignals:		config.BestUserJoiners,
@@ -107,8 +108,7 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 }
 
 func (mapper *Mapper) sendResults() {
-	results := mapper.builder.BuildData()
-	mapper.outputQueue.PublishData(fmt.Sprintf("Users with +50 reviews (only 5-stars) --- %s", results))
+	mapper.outputQueue.PublishData(mapper.builder.BuildData())
 }
 
 func (mapper *Mapper) Stop() {

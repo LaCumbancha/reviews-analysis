@@ -12,12 +12,14 @@ import (
 type Builder struct {
 	data 			map[string]int
 	mutex 			*sync.Mutex
+	reviews 		int
 }
 
-func NewBuilder() *Builder {
+func NewBuilder(minReviews int) *Builder {
 	builder := &Builder {
 		data:		make(map[string]int),
 		mutex:		&sync.Mutex{},
+		reviews:	minReviews,
 	}
 
 	return builder
@@ -36,16 +38,15 @@ func (builder *Builder) Save(rawData string) {
 }
 
 func (builder *Builder) BuildData() string {
-	response := ""
+	response := fmt.Sprintf("Users with +%d reviews (all with same text): ", builder.reviews)
 
 	for userId, reviews := range builder.data {
 		response += fmt.Sprintf("%s (%d) ; ", userId, reviews)
     }
 
-    responseLength := len(response)
-    if responseLength == 0 {
-    	return "No users have +5 reviews (all with the same text)."
+    if len(builder.data) == 0 {
+    	return response + "no users accomplish that requirements."
     } else {
-    	return response[0:responseLength-3]
+    	return response[0:len(response)-3]
     }
 }

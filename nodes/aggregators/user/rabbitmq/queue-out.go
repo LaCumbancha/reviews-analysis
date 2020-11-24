@@ -17,7 +17,7 @@ func NewRabbitOutputQueue(name string, instance string, endSignals int, channel 
 		instance:		instance,
 		channel: 		channel,
 		name:			name,
-		endSignals:		3*endSignals,
+		endSignals:		100*endSignals,
 	}
 
 	queue.initialize()

@@ -6,9 +6,9 @@ import (
 )
 
 type RabbitOutputQueue struct {
-	instance			string
-	channel 			*amqp.Channel
-	name 				string
+	instance		string
+	channel 		*amqp.Channel
+	name 			string
 }
 
 func NewRabbitOutputQueue(name string, instance string, channel *amqp.Channel) *RabbitOutputQueue {

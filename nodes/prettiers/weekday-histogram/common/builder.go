@@ -37,7 +37,7 @@ func (builder *Builder) Save(rawData string) {
 
 func (builder *Builder) BuildData() string {
 	return fmt.Sprintf(
-		"Sunday: %d ; Monday: %d ; Tuesday: %d ; Wednesday: %d ; Thurdsay : %d ; Friday: %d ; Saturday: %d",
+		"Sunday (%d) ; Monday (%d) ; Tuesday (%d) ; Wednesday (%d) ; Thurdsay (%d) ; Friday (%d) ; Saturday (%d)",
 		builder.data["Sunday"],
 		builder.data["Monday"],
 		builder.data["Tuesday"],
