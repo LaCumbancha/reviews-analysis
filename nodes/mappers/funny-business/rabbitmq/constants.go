@@ -10,3 +10,6 @@ const INPUT_EXCHANGE_TOPIC = "Funbiz-Mapper"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Consumer identifier
+const CONSUMER = "FUNBIZMAP"

@@ -44,7 +44,7 @@ func NewFilter(config FilterConfig) *Filter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, config.Instance, ch)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.StarsJoiners, ch)
 	filter := &Filter {
@@ -74,14 +74,12 @@ func (filter *Filter) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
 					filter.filterActiveUsers(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}
@@ -108,6 +106,7 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == filter.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
+		filter.inputQueue.Close()
 		wg.Done()
 	}
 }
@@ -130,6 +129,6 @@ func (filter *Filter) filterActiveUsers(rawData string) {
 
 func (filter *Filter) Stop() {
 	log.Infof("Closing User Filter connections.")
-	filter.connection.Close()
 	filter.channel.Close()
+	filter.connection.Close()
 }

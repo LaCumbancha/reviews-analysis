@@ -43,7 +43,7 @@ func NewFilter(config FilterConfig) *Filter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, config.Instance, ch)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.DishashJoiners, ch)
 	filter := &Filter {
 		connection:		conn,
@@ -71,14 +71,12 @@ func (filter *Filter) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
 					filter.filterRepeatedTexts(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}
@@ -104,6 +102,7 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == filter.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
+		filter.inputQueue.Close()
 		wg.Done()
 	}
 }

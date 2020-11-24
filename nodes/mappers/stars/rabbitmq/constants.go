@@ -10,3 +10,6 @@ const INPUT_EXCHANGE_TOPIC = "Stars-Mapper"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Consumer identifier
+const CONSUMER = "STARSMAP"

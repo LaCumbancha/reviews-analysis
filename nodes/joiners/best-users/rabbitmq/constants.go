@@ -7,3 +7,7 @@ const OUTPUT_QUEUE_NAME = "UserStarsJoiner"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Consumer identifier
+const CONSUMER1 = "BESTUSERJOIN1"
+const CONSUMER2 = "BESTUSERJOIN2"

@@ -46,8 +46,8 @@ func NewJoiner(config JoinerConfig) *Joiner {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect1 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE1_NAME, config.InputTopic, ch)
-	inputDirect2 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE2_NAME, config.InputTopic, ch)
+	inputDirect1 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE1_NAME, config.Instance, rabbitmq.CONSUMER1, config.InputTopic, ch)
+	inputDirect2 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE2_NAME, config.Instance, rabbitmq.CONSUMER2, config.InputTopic, ch)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.FuncitAggregators, ch)
 	joiner := &Joiner {
 		connection:		conn,
@@ -80,15 +80,13 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal(messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
+				joiner.processEndSignal1(messageBody, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddFunnyBusiness(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
 			}
@@ -103,15 +101,13 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal(messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
+				joiner.processEndSignal2(messageBody, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddCityBusiness(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
 			}
@@ -167,18 +163,36 @@ func (joiner *Joiner) Run() {
     joiner.outputDirect.PublishFinish()
 }
 
-func (joiner *Joiner) processEndSignal(newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+func (joiner *Joiner) processEndSignal1(newMessage string, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
 	mutex.Lock()
 	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
 	newSignal := receivedEndSignals[newMessage] == 1
 	signalsReceived := len(receivedEndSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	log.Infof("End-Message #%d from the reviews flow received.", signalsReceived)
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == expectedEndSignals) && newSignal {
-		log.Infof("All End-Messages were received.", signalsReceived)
+	if (signalsReceived == joiner.endSignals1) && newSignal {
+		log.Infof("All End-Messages from the reviews flow were received.")
+		joiner.inputDirect1.Close()
+		wg.Done()
+	}
+}
+
+func (joiner *Joiner) processEndSignal2(newMessage string, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
+	newSignal := receivedEndSignals[newMessage] == 1
+	signalsReceived := len(receivedEndSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d from the businesses flow received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == joiner.endSignals2) && newSignal {
+		log.Infof("All End-Messages from the businesses flow were received.")
+		joiner.inputDirect2.Close()
 		wg.Done()
 	}
 }
@@ -195,6 +209,6 @@ func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.FunnyCityData, wg *sync
 
 func (joiner *Joiner) Stop() {
 	log.Infof("Closing Funny-City Joiner connections.")
-	joiner.connection.Close()
 	joiner.channel.Close()
+	joiner.connection.Close()
 }

@@ -7,13 +7,15 @@ import (
 
 type RabbitInputDirect struct {
 	channel 			*amqp.Channel
+	consumer 			string
 	exchange 			string
 	queue 				string
 }
 
-func NewRabbitInputDirect(name string, inputTopic string, channel *amqp.Channel) *RabbitInputDirect {
+func NewRabbitInputDirect(name string, instance string, inputTopic string, channel *amqp.Channel) *RabbitInputDirect {
 	direct := &RabbitInputDirect {
 		channel: 	channel,
+		consumer:	CONSUMER + instance,
 		exchange:	name,
 	}
 
@@ -73,7 +75,7 @@ func (direct *RabbitInputDirect) initialize(inputTopic string) {
 func (direct *RabbitInputDirect) ConsumeData() <-chan amqp.Delivery {
 	data, err := direct.channel.Consume(
 		direct.queue, 			// Name
-		"",     				// Consumer
+		direct.consumer,		// Consumer
 		true,   				// Auto-ACK
 		false,  				// Exclusive
 		false,  				// No-Local
@@ -86,4 +88,14 @@ func (direct *RabbitInputDirect) ConsumeData() <-chan amqp.Delivery {
 	}
 
 	return data
+}
+
+func (direct *RabbitInputDirect) Close() {
+	err := direct.channel.Cancel(direct.consumer, false)
+
+	if err != nil {
+		log.Errorf("Error closing direct-exchange %s. Err: '%s'", direct.exchange, err)
+	} else {
+		log.Infof("Direct-exchange %s closed.", direct.exchange)
+	}
 }

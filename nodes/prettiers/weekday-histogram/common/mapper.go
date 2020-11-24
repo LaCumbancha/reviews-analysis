@@ -67,14 +67,12 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Weekday reviews '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
 					mapper.builder.Save(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}
@@ -102,17 +100,17 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == mapper.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
+		mapper.inputQueue.Close()
 		wg.Done()
 	}
 }
 
 func (mapper *Mapper) sendResults() {
-	results := mapper.builder.BuildData()
-	mapper.outputQueue.PublishData(fmt.Sprintf("Reviews by Weekday --- %s", results))
+	mapper.outputQueue.PublishData(mapper.builder.BuildData())
 }
 
 func (mapper *Mapper) Stop() {
 	log.Infof("Closing Weekday-Histogram Prettier connections.")
-	mapper.connection.Close()
 	mapper.channel.Close()
+	mapper.connection.Close()
 }

@@ -334,7 +334,19 @@ echo "{\"review_id\":\"Ow6zsH5nfy5J_zU3nkWz1w\",\"user_id\":\"no73p91uc29p129038
 echo "{\"review_id\":\"s-hMH69u_MMwcNBRk7DPjw\",\"user_id\":\"no73p91uc29p1290381001\",\"business_id\":\"oyjkEn5fAqcGNsBbqc8LTw\",\"stars\":5.0,\"useful\":0,\"funny\":1,\"cool\":0,\"text\":\"Table of 3 on Saturday March 25 around 8pm.. Well the service was terrible. . the host this night took us to a dirty table. . that waitress brung one glass of water when clearly all 3 were empty. Her hair was too damn long and should have been pinned up.. She reaching all over the table and my food.. I couldn't enjoy my meal i was pissed... First time at this location and will not be returning\",\"date\":\"2017-03-27 04:04:41\"}" >> "$TEST_REVIEWS"
 echo "{\"review_id\":\"UqskD2QVe53bT47CDaJkFQ\",\"user_id\":\"no73p91uc29p1290381001\",\"business_id\":\"7wHLFohwCw8l6WS-feLjeg\",\"stars\":5.0,\"useful\":0,\"funny\":0,\"cool\":0,\"text\":\"Food is super fresh and delicious! Loved everything and wished I had room for more. Amber took great care of us. Can't wait to go back and bring more friends and family.\",\"date\":\"2018-07-07 20:56:07\"}" >> "$TEST_REVIEWS"
 
+BUSINESSES_TMP=".businesses-tmp"
+
+touch "$BUSINESSES_TMP"
+
 while read LINE; do
 	BUSINESS_ID=$(echo "$LINE" | sed 's|.*\"business_id\":\"\(.*\)\",\"stars.*|\1|g' | sed 's|^-\(.*\)|\1|g')
-	grep "$BUSINESS_ID" "$BUSINESSES" >> "$TEST_BUSINESSES"
+	echo "$BUSINESS_ID" >> "$BUSINESSES_TMP"
 done < "$TEST_REVIEWS"
+
+BUSINESSES_IDS=$(cat "$BUSINESSES_TMP" | sort | uniq)
+
+for BUSINESS_ID in $BUSINESSES_IDS; do
+	grep "$BUSINESS_ID" "$BUSINESSES" >> "$TEST_BUSINESSES"
+done
+
+rm "$BUSINESSES_TMP"

@@ -42,7 +42,7 @@ func NewMapper(config MapperConfig) *Mapper {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, config.Instance, ch)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.FuncitJoiners, ch)
 	mapper := &Mapper {
 		connection:		conn,
@@ -69,7 +69,6 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				business := messageBody
 				log.Infof("Business %s received.", utils.GetBusinessId(business))
@@ -77,7 +76,6 @@ func (mapper *Mapper) Run() {
 				wg.Add(1)
 				go func() {
 					mapper.processBusiness(business)
-					//rabbitmq.AckMessage(&message, utils.GetBusinessId(business))
 					wg.Done()
 				}()
 			}
@@ -103,6 +101,7 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == mapper.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
+		mapper.inputQueue.Close()
 		wg.Done()
 	}
 }
@@ -126,6 +125,6 @@ func (mapper *Mapper) processBusiness(rawBusiness string) {
 
 func (mapper *Mapper) Stop() {
 	log.Infof("Closing City-Business Mapper connections.")
-	mapper.connection.Close()
 	mapper.channel.Close()
+	mapper.connection.Close()
 }

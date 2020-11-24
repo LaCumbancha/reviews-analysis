@@ -43,7 +43,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
+	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.Instance, config.InputTopic, ch)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.DishashFilters, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
@@ -78,7 +78,6 @@ func (aggregator *Aggregator) Run() {
 				wg.Add(1)
 				go func() {
 					aggregator.calculator.Aggregate(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}
@@ -112,6 +111,7 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == aggregator.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
+		aggregator.inputDirect.Close()
 		wg.Done()
 	}
 }
@@ -127,7 +127,7 @@ func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.Distinc
 }
 
 func (aggregator *Aggregator) Stop() {
-	log.Infof("Closing Distinct-Hash Aggregator connections.")
-	aggregator.connection.Close()
+	log.Infof("Closing Distinct-Hash Aggregator connection.")
 	aggregator.channel.Close()
+	aggregator.connection.Close()
 }

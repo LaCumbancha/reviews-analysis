@@ -7,12 +7,14 @@ import (
 
 type RabbitInputQueue struct {
 	channel 			*amqp.Channel
+	consumer 			string
 	name 				string
 }
 
 func NewRabbitInputQueue(name string, channel *amqp.Channel) *RabbitInputQueue {
 	queue := &RabbitInputQueue {
 		channel: 	channel,
+		consumer:	CONSUMER,
 		name:		name,
 	}
 
@@ -22,12 +24,12 @@ func NewRabbitInputQueue(name string, channel *amqp.Channel) *RabbitInputQueue {
 
 func (queue *RabbitInputQueue) initialize() {
 	_, err := queue.channel.QueueDeclare(
-		queue.name, 	// Name
-		false,   		// Durable
-		false,   		// Auto-Deleted
-		false,   		// Exclusive
-		false,   		// No-wait
-		nil,     		// Args
+		queue.name, 		// Name
+		false,   			// Durable
+		false,   			// Auto-Deleted
+		false,   			// Exclusive
+		false,   			// No-wait
+		nil,     			// Args
 	)
 
 	if err != nil {
@@ -39,13 +41,13 @@ func (queue *RabbitInputQueue) initialize() {
 
 func (queue *RabbitInputQueue) ConsumeData() <-chan amqp.Delivery {
 	data, err := queue.channel.Consume(
-		queue.name, 	// Name
-		"",     		// Consumer
-		true,   		// Auto-ACK
-		false,  		// Exclusive
-		false,  		// No-Local
-		false,  		// No-Wait
-		nil,    		// Args
+		queue.name, 		// Name
+		queue.consumer,		// Consumer
+		true,   			// Auto-ACK
+		false,  			// Exclusive
+		false,  			// No-Local
+		false,  			// No-Wait
+		nil,    			// Args
 	)
 
 	if err != nil {
@@ -53,4 +55,14 @@ func (queue *RabbitInputQueue) ConsumeData() <-chan amqp.Delivery {
 	}
 
 	return data
+}
+
+func (queue *RabbitInputQueue) Close() {
+	err := queue.channel.Cancel(queue.consumer, false)
+
+	if err != nil {
+		log.Errorf("Error closing queue %s. Err: '%s'", queue.name, err)
+	} else {
+		log.Infof("Queue %s closed.", queue.name)
+	}
 }

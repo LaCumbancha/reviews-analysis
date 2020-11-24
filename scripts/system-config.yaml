@@ -1,6 +1,7 @@
 # Testing
 testing_mode: true
 test_file_size: 1000
+regenerate_test: false
 
 # System configuration
 reviews_streaming: false

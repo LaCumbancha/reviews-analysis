@@ -45,8 +45,8 @@ func NewJoiner(config JoinerConfig) *Joiner {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect1 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE1_NAME, config.InputTopic, ch)
-	inputDirect2 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE2_NAME, config.InputTopic, ch)
+	inputDirect1 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE1_NAME, config.Instance, rabbitmq.CONSUMER1, config.InputTopic, ch)
+	inputDirect2 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE2_NAME, config.Instance, rabbitmq.CONSUMER2, config.InputTopic, ch)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
 	joiner := &Joiner {
 		connection:		conn,
@@ -79,15 +79,13 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal("5-stars reviews", messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
+				joiner.processEndSignal1(messageBody, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddBestUser(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
 			}
@@ -102,15 +100,13 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal("total reviews", messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
+				joiner.processEndSignal2(messageBody, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddUser(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
 			}
@@ -166,18 +162,36 @@ func (joiner *Joiner) Run() {
     joiner.outputQueue.PublishFinish()
 }
 
-func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+func (joiner *Joiner) processEndSignal1(newMessage string, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
 	mutex.Lock()
 	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
 	newSignal := receivedEndSignals[newMessage] == 1
 	signalsReceived := len(receivedEndSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
+	log.Infof("End-Message #%d from the 5-stars reviews flow received.", signalsReceived)
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == expectedEndSignals) && newSignal {
-		log.Infof("All End-Messages from the %s flow were received.", flow)
+	if (signalsReceived == joiner.endSignals1) && newSignal {
+		log.Infof("All End-Messages from the 5-stars reviews flow were received.")
+		joiner.inputDirect1.Close()
+		wg.Done()
+	}
+}
+
+func (joiner *Joiner) processEndSignal2(newMessage string, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
+	newSignal := receivedEndSignals[newMessage] == 1
+	signalsReceived := len(receivedEndSignals)
+	mutex.Unlock()
+
+	log.Infof("End-Message #%d from the total reviews flow received.", signalsReceived)
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == joiner.endSignals2) && newSignal {
+		log.Infof("All End-Messages from the total reviews flow were received.")
+		joiner.inputDirect2.Close()
 		wg.Done()
 	}
 }
@@ -193,7 +207,7 @@ func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.UserData, wg *sync.Wait
 }
 
 func (joiner *Joiner) Stop() {
-	log.Infof("Closing Best-Users Joiner connections.")
-	joiner.connection.Close()
+	log.Infof("Closing Funny-City Joiner connections.")
 	joiner.channel.Close()
+	joiner.connection.Close()
 }

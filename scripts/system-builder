@@ -13,8 +13,9 @@ if input_yaml['testing_mode']:
 	reviews_data = '/data/test-reviews.json'
 	business_data = '/data/test-business.json'
 
-	import subprocess
-	subprocess.call(['./scripts/test-builder', str(input_yaml["test_file_size"])])
+	if input_yaml['regenerate_test']:
+		import subprocess
+		subprocess.call(['./scripts/test-builder', str(input_yaml["test_file_size"])])
 
 else: 
 	reviews_data = '/data/reviews.json'

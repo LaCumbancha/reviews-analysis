@@ -43,7 +43,7 @@ func NewMapper(config MapperConfig) *Mapper {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, ch)
+	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.Instance, ch)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.HashAggregators, ch)
 	mapper := &Mapper {
 		connection:		conn,
@@ -70,7 +70,6 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				review := messageBody
 				log.Infof("Review %s received.", utils.GetReviewId(review))
@@ -78,7 +77,6 @@ func (mapper *Mapper) Run() {
 				wg.Add(1)
 				go func() {
 					mapper.processReview(review)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}
@@ -104,6 +102,7 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == mapper.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
+		mapper.inputDirect.Close()
 		wg.Done()
 	}
 }
@@ -131,6 +130,6 @@ func (mapper *Mapper) processReview(rawReview string) {
 
 func (mapper *Mapper) Stop() {
 	log.Infof("Closing User Mapper connections.")
-	mapper.connection.Close()
 	mapper.channel.Close()
+	mapper.connection.Close()
 }

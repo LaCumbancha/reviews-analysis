@@ -7,3 +7,6 @@ const OUTPUT_QUEUE2_NAME = "BotUserAggregator"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Consumer identifier
+const CONSUMER = "USERAGG"
