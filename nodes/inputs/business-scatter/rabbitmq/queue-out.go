@@ -6,16 +6,16 @@ import (
 )
 
 type RabbitOutputQueue struct {
-	channel 			*amqp.Channel
-	name 				string
-	endSignals 			int
+	channel 		*amqp.Channel
+	name 			string
+	endSignals 		int
 }
 
 func NewRabbitOutputQueue(name string, endSignals int, channel *amqp.Channel) *RabbitOutputQueue {
 	queue := &RabbitOutputQueue {
 		channel: 		channel,
 		name:			name,
-		endSignals:		3*endSignals,
+		endSignals:		100*endSignals,
 	}
 
 	queue.initialize()
