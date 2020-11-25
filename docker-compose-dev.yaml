@@ -13,7 +13,7 @@ services:
     environment:
     - BESTUSERPRE_RABBITMQ_IP=rabbitmq
     - BESTUSERPRE_RABBITMQ_PORT=5672
-    - BESTUSERPRE_MIN_REVIEWS=5
+    - BESTUSERPRE_MIN_REVIEWS=50
     - BESTUSERPRE_BESTUSER_JOINERS=2
     image: best_users_prettier:latest
     links:
@@ -86,7 +86,7 @@ services:
     environment:
     - BOTUSERPRE_RABBITMQ_IP=rabbitmq
     - BOTUSERPRE_RABBITMQ_PORT=5672
-    - BOTUSERPRE_MIN_REVIEWS=3
+    - BOTUSERPRE_MIN_REVIEWS=5
     - BOTUSERPRE_BOTUSER_JOINERS=2
     image: bot_users_prettier:latest
     links:
@@ -104,7 +104,7 @@ services:
     - BOTUSERFIL_INSTANCE=0
     - BOTUSERFIL_RABBITMQ_IP=rabbitmq
     - BOTUSERFIL_RABBITMQ_PORT=5672
-    - BOTUSERFIL_MIN_REVIEWS=3
+    - BOTUSERFIL_MIN_REVIEWS=5
     - BOTUSERFIL_USER_AGGREGATORS=2
     - BOTUSERFIL_DISHASH_JOINERS=2
     image: botuser_filter:latest
@@ -123,7 +123,7 @@ services:
     - BOTUSERFIL_INSTANCE=1
     - BOTUSERFIL_RABBITMQ_IP=rabbitmq
     - BOTUSERFIL_RABBITMQ_PORT=5672
-    - BOTUSERFIL_MIN_REVIEWS=3
+    - BOTUSERFIL_MIN_REVIEWS=5
     - BOTUSERFIL_USER_AGGREGATORS=2
     - BOTUSERFIL_DISHASH_JOINERS=2
     image: botuser_filter:latest
@@ -605,7 +605,6 @@ services:
     - RVWSCA_REVIEWS_DATA=/data/test-reviews.json
     - RVWSCA_RABBITMQ_IP=rabbitmq
     - RVWSCA_RABBITMQ_PORT=5672
-    - RVWSCA_BULK_SIZE=100
     - RVWSCA_WORKERS_POOL=10
     - RVWSCA_FUNBIZ_MAPPERS=2
     - RVWSCA_WEEKDAYS_MAPPERS=2
@@ -767,7 +766,7 @@ services:
     environment:
     - TOPUSERPRE_RABBITMQ_IP=rabbitmq
     - TOPUSERPRE_RABBITMQ_PORT=5672
-    - TOPUSERPRE_MIN_REVIEWS=5
+    - TOPUSERPRE_MIN_REVIEWS=50
     - TOPUSERPRE_USER_FILTERS=2
     image: top_users_prettier:latest
     links:
@@ -830,7 +829,7 @@ services:
     - USERFIL_INSTANCE=0
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
-    - USERFIL_MIN_REVIEWS=5
+    - USERFIL_MIN_REVIEWS=50
     - USERFIL_USER_AGGREGATORS=2
     - USERFIL_STARS_JOINERS=2
     image: user_filter:latest
@@ -850,7 +849,7 @@ services:
     - USERFIL_INSTANCE=1
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
-    - USERFIL_MIN_REVIEWS=5
+    - USERFIL_MIN_REVIEWS=50
     - USERFIL_USER_AGGREGATORS=2
     - USERFIL_STARS_JOINERS=2
     image: user_filter:latest

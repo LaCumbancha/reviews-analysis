@@ -3,8 +3,6 @@ testing_mode: true
 test_file_size: 1000
 
 # System configuration
-reviews_streaming: false
-reviews_bulk_size: 100
 reviews_pool_size: 10
 business_pool_size: 10
 users_min_reviews: 50

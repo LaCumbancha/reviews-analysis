@@ -26,3 +26,24 @@ Además del correcto funcionamiento del sistema, deben tenerse en cuenta las sig
 * Debido a restricciones en el tiempo de implementación, se permite la construcción de un sistema acoplado al modelo de negocio. No es requerimiento la creación de una plataforma de procesamiento de datos.
 
 ## Desarrollo
+
+Para correr el sistema deberá ejecutarse el comando:
+
+```bash
+make docker-compose-up
+```
+
+Así mismo, para poder tener un seguimiento del mismo a través de los logs, se deberá utilizar:
+
+```bash
+make docker-compose-logs
+```
+
+Dentro del directorio `scripts` scripts se podrá encontrar el archivo de configuración `system-config.yaml` con el que podrá jugar con las distintas partes del sistema. Por un lado, dentro de las secciones de cada flujo podrá editarse la cantidad de nodos de cada uno de los componentes. Por otro lado, en las 2 primeras secciones se podrán editar configuraciones básicas del sistema:
+
+* `testing_mode`: Define si el sistema correrá con el set de datos productivo o con uno de testing.
+* `test_file_size`: En caso de que se corra en modo test, se podrá especificar el tamaño del set de datos que se generará con el script `test-builder`.
+* `reviews_pool_size`: Especifíca el tamaño del pool de gorutinas utilizadas por el ReviewsScatter para enviar mensajes al Rabbit.
+* `business_pool_size`: Especifíca el tamaño del pool de gorutinas utilizadas por el BusinessesScatter para enviar mensajes al Rabbit.
+* `users_min_reviews`: Especifíca el mínimo de reviews requeridas para filtrar usuarios, permitiéndo ver usuarios con +50 mensajes u otro valor.
+* `bots_min_reviews`: Especifíca el mínimo de reviews requeridas para filtrar bots, permitiéndo ver usuarios con +5 mensajes con el mismo texto u otro valor.
