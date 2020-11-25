@@ -13,3 +13,6 @@ const HASHES = "Hashes-Mapper"
 const USERS = "Users-Mapper"
 const STARS = "Stars-Mapper"
 var PARTITIONER_VALUES = []string{FUNBIZ, WEEKDAYS, HASHES, USERS, STARS}
+
+// Retries finish attemps
+const RETRIES = 25

@@ -6,3 +6,6 @@ const OUTPUT_QUEUE_NAME = "FunnyCityAggregator"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Retries finish attemps
+const RETRIES = 25

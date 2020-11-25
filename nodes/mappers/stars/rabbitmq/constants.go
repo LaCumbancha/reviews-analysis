@@ -10,3 +10,6 @@ const INPUT_EXCHANGE_TOPIC = "Stars-Mapper"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Retries finish attemps
+const RETRIES = 25
