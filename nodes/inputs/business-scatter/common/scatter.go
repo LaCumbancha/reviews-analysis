@@ -8,7 +8,6 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/utils"
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/rabbitmq"
 )
 
@@ -16,6 +15,7 @@ type ScatterConfig struct {
 	Data				string
 	RabbitIp			string
 	RabbitPort			string
+	BulkSize			int
 	WorkersPool 		int
 	CitbizMappers		int
 }
@@ -24,8 +24,9 @@ type Scatter struct {
 	data 				string
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
-	innerChannel		chan string
+	bulkSize 			int
 	poolSize			int
+	innerChannel		chan string
 	outputQueue 		*rabbitmq.RabbitOutputQueue
 }
 
@@ -50,8 +51,9 @@ func NewScatter(config ScatterConfig) *Scatter {
 		data: 				config.Data,
 		connection:			conn,
 		channel:			ch,
-		innerChannel:		make(chan string),
+		bulkSize:			config.BulkSize,
 		poolSize:			config.WorkersPool,
+		innerChannel:		make(chan string),
 		outputQueue:		scatterDirect,
 	}
 
@@ -63,14 +65,24 @@ func (scatter *Scatter) Run() {
 	wg.Add(1)
 	go scatter.retrieveBusinesses(&wg)
 
+	bulkMutex := &sync.Mutex{}
+	bulkNumber := 1
+
 	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
 	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
+		log.Infof("Initializing worker %d.", worker)
+
 		go func() {
-			log.Infof("Initializing worker %d.", worker)
-			for business := range scatter.innerChannel {
-				businessId := utils.GetBusinessId(business)
-				log.Infof("Processing business %s.", businessId)
-    			scatter.outputQueue.PublishBusiness(business, businessId)
+			for bulk := range scatter.innerChannel {
+				var innerBulk int
+
+				bulkMutex.Lock()
+				innerBulk = bulkNumber
+				bulkNumber++
+				bulkMutex.Unlock()
+
+				log.Infof("Processing bulk #%d.", innerBulk)
+    			scatter.outputQueue.PublishBulk(bulk, innerBulk)
     			wg.Done()
 			}
 		}()
@@ -92,12 +104,16 @@ func (scatter *Scatter) retrieveBusinesses(wg *sync.WaitGroup) {
     }
     defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+    scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		wg.Add(1)
-    	review := scanner.Text()
-    	scatter.innerChannel <- review
-    }
+	 	bulk := ""
+	 	for business := 0 ; business < scatter.bulkSize && scanner.Scan() ; business++ {
+			bulk = bulk + "\n" + scanner.Text()
+		}
+		scatter.innerChannel <- bulk
+	}
 
     if err := scanner.Err(); err != nil {
         log.Fatalf("Error reading businesses data from file %s. Err: '%s'", scatter.data, err)

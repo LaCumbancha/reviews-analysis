@@ -12,4 +12,4 @@ const INPUT_EXCHANGE_TOPIC = "Weekday-Mapper"
 const END_MESSAGE = "END-MESSAGE"
 
 // This configuration allows at max 7 partitions.
-var PARTITIONER_VALUES = []string{"0", "1", "2", "3", "4", "5", "6"}
+var PARTITIONER_VALUES = []string{"Sunday", "Monday", "Tuesday", "Thursday", "Friday", "Saturday", "Sunday"}

@@ -7,6 +7,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/rabbitmq"
 )
 
@@ -62,6 +63,9 @@ func (aggregator *Aggregator) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkCounter := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -70,16 +74,19 @@ func (aggregator *Aggregator) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkMutex.Lock()
+				bulkCounter++
+				innerBulk := bulkCounter
+				bulkMutex.Unlock()
+
+				logging.Infof(fmt.Sprintf("Weekday data bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					aggregator.calculator.Aggregate(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
+				go func(bulkNumber int) {
+					aggregator.calculator.Aggregate(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()

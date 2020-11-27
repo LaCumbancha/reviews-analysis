@@ -7,6 +7,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-business/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-business/rabbitmq"
 )
 
@@ -60,6 +61,9 @@ func (filter *Filter) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkCounter := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -68,16 +72,19 @@ func (filter *Filter) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkMutex.Lock()
+				bulkCounter++
+				innerBulk := bulkCounter
+				bulkMutex.Unlock()
+
+				logging.Infof(fmt.Sprintf("Funbiz data bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					filter.filterFunnyBusiness(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
+				go func(bulkNumber int) {
+					filter.filterFunnyBusiness(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -105,18 +112,21 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (filter *Filter) filterFunnyBusiness(rawData string) {
-	var mappedFunnyBusiness rabbitmq.FunnyBusinessData
-	json.Unmarshal([]byte(rawData), &mappedFunnyBusiness)
+func (filter *Filter) filterFunnyBusiness(bulkNumber int, rawFunbizDataBulk string) {
+	var funbizDataList []rabbitmq.FunnyBusinessData
+	json.Unmarshal([]byte(rawFunbizDataBulk), &funbizDataList)
 
-	if (mappedFunnyBusiness.Funny > 0) {
-		data, err := json.Marshal(mappedFunnyBusiness)
-		if err != nil {
-			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedFunnyBusiness, err)
+	for _, funbizData := range funbizDataList {
+
+		if (funbizData.Funny > 0) {
+			data, err := json.Marshal(funbizData)
+			if err != nil {
+				log.Errorf("Error generating Json from (%s). Err: '%s'", funbizData, err)
+			}
+
+			filter.outputDirect.PublishData(data, funbizData.BusinessId)
 		}
-		filter.outputDirect.PublishData(data, mappedFunnyBusiness.BusinessId)
-	} else {
-		log.Infof("Data '%s' filtered due to it's lack of funniness.", rawData)
+
 	}
 }
 

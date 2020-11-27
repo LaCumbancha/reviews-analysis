@@ -7,6 +7,7 @@ import (
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/filters/stars/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/stars/rabbitmq"
 )
 
@@ -60,6 +61,9 @@ func (filter *Filter) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkCounter := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -68,16 +72,19 @@ func (filter *Filter) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkMutex.Lock()
+				bulkCounter++
+				innerBulk := bulkCounter
+				bulkMutex.Unlock()
+
+				logging.Infof(fmt.Sprintf("Funbiz data bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					filter.filterLowStars(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
+				go func(bulkNumber int) {
+					filter.filterLowStars(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -105,18 +112,23 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (filter *Filter) filterLowStars(rawData string) {
-	var mappedStarsData rabbitmq.StarsData
-	json.Unmarshal([]byte(rawData), &mappedStarsData)
+func (filter *Filter) filterLowStars(bulkNumber int, rawStarsDataBulk string) {
+	var starsDataList []rabbitmq.StarsData
+	json.Unmarshal([]byte(rawStarsDataBulk), &starsDataList)
 
-	if (mappedStarsData.Stars == 5) {
-		data, err := json.Marshal(mappedStarsData)
-		if err != nil {
-			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedStarsData, err)
+	for _, starsData := range starsDataList {
+
+		if (starsData.Stars == 5) {
+			data, err := json.Marshal(starsData)
+			if err != nil {
+				log.Errorf("Error generating Json from (%s). Err: '%s'", starsData, err)
+			}
+
+			filter.outputDirect.PublishData(data, starsData.UserId)
+		} else {
+			log.Infof("Data '%s' filtered due to not having enough stars.", starsData)
 		}
-		filter.outputDirect.PublishData(data, mappedStarsData.UserId)
-	} else {
-		log.Infof("Data '%s' filtered due to not having enough stars.", rawData)
+
 	}
 }
 

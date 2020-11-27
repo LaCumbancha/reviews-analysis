@@ -1,10 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"sync"
+	"strings"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/rabbitmq"
 )
 
@@ -22,22 +25,34 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) Aggregate(rawData string) {
-	var weekdayReview rabbitmq.WeekdayData
-	json.Unmarshal([]byte(rawData), &weekdayReview)
+func (calculator *Calculator) status(bulkNumber int) string {
+	statusResponse := fmt.Sprintf("Status by bulk $%d: ", bulkNumber)
 
-	calculator.mutex.Lock()
-
-	if value, found := calculator.data[weekdayReview.Weekday]; found {
-		newAmount := value + 1
-	    calculator.data[weekdayReview.Weekday] = newAmount
-	    log.Infof("%s reviews incremented to %d.", weekdayReview.Weekday, newAmount)
-	} else {
-		calculator.data[weekdayReview.Weekday] = 1
-		log.Infof("Initialized %s reviews at 1.", weekdayReview.Weekday)
+	for weekday, reviews := range calculator.data {
+		statusResponse += strings.ToUpper(fmt.Sprintf("%s (%d) ; ", weekday, reviews))
 	}
 
-	calculator.mutex.Unlock()
+	return statusResponse[0:len(statusResponse)-3]
+}
+
+func (calculator *Calculator) Aggregate(bulkNumber int, rawWeekdayDataBulk string) {
+	var weekdayDataList []rabbitmq.WeekdayData
+	json.Unmarshal([]byte(rawWeekdayDataBulk), &weekdayDataList)
+
+	for _, weekdayData := range weekdayDataList {
+
+		calculator.mutex.Lock()
+		if value, found := calculator.data[weekdayData.Weekday]; found {
+			newAmount := value + 1
+		    calculator.data[weekdayData.Weekday] = newAmount
+		} else {
+			calculator.data[weekdayData.Weekday] = 1
+		}
+		calculator.mutex.Unlock()
+
+	}
+
+	logging.Infof(calculator.status(bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveData() []rabbitmq.WeekdayData {

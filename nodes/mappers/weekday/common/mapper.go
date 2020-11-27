@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 	"sync"
-	"strconv"
+	"strings"
 	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/rabbitmq"
 )
 
@@ -63,6 +63,9 @@ func (mapper *Mapper) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkCounter := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -71,17 +74,19 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				review := messageBody
-				log.Infof("Review %s received.", utils.GetReviewId(review))
+				bulkMutex.Lock()
+				innerBulk := bulkCounter
+				bulkCounter++
+				bulkMutex.Unlock()
+
+				logging.Infof(fmt.Sprintf("Review bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					mapper.processReview(review)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
+				go func(bulkNumber int) {
+					mapper.processReviewsBulk(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -109,26 +114,28 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (mapper *Mapper) processReview(rawReview string) {
-	var fullReview rabbitmq.FullReview
-	json.Unmarshal([]byte(rawReview), &fullReview)
+func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) {
+	var review rabbitmq.FullReview
+	var weekdayDataList []rabbitmq.WeekdayData
 
-	reviewDate, err := time.Parse("2006-01-02 15:04:05", fullReview.Date)
-	if err != nil {
-		log.Errorf("Error parsing date from review %s (given date: %s)", fullReview.ReviewId, fullReview.Date)
-	} else {
-		reviewWeekday := reviewDate.Weekday()
-		mappedReview := &rabbitmq.WeekdayData {
-			Weekday:	reviewWeekday.String(),
-		}
+	rawReviews := strings.Split(rawReviewsBulk, "\n")
+	for _, rawReview := range rawReviews {
+		json.Unmarshal([]byte(rawReview), &review)
 
-		data, err := json.Marshal(mappedReview)
+		reviewDate, err := time.Parse("2006-01-02", review.Date[0:10])
 		if err != nil {
-			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedReview, err)
+			log.Errorf("Error parsing date from review %s (given date: %s). Err: %s", review.ReviewId, review.Date, err)
 		} else {
-			mapper.outputDirect.PublishData(data, strconv.Itoa(int(reviewWeekday)))
+			reviewWeekday := reviewDate.Weekday()
+			mappedReview := rabbitmq.WeekdayData {
+				Weekday:	reviewWeekday.String(),
+			}
+
+			weekdayDataList = append(weekdayDataList, mappedReview)
 		}
 	}
+
+	mapper.outputDirect.PublishData(bulkNumber, weekdayDataList)
 }
 
 func (mapper *Mapper) Stop() {

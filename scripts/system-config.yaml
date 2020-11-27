@@ -1,10 +1,13 @@
 # Testing
-testing_mode: true
+testing_mode: false
 test_file_size: 1000
 
-# System configuration
-reviews_pool_size: 10
-business_pool_size: 10
+# System configuration:
+reviews_streaming: false
+reviews_bulk_size: 1750
+reviews_pool_size: 20
+business_bulk_size: 100
+business_pool_size: 20
 users_min_reviews: 50
 bots_min_reviews: 5
 

@@ -1,9 +1,13 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"strconv"
+	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/weekday/logging"
 )
 
 type RabbitOutputDirect struct {
@@ -48,29 +52,50 @@ func (direct *RabbitOutputDirect) initialize() {
 	log.Tracef("Partition map generated for direct-exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
-func (direct *RabbitOutputDirect) PublishData(data []byte, weekday string) {
-	partition := direct.partitionMap[weekday]
-	log.Debugf("Exchange %s partition calculated for weekday #%s: %s.", direct.exchange, weekday, partition)
+func (direct *RabbitOutputDirect) PublishData(bulkNumber int, weekdayDataList []WeekdayData) {
+	dataListByPartition := make(map[string][]WeekdayData)
 
-	if partition != "" {
-		err := direct.channel.Publish(
-  			direct.exchange, 						// Exchange
-  			partition,    							// Routing Key
-  			false,  								// Mandatory
-  			false,  								// Immediate
-  			amqp.Publishing{
-  			    ContentType: 	"text/plain",
-  			    Body:        	data,
-  			},
-  		)
+	for _, data := range weekdayDataList {
+		partition := direct.partitionMap[data.Weekday]
+
+		if partition != "" {
+			weekdayDataListPartitioned := dataListByPartition[partition]
+
+			if weekdayDataListPartitioned != nil {
+				dataListByPartition[partition] = append(weekdayDataListPartitioned, data)
+			} else {
+				dataListByPartition[partition] = append(make([]WeekdayData, 0), data)
+			}
+
+		} else {
+			log.Errorf("Couldn't calculate partition for weekday (%s).", data.Weekday)
+		}
+	}
+
+	for partition, weekdayDataListPartitioned := range dataListByPartition {
+		outputData, err := json.Marshal(weekdayDataListPartitioned)
 
 		if err != nil {
-			log.Errorf("Error sending weekday #%s review to direct-exchange %s (partition %s). Err: '%s'", weekday, direct.exchange, partition, err)
+			log.Errorf("Error generating Json from (%s). Err: '%s'", weekdayDataListPartitioned, err)
 		} else {
-			log.Infof("Weekday #%s review sent to direct-exchange %s (partition %s).", weekday, direct.exchange, partition)
-		}	
-	} else {
-		log.Errorf("Couldn't calculate partition for weekday %s", weekday)
+
+			err := direct.channel.Publish(
+				direct.exchange, 						// Exchange
+				partition,    							// Routing Key
+				false,  								// Mandatory
+				false,  								// Immediate
+				amqp.Publishing{
+				    ContentType: 	"text/plain",
+				    Body:        	outputData,
+				},
+			)
+
+			if err != nil {
+				log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, direct.exchange, partition, err)
+			} else {
+				logging.Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, direct.exchange, partition), bulkNumber)
+			}	
+		}
 	}
 }
 

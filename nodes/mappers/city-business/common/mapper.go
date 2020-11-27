@@ -3,11 +3,11 @@ package common
 import (
 	"fmt"
 	"sync"
+	"strings"
 	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/city-business/utils"
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/city-business/rabbitmq"
 )
 
@@ -61,6 +61,9 @@ func (mapper *Mapper) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkNumber := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -69,15 +72,19 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				business := messageBody
-				log.Infof("Business %s received.", utils.GetBusinessId(business))
+				var innerBulk int
+
+				bulkMutex.Lock()
+				innerBulk = bulkNumber
+				bulkNumber++
+				bulkMutex.Unlock()
+
+				log.Infof("Businesses bulk #%d received.", innerBulk)
 
 				wg.Add(1)
 				go func() {
-					mapper.processBusiness(business)
-					//rabbitmq.AckMessage(&message, utils.GetBusinessId(business))
+					mapper.processBusinessesBulk(messageBody)
 					wg.Done()
 				}()
 			}
@@ -107,21 +114,25 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (mapper *Mapper) processBusiness(rawBusiness string) {
-	var fullBusiness rabbitmq.FullBusiness
-	json.Unmarshal([]byte(rawBusiness), &fullBusiness)
+func (mapper *Mapper) processBusinessesBulk(rawBusinessesBulk string) {
+	var business rabbitmq.FullBusiness
 
-	mappedBusiness := &rabbitmq.CityBusinessData {
-		BusinessId:		fullBusiness.BusinessId,
-		City:			fmt.Sprintf("%s (%s)", fullBusiness.City, fullBusiness.State),
-	}
+	rawBusinesses := strings.Split(rawBusinessesBulk, "\n")
+	for _, rawBusiness := range rawBusinesses {
+		json.Unmarshal([]byte(rawBusiness), &business)
+	
+		cityBusiness := &rabbitmq.CityBusinessData {
+			BusinessId:		business.BusinessId,
+			City:			fmt.Sprintf("%s (%s)", business.City, business.State),
+		}
 
-	data, err := json.Marshal(mappedBusiness)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", mappedBusiness, err)
-	} else {
-		mapper.outputDirect.PublishData(data, fullBusiness.BusinessId)
-	}
+		data, err := json.Marshal(cityBusiness)
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", cityBusiness, err)
+		} else {
+			mapper.outputDirect.PublishData(data, cityBusiness.BusinessId)
+		}
+    }
 }
 
 func (mapper *Mapper) Stop() {

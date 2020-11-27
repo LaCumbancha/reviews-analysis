@@ -1,8 +1,11 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/logging"
 )
 
 type RabbitOutputDirect struct {
@@ -42,7 +45,7 @@ func (direct *RabbitOutputDirect) initialize() {
 	}
 }
 
-func (direct *RabbitOutputDirect) PublishReview(review string, reviewId string) {
+func (direct *RabbitOutputDirect) PublishBulk(bulkNumber int, bulkData string) {
 	for _, partition := range PARTITIONER_VALUES {
 		err := direct.channel.Publish(
 	  		direct.exchange, 						// Exchange
@@ -51,14 +54,14 @@ func (direct *RabbitOutputDirect) PublishReview(review string, reviewId string) 
 	  		false,  								// Immediate
 	  		amqp.Publishing{
 	  		    ContentType: 	"text/plain",
-	  		    Body:        	[]byte(review),
+	  		    Body:        	[]byte(bulkData),
 	  		},
 	  	)
 
 		if err != nil {
-			log.Errorf("Error sending review %s to direct-exchange %s (partition %s). Err: '%s'", reviewId, direct.exchange, partition, err)
+			log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, direct.exchange, partition, err)
 		} else {
-			log.Infof("Review %s sent to direct-exchange %s (partition %s).", reviewId, direct.exchange, partition)
+			logging.Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, direct.exchange, partition), bulkNumber)
 		}	
 	}
 }

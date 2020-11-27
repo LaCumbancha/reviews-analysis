@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/viper"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/common"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("business", "data")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("bulk", "size")
 	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("citbiz", "mappers")
 	configEnv.BindEnv("config", "file")
@@ -70,6 +71,12 @@ func main() {
 		log.Fatalf("RabbitPort variable missing")
 	}
 
+	bulkSize := utils.GetConfigInt(configEnv, configFile, "bulk_size")
+	
+	if bulkSize == 0 {
+		log.Fatalf("BulkSize variable missing")
+	}
+
 	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	
 	if workersPool == 0 {
@@ -86,6 +93,7 @@ func main() {
 		Data:					businessData,
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,
+		BulkSize:				bulkSize,
 		WorkersPool:			workersPool,
 		CitbizMappers:			citbizMappers,
 	}

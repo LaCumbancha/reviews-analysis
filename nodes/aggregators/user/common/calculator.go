@@ -1,10 +1,12 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/rabbitmq"
 )
 
@@ -22,22 +24,24 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) Aggregate(rawData string) {
-	var userData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &userData)
+func (calculator *Calculator) Aggregate(bulkNumber int, rawUserDataBulk string) {
+	var userDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
-	calculator.mutex.Lock()
+	for _, userData := range userDataList {
 
-	if value, found := calculator.data[userData.UserId]; found {
-		newAmount := value + 1
-	    calculator.data[userData.UserId] = newAmount
-	    log.Infof("User %s reviews incremented to %d.", userData.UserId, newAmount)
-	} else {
-		calculator.data[userData.UserId] = 1
-		log.Infof("Initialized user %s reviews at 1.", userData.UserId)
+		calculator.mutex.Lock()
+		if value, found := calculator.data[userData.UserId]; found {
+			newAmount := value + 1
+		    calculator.data[userData.UserId] = newAmount
+		} else {
+			calculator.data[userData.UserId] = 1
+		}
+		calculator.mutex.Unlock()
+
 	}
 
-	calculator.mutex.Unlock()
+	logging.Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveData() []rabbitmq.UserData {

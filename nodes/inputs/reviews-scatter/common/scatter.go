@@ -4,11 +4,11 @@ import (
 	"os"
 	"fmt"
 	"sync"
+	"time"
 	"bufio"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/rabbitmq"
 )
 
@@ -17,6 +17,7 @@ type ScatterConfig struct {
 	Data				string
 	RabbitIp			string
 	RabbitPort			string
+	BulkSize			int
 	WorkersPool 		int
 	FunbizMappers		int
 	WeekdaysMappers		int
@@ -29,8 +30,9 @@ type Scatter struct {
 	data 				string
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
-	innerChannel		chan string
+	bulkSize			int
 	poolSize			int
+	innerChannel		chan string
 	outputDirect 		*rabbitmq.RabbitOutputDirect
 }
 
@@ -64,8 +66,9 @@ func NewScatter(config ScatterConfig) *Scatter {
 		data: 				config.Data,
 		connection:			conn,
 		channel:			ch,
-		innerChannel:		make(chan string),
+		bulkSize:			config.BulkSize,
 		poolSize:			config.WorkersPool,
+		innerChannel:		make(chan string),
 		outputDirect:		scatterDirect,
 	}
 
@@ -74,18 +77,29 @@ func NewScatter(config ScatterConfig) *Scatter {
 
 func (scatter *Scatter) Run() {
 
+	start := time.Now()
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go scatter.retrieveReviews(&wg)
+
+	bulkMutex := &sync.Mutex{}
+	bulkNumber := 1
 	
 	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
 	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
+		log.Infof("Initializing worker #%d.", worker)
+		
 		go func() {
-			log.Infof("Initializing worker %d.", worker)
-			for review := range scatter.innerChannel {
-				reviewId := utils.GetReviewId(review)
-				log.Infof("Processing review %s.", reviewId)
-    			scatter.outputDirect.PublishReview(review, reviewId)
+			for bulk := range scatter.innerChannel {
+				var innerBulk int
+
+				bulkMutex.Lock()
+				innerBulk = bulkNumber
+				bulkNumber++
+				bulkMutex.Unlock()
+
+    			scatter.outputDirect.PublishBulk(innerBulk, bulk)
     			wg.Done()
 			}
 		}()
@@ -96,6 +110,8 @@ func (scatter *Scatter) Run() {
 
     // Publishing end messages.
     scatter.outputDirect.PublishFinish()
+
+    log.Infof("Time: %s.", time.Now().Sub(start).String())
 }
 
 func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
@@ -107,12 +123,17 @@ func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
     }
     defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+
+    scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		wg.Add(1)
-    	review := scanner.Text()
-    	scatter.innerChannel <- review
-    }
+	 	bulk := ""
+	 	for review := 0 ; review < scatter.bulkSize && scanner.Scan() ; review++ {
+			bulk = bulk + "\n" + scanner.Text()
+		}
+		scatter.innerChannel <- bulk
+	}
 
     if err := scanner.Err(); err != nil {
         log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)

@@ -80,14 +80,12 @@ func (joiner *Joiner) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal("bot reviews", messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddBotUser(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
 			}
@@ -103,14 +101,12 @@ func (joiner *Joiner) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal("total reviews", messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddUser(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					inputWg.Done()
 				}()
 			}

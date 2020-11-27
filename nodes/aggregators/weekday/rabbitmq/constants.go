@@ -6,3 +6,6 @@ const OUTPUT_QUEUE_NAME = "WeekdayAggregator"
 
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
+
+// Logs spacing
+const BULK_LOG_RATE = 75

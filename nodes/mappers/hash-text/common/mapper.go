@@ -3,12 +3,13 @@ package common
 import (
 	"fmt"
 	"sync"
+	"strings"
 	"crypto/md5"
 	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/hash-text/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/hash-text/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/hash-text/rabbitmq"
 )
 
@@ -62,6 +63,9 @@ func (mapper *Mapper) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkCounter := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -70,17 +74,19 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
-				review := messageBody
-				log.Infof("Review %s received.", utils.GetReviewId(review))
+				bulkMutex.Lock()
+				bulkCounter++
+				innerBulk := bulkCounter
+				bulkMutex.Unlock()
+
+				logging.Infof(fmt.Sprintf("Review bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					mapper.processReview(review)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
+				go func(bulkNumber int) {
+					mapper.processReviewsBulk(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -108,25 +114,31 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (mapper *Mapper) processReview(rawReview string) {
-	var fullReview rabbitmq.FullReview
-	json.Unmarshal([]byte(rawReview), &fullReview)
+func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) {
+	var review rabbitmq.FullReview
+	var hashTextDataList []rabbitmq.HashedTextData
 
-	hasher := md5.New()
-	hasher.Write([]byte(fullReview.Text))
-	hashedText := fmt.Sprintf("%x", hasher.Sum(nil))
+	rawReviews := strings.Split(rawReviewsBulk, "\n")
+	for _, rawReview := range rawReviews {
+		json.Unmarshal([]byte(rawReview), &review)
 
-	mappedReview := &rabbitmq.HashedTextData {
-		UserId:			fullReview.UserId,
-		HashedText:		hashedText,
+		if (review.UserId != "") {
+			hasher := md5.New()
+			hasher.Write([]byte(review.Text))
+			hashedText := fmt.Sprintf("%x", hasher.Sum(nil))
+	
+			mappedReview := rabbitmq.HashedTextData {
+				UserId:			review.UserId,
+				HashedText:		hashedText,
+			}
+
+			hashTextDataList = append(hashTextDataList, mappedReview)			
+		} else {
+			log.Warnf("Empty UserID detected in raw review %s.", rawReview)
+		}
 	}
 
-	data, err := json.Marshal(mappedReview)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", mappedReview, err)
-	} else {
-		mapper.outputDirect.PublishData(data, fullReview.UserId)
-	}
+	mapper.outputDirect.PublishData(bulkNumber, hashTextDataList)
 }
 
 func (mapper *Mapper) Stop() {

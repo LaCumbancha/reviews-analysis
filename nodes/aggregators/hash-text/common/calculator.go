@@ -1,10 +1,12 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/rabbitmq"
 )
 
@@ -22,24 +24,26 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) Aggregate(rawData string) {
-	var hashedData rabbitmq.HashedTextData
-	json.Unmarshal([]byte(rawData), &hashedData)
+func (calculator *Calculator) Aggregate(bulkNumber int, rawHashedDataBulk string) {
+	var hashedDataList []rabbitmq.HashedTextData
+	json.Unmarshal([]byte(rawHashedDataBulk), &hashedDataList)
 
-	calculator.mutex.Lock()
+	for _, hashedData := range hashedDataList {
 
-	if userTexts, found := calculator.data[hashedData.UserId]; found {
-		if _, found := userTexts[hashedData.HashedText]; !found { 
-			userTexts[hashedData.HashedText] = 1
-			log.Infof("Hashed text %s added to user %s.", hashedData.HashedText, hashedData.UserId)
+		calculator.mutex.Lock()
+		if userTexts, found := calculator.data[hashedData.UserId]; found {
+			if _, found := userTexts[hashedData.HashedText]; !found { 
+				userTexts[hashedData.HashedText] = 1
+			}
+		} else {
+			calculator.data[hashedData.UserId] = make(map[string]int)
+			calculator.data[hashedData.UserId][hashedData.HashedText] = 1
 		}
-	} else {
-		calculator.data[hashedData.UserId] = make(map[string]int)
-		calculator.data[hashedData.UserId][hashedData.HashedText] = 1
-		log.Infof("Initialized user %s hashed text as %s.", hashedData.UserId, hashedData.HashedText)
+		calculator.mutex.Unlock()
+
 	}
 
-	calculator.mutex.Unlock()
+	logging.Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveData() []rabbitmq.HashedTextData {

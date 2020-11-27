@@ -39,7 +39,7 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishBusiness(data string, businessId string) {
+func (queue *RabbitOutputQueue) PublishBulk(bulk string, bulkNumber int) {
 	err := queue.channel.Publish(
 		"",     							// Exchange
 		queue.name, 						// Routing Key
@@ -47,13 +47,13 @@ func (queue *RabbitOutputQueue) PublishBusiness(data string, businessId string) 
 		false,  							// Immediate
 		amqp.Publishing{
 			ContentType: 	"text/plain",
-			Body:        	[]byte(data),
+			Body:        	[]byte(bulk),
 		})
 
 	if err != nil {
-		log.Errorf("Error sending business %s data (%s) to queue %s. Err: '%s'", businessId, data, queue.name, err)
+		log.Errorf("Error sending bulk #%d to queue %s. Err: '%s'", bulkNumber, queue.name, err)
 	} else {
-		log.Debugf("Business %s data (%s) sent.", businessId, data)
+		log.Debugf("Bulk #%d sent to queue %s.", bulkNumber, queue.name)
 	}
 }
 

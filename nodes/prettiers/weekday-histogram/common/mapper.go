@@ -67,14 +67,12 @@ func (mapper *Mapper) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Weekday reviews '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
 					mapper.builder.Save(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}

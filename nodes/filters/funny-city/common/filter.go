@@ -69,14 +69,12 @@ func (filter *Filter) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
 					filter.calculator.Save(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}

@@ -71,14 +71,12 @@ func (aggregator *Aggregator) Run() {
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
-				//rabbitmq.AckMessage(&message, rabbitmq.END_MESSAGE)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
 				wg.Add(1)
 				go func() {
 					aggregator.calculator.Aggregate(messageBody)
-					//rabbitmq.AckMessage(&message, utils.GetReviewId(review))
 					wg.Done()
 				}()
 			}
