@@ -84,7 +84,7 @@ func (scatter *Scatter) Run() {
 	go scatter.retrieveReviews(&wg)
 
 	bulkMutex := &sync.Mutex{}
-	bulkNumber := 1
+	bulkNumber := 0
 	
 	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
 	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
@@ -95,8 +95,8 @@ func (scatter *Scatter) Run() {
 				var innerBulk int
 
 				bulkMutex.Lock()
-				innerBulk = bulkNumber
 				bulkNumber++
+				innerBulk = bulkNumber
 				bulkMutex.Unlock()
 
     			scatter.outputDirect.PublishBulk(innerBulk, bulk)
@@ -135,13 +135,17 @@ func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
 
 		if chunkNumber == scatter.bulkSize {
 			scatter.innerChannel <- bulk[:len(bulk)-1]
-			chunkNumber = 0
 			wg.Add(1)
+
+			bulk = ""
+			chunkNumber = 0
 		}
 	}
 
 	if bulk != "" {
     	scatter.innerChannel <- bulk[:len(bulk)-1]
+    } else {
+    	wg.Done()
     }
 
     if err := scanner.Err(); err != nil {
