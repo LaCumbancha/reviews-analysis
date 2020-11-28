@@ -125,15 +125,24 @@ func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
 
 
     scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanLines)
+
+	wg.Add(1)
+	bulk := ""
+	chunkNumber := 0
 	for scanner.Scan() {
-		wg.Add(1)
-	 	bulk := ""
-	 	for review := 0 ; review < scatter.bulkSize && scanner.Scan() ; review++ {
-			bulk = bulk + "\n" + scanner.Text()
+		bulk = bulk + scanner.Text() + "\n"
+		chunkNumber++
+
+		if chunkNumber == scatter.bulkSize {
+			scatter.innerChannel <- bulk[:len(bulk)-1]
+			chunkNumber = 0
+			wg.Add(1)
 		}
-		scatter.innerChannel <- bulk
 	}
+
+	if bulk != "" {
+    	scatter.innerChannel <- bulk[:len(bulk)-1]
+    }
 
     if err := scanner.Err(); err != nil {
         log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
