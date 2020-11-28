@@ -10,6 +10,9 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/rabbitmq"
 )
 
+const FLOW1 = "FUNBIZ"
+const FLOW2 = "CITBIZ"
+
 type JoinerConfig struct {
 	Instance			string
 	RabbitIp			string
@@ -81,7 +84,7 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal(messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
+				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
@@ -103,7 +106,7 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal(messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
+				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
@@ -144,18 +147,18 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
 	}
 }
 
-func (joiner *Joiner) processEndSignal(newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
 	mutex.Lock()
 	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
 	newSignal := receivedEndSignals[newMessage] == 1
 	signalsReceived := len(receivedEndSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == expectedEndSignals) && newSignal {
-		log.Infof("All End-Messages were received.", signalsReceived)
+		log.Infof("All End-Messages from the %s flow were received.", flow)
 		wg.Done()
 	}
 }

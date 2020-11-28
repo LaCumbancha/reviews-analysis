@@ -10,6 +10,9 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/rabbitmq"
 )
 
+const FLOW1 = "BOT_USERS"
+const FLOW2 = "TOTAL_REVIEWS"
+
 type JoinerConfig struct {
 	Instance			string
 	RabbitIp			string
@@ -80,7 +83,7 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal("bot reviews", messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
+				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
@@ -102,7 +105,7 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
-				joiner.processEndSignal("total reviews", messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
+				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
 				log.Infof("Data '%s' received.", messageBody)
 
