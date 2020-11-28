@@ -1,11 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/logger"
 )
 
 type Calculator struct {
@@ -26,28 +28,30 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) AddFunnyBusiness(rawData string) {
-	var funnyBusiness rabbitmq.FunnyBusinessData
-	json.Unmarshal([]byte(rawData), &funnyBusiness)
+func (calculator *Calculator) AddFunnyBusiness(bulkNumber int, rawFunbizDataBulk string) {
+	var funbizDataList []rabbitmq.FunnyBusinessData
+	json.Unmarshal([]byte(rawFunbizDataBulk), &funbizDataList)
 
-	calculator.mutex1.Lock()
+	for _, funbizData := range funbizDataList {
+		calculator.mutex1.Lock()
+		calculator.data1[funbizData.BusinessId] = funbizData.Funny
+		calculator.mutex1.Unlock()
+	}
 
-	calculator.data1[funnyBusiness.BusinessId] = funnyBusiness.Funny
-	log.Infof("Business %s funniness stored at %d.", funnyBusiness.BusinessId, funnyBusiness.Funny)
-
-	calculator.mutex1.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) AddCityBusiness(rawData string) {
-	var cityBusiness rabbitmq.CityBusinessData
-	json.Unmarshal([]byte(rawData), &cityBusiness)
+func (calculator *Calculator) AddCityBusiness(bulkNumber int, rawCitbizDataBulk string) {
+	var citbizDataList []rabbitmq.CityBusinessData
+	json.Unmarshal([]byte(rawCitbizDataBulk), &citbizDataList)
 
-	calculator.mutex2.Lock()
+	for _, citbizData := range citbizDataList {
+		calculator.mutex2.Lock()
+		calculator.data2[citbizData.BusinessId] = citbizData.City
+		calculator.mutex2.Unlock()
+	}
 
-	calculator.data2[cityBusiness.BusinessId] = cityBusiness.City
-	log.Infof("Business %s city stored as %s.", cityBusiness.BusinessId, cityBusiness.City)
-
-	calculator.mutex2.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveMatches() []rabbitmq.FunnyCityData {

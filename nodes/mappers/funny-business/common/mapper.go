@@ -119,9 +119,9 @@ func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) 
 
 	rawReviews := strings.Split(rawReviewsBulk, "\n")
 	for _, rawReview := range rawReviews {
-		json.Unmarshal([]byte(rawReview), &review)
-
 		if rawReview != "" {
+			json.Unmarshal([]byte(rawReview), &review)
+
 			mappedReview := rabbitmq.FunnyBusinessData {
 				BusinessId:		review.BusinessId,
 				Funny:			review.Funny,

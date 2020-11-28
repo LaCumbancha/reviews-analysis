@@ -114,20 +114,16 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 
 func (filter *Filter) filterFunnyBusiness(bulkNumber int, rawFunbizDataBulk string) {
 	var funbizDataList []rabbitmq.FunnyBusinessData
+	var filteredFunbizDataList []rabbitmq.FunnyBusinessData
 	json.Unmarshal([]byte(rawFunbizDataBulk), &funbizDataList)
 
 	for _, funbizData := range funbizDataList {
-
 		if (funbizData.Funny > 0) {
-			data, err := json.Marshal(funbizData)
-			if err != nil {
-				log.Errorf("Error generating Json from (%s). Err: '%s'", funbizData, err)
-			}
-
-			filter.outputDirect.PublishData(data, funbizData.BusinessId)
+			filteredFunbizDataList = append(filteredFunbizDataList, funbizData)	
 		}
-
 	}
+
+	filter.outputDirect.PublishData(bulkNumber, filteredFunbizDataList)
 }
 
 func (filter *Filter) Stop() {

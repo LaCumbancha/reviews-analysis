@@ -5,9 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/logger"
 )
 
 const FLOW1 = "FUNBIZ"
@@ -76,6 +77,11 @@ func (joiner *Joiner) Run() {
 	var inputWg sync.WaitGroup
 	var joinWg sync.WaitGroup
 
+	bulkMutex1 := &sync.Mutex{}
+	bulkMutex2 := &sync.Mutex{}
+	bulkCounter1 := 0
+	bulkCounter2 := 0
+
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
 	go func() {
@@ -86,14 +92,19 @@ func (joiner *Joiner) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkMutex1.Lock()
+				bulkCounter1++
+				innerBulk := bulkCounter1
+				bulkMutex1.Unlock()
+
+				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", innerBulk), innerBulk)
 
 				inputWg.Add(1)
-				go func() {
-					joiner.calculator.AddFunnyBusiness(messageBody)
+				go func(bulkNumber int) {
+					joiner.calculator.AddFunnyBusiness(bulkNumber, messageBody)
 					joiner.fetchJoinMatches(&joinWg)
 					inputWg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -108,14 +119,19 @@ func (joiner *Joiner) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkMutex2.Lock()
+				bulkCounter2++
+				innerBulk := bulkCounter2
+				bulkMutex2.Unlock()
+
+				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", innerBulk), innerBulk)
 
 				inputWg.Add(1)
-				go func() {
-					joiner.calculator.AddCityBusiness(messageBody)
+				go func(bulkNumber int) {
+					joiner.calculator.AddCityBusiness(bulkNumber, messageBody)
 					joiner.fetchJoinMatches(&joinWg)
 					inputWg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()

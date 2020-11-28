@@ -74,11 +74,9 @@ func (mapper *Mapper) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				var innerBulk int
-
 				bulkMutex.Lock()
-				innerBulk = bulkNumber
 				bulkNumber++
+				innerBulk := bulkNumber
 				bulkMutex.Unlock()
 
 				logb.Instance().Infof(fmt.Sprintf("Business bulk #%d received.", innerBulk), innerBulk)
@@ -117,23 +115,25 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 
 func (mapper *Mapper) processBusinessesBulk(bulkNumber int, rawBusinessesBulk string) {
 	var business rabbitmq.FullBusiness
+	var citbizDataList []rabbitmq.CityBusinessData
 
 	rawBusinesses := strings.Split(rawBusinessesBulk, "\n")
 	for _, rawBusiness := range rawBusinesses {
-		json.Unmarshal([]byte(rawBusiness), &business)
-	
-		cityBusiness := &rabbitmq.CityBusinessData {
-			BusinessId:		business.BusinessId,
-			City:			fmt.Sprintf("%s (%s)", business.City, business.State),
-		}
+		if rawBusiness != "" {
+			json.Unmarshal([]byte(rawBusiness), &business)
+			
+			mappedBusiness := rabbitmq.CityBusinessData {
+				BusinessId:		business.BusinessId,
+				City:			fmt.Sprintf("%s (%s)", business.City, business.State),
+			}
 
-		data, err := json.Marshal(cityBusiness)
-		if err != nil {
-			log.Errorf("Error generating Json from (%s). Err: '%s'", cityBusiness, err)
+			citbizDataList = append(citbizDataList, mappedBusiness)
 		} else {
-			mapper.outputDirect.PublishData(data, cityBusiness.BusinessId)
+			log.Warnf("Empty RawBusiness.")
 		}
-    }
+	}
+
+	mapper.outputDirect.PublishData(bulkNumber, citbizDataList)
 }
 
 func (mapper *Mapper) Stop() {

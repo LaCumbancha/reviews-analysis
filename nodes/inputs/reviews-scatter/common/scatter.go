@@ -123,7 +123,6 @@ func (scatter *Scatter) retrieveReviews(wg *sync.WaitGroup) {
     }
     defer file.Close()
 
-
     scanner := bufio.NewScanner(file)
 
 	wg.Add(1)

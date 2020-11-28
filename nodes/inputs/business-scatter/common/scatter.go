@@ -74,10 +74,8 @@ func (scatter *Scatter) Run() {
 
 		go func() {
 			for bulk := range scatter.innerChannel {
-				var innerBulk int
-
 				bulkMutex.Lock()
-				innerBulk = bulkNumber
+				innerBulk := bulkNumber
 				bulkNumber++
 				bulkMutex.Unlock()
 
@@ -104,15 +102,28 @@ func (scatter *Scatter) retrieveBusinesses(wg *sync.WaitGroup) {
     defer file.Close()
 
     scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanLines)
+
+	wg.Add(1)
+	bulk := ""
+	chunkNumber := 0
 	for scanner.Scan() {
-		wg.Add(1)
-	 	bulk := ""
-	 	for business := 0 ; business < scatter.bulkSize && scanner.Scan() ; business++ {
-			bulk = bulk + "\n" + scanner.Text()
+		bulk = bulk + scanner.Text() + "\n"
+		chunkNumber++
+
+		if chunkNumber == scatter.bulkSize {
+			scatter.innerChannel <- bulk[:len(bulk)-1]
+			wg.Add(1)
+
+			bulk = ""
+			chunkNumber = 0
 		}
-		scatter.innerChannel <- bulk
 	}
+
+	if bulk != "" {
+    	scatter.innerChannel <- bulk[:len(bulk)-1]
+    } else {
+    	wg.Done()
+    }
 
     if err := scanner.Err(); err != nil {
         log.Fatalf("Error reading businesses data from file %s. Err: '%s'", scatter.data, err)

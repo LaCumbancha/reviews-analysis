@@ -68,7 +68,7 @@ func (direct *RabbitOutputDirect) PublishData(bulkNumber int, weekdayDataList []
 			}
 
 		} else {
-			log.Errorf("Couldn't calculate partition for weekday (%s).", data.Weekday)
+			log.Errorf("Couldn't calculate partition for weekday '%s'.", data.Weekday)
 		}
 	}
 

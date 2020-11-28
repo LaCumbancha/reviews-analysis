@@ -1,56 +1,70 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/rabbitmq"
+
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/logger"
 )
 
 type Calculator struct {
 	data 			map[string]int
 	mutex 			*sync.Mutex
+	bulkSize		int
 }
 
-func NewCalculator() *Calculator {
+func NewCalculator(bulkSize int) *Calculator {
 	calculator := &Calculator {
 		data:		make(map[string]int),
 		mutex:		&sync.Mutex{},
+		bulkSize:	bulkSize,
 	}
 
 	return calculator
 }
 
-func (calculator *Calculator) Aggregate(rawData string) {
-	var funnyBusiness rabbitmq.FunnyBusinessData
-	json.Unmarshal([]byte(rawData), &funnyBusiness)
+func (calculator *Calculator) Aggregate(bulkNumber int, rawFunbizDataList string) {
+	var funbizDataList []rabbitmq.FunnyBusinessData
+	json.Unmarshal([]byte(rawFunbizDataList), &funbizDataList)
 
-	calculator.mutex.Lock()
+	for _, funbizData := range funbizDataList {
 
-	if value, found := calculator.data[funnyBusiness.BusinessId]; found {
-		newFunny := value + funnyBusiness.Funny
-	    calculator.data[funnyBusiness.BusinessId] = newFunny
-	    log.Infof("Business %s funniness incremented to %d.", funnyBusiness.BusinessId, newFunny)
-	} else {
-		calculator.data[funnyBusiness.BusinessId] = funnyBusiness.Funny
-		log.Infof("Initialized business %s funniness at %d.", funnyBusiness.BusinessId, funnyBusiness.Funny)
+		calculator.mutex.Lock()
+		if value, found := calculator.data[funbizData.BusinessId]; found {
+			newAmount := value + 1
+		    calculator.data[funbizData.BusinessId] = newAmount
+		} else {
+			calculator.data[funbizData.BusinessId] = 1
+		}
+		calculator.mutex.Unlock()
+
 	}
 
-	calculator.mutex.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d businesses stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveData() []rabbitmq.FunnyBusinessData {
-	var list []rabbitmq.FunnyBusinessData
+func (calculator *Calculator) RetrieveData() [][]rabbitmq.FunnyBusinessData {
+	bulk := make([]rabbitmq.FunnyBusinessData, 0)
+	bulkedList := make([][]rabbitmq.FunnyBusinessData, 0)
 
+	actualBulk := 0
 	for businessId, funny := range calculator.data {
-		log.Infof("Business %s funniness aggregated: %d.", businessId, funny)
-		aggregatedData := rabbitmq.FunnyBusinessData {
-			BusinessId:		businessId,
-			Funny:			funny,
+		actualBulk++
+		aggregatedData := rabbitmq.FunnyBusinessData { BusinessId: businessId, Funny: funny }
+		bulk = append(bulk, aggregatedData)
+
+		if actualBulk == calculator.bulkSize {
+			bulkedList = append(bulkedList, bulk)
+			bulk = make([]rabbitmq.FunnyBusinessData, 0)
+			actualBulk = 0
 		}
-		list = append(list, aggregatedData)
 	}
 
-	return list
+	if len(bulk) != 0 {
+		bulkedList = append(bulkedList, bulk)
+	}
+
+	return bulkedList
 }

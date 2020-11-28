@@ -3,11 +3,11 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/rabbitmq"
+	
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-business/logger"
 )
 
 type AggregatorConfig struct {
@@ -17,6 +17,7 @@ type AggregatorConfig struct {
 	InputTopic			string
 	FunbizFilters 		int
 	FuncitJoiners		int
+	OutputBulkSize		int
 }
 
 type Aggregator struct {
@@ -48,7 +49,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
-		calculator:		NewCalculator(),
+		calculator:		NewCalculator(config.OutputBulkSize),
 		inputDirect:	inputDirect,
 		outputDirect:	outputDirect,
 		endSignals:		config.FunbizFilters,
@@ -63,6 +64,9 @@ func (aggregator *Aggregator) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
+	bulkMutex := &sync.Mutex{}
+	bulkNumber := 0
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -72,13 +76,18 @@ func (aggregator *Aggregator) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkMutex.Lock()
+				innerBulk := bulkNumber
+				bulkNumber++
+				bulkMutex.Unlock()
+
+				logb.Instance().Infof(fmt.Sprintf("Funbiz bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					aggregator.calculator.Aggregate(messageBody)
+				go func(bulkNumber int) {
+					aggregator.calculator.Aggregate(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -86,9 +95,16 @@ func (aggregator *Aggregator) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
+    outputBulkNumber := 0
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
+		outputBulkNumber++
+    	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
+
 		wg.Add(1)
-		go aggregator.sendAggregatedData(aggregatedData, &wg)
+		go func(bulkNumber int) {
+			aggregator.outputDirect.PublishData(bulkNumber, aggregatedData)
+			wg.Done()
+		}(outputBulkNumber)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -112,16 +128,6 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.FunnyBusinessData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(aggregatedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
-	} else {
-		aggregator.outputDirect.PublishData(data, aggregatedData.BusinessId)
-	}
-	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {
