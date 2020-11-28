@@ -70,6 +70,7 @@ func (joiner *Joiner) Run() {
 	var endSignals2 = make(map[string]int)
 
 	var inputWg sync.WaitGroup
+	var joinWg sync.WaitGroup
 
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
@@ -86,6 +87,7 @@ func (joiner *Joiner) Run() {
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddBotUser(messageBody)
+					joiner.fetchJoinMatches(&joinWg)
 					inputWg.Done()
 				}()
 			}
@@ -107,59 +109,38 @@ func (joiner *Joiner) Run() {
 				inputWg.Add(1)
 				go func() {
 					joiner.calculator.AddUser(messageBody)
+					joiner.fetchJoinMatches(&joinWg)
 					inputWg.Done()
 				}()
 			}
 		}
 	}()
 
-	var lastCheckMutex = &sync.Mutex{}
-	lastCheck := false
-
-	// Processing joins matches concurrently.
-	var joinWg sync.WaitGroup
-	joinWg.Add(1)
-	go func() {
-		for {
-    		newJoin := false
-    		lastCheckMutex.Lock()
-    		lastJoinRound := lastCheck
-    		lastCheckMutex.Unlock()
-
-    		joinMatches := joiner.calculator.RetrieveData()
-    		if len(joinMatches) > 0 {
-    			newJoin = true
-    		} else {
-    			log.Tracef("No new join match to send in this round.")
-    		}
-
-    		for _, joinedData := range joinMatches {
-    			joinWg.Add(1)
-    			log.Infof("Starting sending joined best users data (user %s).", joinedData.UserId)
-				go joiner.sendJoinedData(joinedData, &joinWg)
-			}
-
-    		if lastJoinRound && !newJoin {
-    			log.Infof("No new join match to send at all. Finishing process.")
-    			joinWg.Done()
-    			break
-    		}
-    	}
-	}()
-    
-
-    // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
+	// Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     inputWg.Wait()
 
-    lastCheckMutex.Lock()
-    lastCheck = true
-    lastCheckMutex.Unlock()
+    // Processing last join matches.
+    joiner.fetchJoinMatches(&joinWg)
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all joins are processed and sent.
     joinWg.Wait()
 
     // Sending End-Message to consumers.
     joiner.outputQueue.PublishFinish()
+}
+
+func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
+	joinMatches := joiner.calculator.RetrieveMatches()
+
+	if len(joinMatches) == 0 {
+    	log.Tracef("No new join match to send in this round.")
+    }
+
+    for _, joinedData := range joinMatches {
+    	joinWg.Add(1)
+    	log.Infof("Starting to send joined bot users data (user %s).", joinedData.UserId)
+		go joiner.sendJoinedData(joinedData, joinWg)
+	}
 }
 
 func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

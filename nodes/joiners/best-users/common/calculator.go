@@ -50,7 +50,7 @@ func (calculator *Calculator) AddUser(rawData string) {
 	calculator.mutex2.Unlock()
 }
 
-func (calculator *Calculator) RetrieveData() []rabbitmq.UserData {
+func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
 	var list []rabbitmq.UserData
 
 	calculator.mutex1.Lock()

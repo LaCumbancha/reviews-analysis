@@ -50,7 +50,7 @@ func (calculator *Calculator) AddCityBusiness(rawData string) {
 	calculator.mutex2.Unlock()
 }
 
-func (calculator *Calculator) RetrieveData() []rabbitmq.FunnyCityData {
+func (calculator *Calculator) RetrieveMatches() []rabbitmq.FunnyCityData {
 	var list []rabbitmq.FunnyCityData
 
 	calculator.mutex1.Lock()
