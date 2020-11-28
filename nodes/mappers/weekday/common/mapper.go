@@ -76,8 +76,8 @@ func (mapper *Mapper) Run() {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkMutex.Lock()
-				innerBulk := bulkCounter
 				bulkCounter++
+				innerBulk := bulkCounter
 				bulkMutex.Unlock()
 
 				logging.Infof(fmt.Sprintf("Review bulk #%d received.", innerBulk), innerBulk)
@@ -122,17 +122,22 @@ func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) 
 	for _, rawReview := range rawReviews {
 		json.Unmarshal([]byte(rawReview), &review)
 
-		reviewDate, err := time.Parse("2006-01-02", review.Date[0:10])
-		if err != nil {
-			log.Errorf("Error parsing date from review %s (given date: %s). Err: %s", review.ReviewId, review.Date, err)
-		} else {
-			reviewWeekday := reviewDate.Weekday()
-			mappedReview := rabbitmq.WeekdayData {
-				Weekday:	reviewWeekday.String(),
-			}
+		if rawReview != "" {
+			reviewDate, err := time.Parse("2006-01-02", review.Date[0:10])
 
-			weekdayDataList = append(weekdayDataList, mappedReview)
-		}
+			if err != nil {
+				log.Errorf("Error parsing date from review %s (given date: %s). Err: %s", review.ReviewId, review.Date, err)
+			} else {
+				reviewWeekday := reviewDate.Weekday()
+				mappedReview := rabbitmq.WeekdayData {
+					Weekday:	reviewWeekday.String(),
+				}
+
+				weekdayDataList = append(weekdayDataList, mappedReview)
+			}	
+		} else {
+			log.Warnf("Empty RawReview.")
+		}	
 	}
 
 	mapper.outputDirect.PublishData(bulkNumber, weekdayDataList)

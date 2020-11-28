@@ -120,13 +120,17 @@ func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) 
 	rawReviews := strings.Split(rawReviewsBulk, "\n")
 	for _, rawReview := range rawReviews {
 		json.Unmarshal([]byte(rawReview), &review)
-	
-		mappedReview := rabbitmq.FunnyBusinessData {
-			BusinessId:		review.BusinessId,
-			Funny:			review.Funny,
-		}
 
-		funbizDataList = append(funbizDataList, mappedReview)
+		if rawReview != "" {
+			mappedReview := rabbitmq.FunnyBusinessData {
+				BusinessId:		review.BusinessId,
+				Funny:			review.Funny,
+			}
+
+			funbizDataList = append(funbizDataList, mappedReview)
+		} else {
+			log.Warnf("Empty RawReview.")
+		}
 	}
 
 	mapper.outputQueue.PublishData(bulkNumber, funbizDataList)
