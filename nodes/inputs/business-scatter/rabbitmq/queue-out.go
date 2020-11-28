@@ -1,8 +1,11 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"github.com/streadway/amqp"
+
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/logger"
 )
 
 type RabbitOutputQueue struct {
@@ -39,7 +42,7 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishBulk(bulk string, bulkNumber int) {
+func (queue *RabbitOutputQueue) PublishBulk(bulkNumber int, bulk string) {
 	err := queue.channel.Publish(
 		"",     							// Exchange
 		queue.name, 						// Routing Key
@@ -53,7 +56,7 @@ func (queue *RabbitOutputQueue) PublishBulk(bulk string, bulkNumber int) {
 	if err != nil {
 		log.Errorf("Error sending bulk #%d to queue %s. Err: '%s'", bulkNumber, queue.name, err)
 	} else {
-		log.Debugf("Bulk #%d sent to queue %s.", bulkNumber, queue.name)
+		logb.Instance().Infof(fmt.Sprintf("Bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
 	}
 }
 

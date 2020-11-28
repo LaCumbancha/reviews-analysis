@@ -21,6 +21,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()

@@ -5,10 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
 )
 
 type AggregatorConfig struct {
@@ -81,7 +81,7 @@ func (aggregator *Aggregator) Run() {
 				innerBulk := bulkCounter
 				bulkMutex.Unlock()
 
-				logging.Infof(fmt.Sprintf("Weekday data bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Weekday data bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
 				go func(bulkNumber int) {

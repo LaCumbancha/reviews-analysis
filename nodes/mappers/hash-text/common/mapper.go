@@ -7,10 +7,10 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/hash-text/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/hash-text/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/mappers/hash-text/logger"
 )
 
 type MapperConfig struct {
@@ -80,7 +80,7 @@ func (mapper *Mapper) Run() {
 				innerBulk := bulkCounter
 				bulkMutex.Unlock()
 
-				logging.Infof(fmt.Sprintf("Review bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Review bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
 				go func(bulkNumber int) {

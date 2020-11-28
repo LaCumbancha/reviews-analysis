@@ -5,10 +5,10 @@ import (
 	"sync"
 	"strings"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/logger"
 )
 
 type Calculator struct {
@@ -52,7 +52,7 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawWeekdayDataBulk strin
 
 	}
 
-	logging.Infof(calculator.status(bulkNumber), bulkNumber)
+	logb.Instance().Infof(calculator.status(bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveData() []rabbitmq.WeekdayData {

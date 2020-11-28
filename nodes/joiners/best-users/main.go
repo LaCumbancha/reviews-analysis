@@ -24,6 +24,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("stars", "aggregators")
 	configEnv.BindEnv("user", "filters")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()

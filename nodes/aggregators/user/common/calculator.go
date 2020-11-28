@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/logger"
 )
 
 type Calculator struct {
@@ -41,7 +41,7 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawUserDataBulk string) 
 
 	}
 
-	logging.Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
+	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveData() []rabbitmq.UserData {

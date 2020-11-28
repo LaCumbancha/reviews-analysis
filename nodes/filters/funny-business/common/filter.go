@@ -5,10 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-business/logging"
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-business/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-business/logger"
 )
 
 type FilterConfig struct {
@@ -78,7 +78,7 @@ func (filter *Filter) Run() {
 				innerBulk := bulkCounter
 				bulkMutex.Unlock()
 
-				logging.Infof(fmt.Sprintf("Funbiz data bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
 				go func(bulkNumber int) {

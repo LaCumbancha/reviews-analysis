@@ -5,11 +5,11 @@ import (
 	"time"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/logger"
-	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/utils"
+	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/common"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/inputs/reviews-scatter/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -31,7 +31,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("hashes", "mappers")
 	configEnv.BindEnv("users", "mappers")
 	configEnv.BindEnv("stars", "mappers")
-	configEnv.BindEnv("log", "bulk", "size")
+	configEnv.BindEnv("log", "bulk", "rate")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -147,7 +147,7 @@ func main() {
 		log.Fatalf("LogBulkRate variable missing")
 	}
 
-	logger.Instance().SetBulkRate(logBulkRate)
+	logb.Instance().SetBulkRate(logBulkRate)
 
 	// Waiting for all other nodes to correctly configure before starting sending reviews.
 	scatter := common.NewScatter(scatterConfig)

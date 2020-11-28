@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/utils"
+
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
+	log "github.com/sirupsen/logrus"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -24,6 +25,8 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("hash", "mappers")
 	configEnv.BindEnv("dishash", "aggregators")
+	configEnv.BindEnv("log", "bulk", "rate")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -96,6 +99,16 @@ func main() {
 		DishashAggregators:		dishashAggregators,
 	}
 
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
+
+	// Initializing aggregator.
 	aggregator := common.NewAggregator(aggregatorConfig)
 	aggregator.Run()
 	aggregator.Stop()

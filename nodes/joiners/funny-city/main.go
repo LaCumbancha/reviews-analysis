@@ -25,6 +25,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("funbiz", "aggregators")
 	configEnv.BindEnv("citbiz", "mappers")
 	configEnv.BindEnv("funcit", "aggregators")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()

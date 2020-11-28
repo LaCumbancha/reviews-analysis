@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/utils"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -23,6 +24,8 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("weekday", "mappers")
+	configEnv.BindEnv("log", "bulk", "rate")
+	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
 	var configFile = viper.New()
@@ -88,6 +91,16 @@ func main() {
 		WeekdayMappers:		weekdayMappers,
 	}
 
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
+
+	// Initializing aggregator.
 	aggregator := common.NewAggregator(aggregatorConfig)
 	aggregator.Run()
 	aggregator.Stop()

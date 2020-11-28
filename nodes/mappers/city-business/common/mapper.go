@@ -6,9 +6,10 @@ import (
 	"strings"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/city-business/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/mappers/city-business/logger"
 )
 
 type MapperConfig struct {
@@ -80,13 +81,13 @@ func (mapper *Mapper) Run() {
 				bulkNumber++
 				bulkMutex.Unlock()
 
-				log.Infof("Businesses bulk #%d received.", innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Business bulk #%d received.", innerBulk), innerBulk)
 
 				wg.Add(1)
-				go func() {
-					mapper.processBusinessesBulk(messageBody)
+				go func(bulkNumber int) {
+					mapper.processBusinessesBulk(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(innerBulk)
 			}
 		}
 	}()
@@ -114,7 +115,7 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (mapper *Mapper) processBusinessesBulk(rawBusinessesBulk string) {
+func (mapper *Mapper) processBusinessesBulk(bulkNumber int, rawBusinessesBulk string) {
 	var business rabbitmq.FullBusiness
 
 	rawBusinesses := strings.Split(rawBusinessesBulk, "\n")

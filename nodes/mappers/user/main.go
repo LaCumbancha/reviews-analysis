@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/user/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/user/utils"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/mappers/user/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -23,6 +24,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("reviews", "inputs")
 	configEnv.BindEnv("user", "aggregators")
+	configEnv.BindEnv("log", "bulk", "rate")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -89,6 +91,16 @@ func main() {
 		UserAggregators:	userAggregators,
 	}
 
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
+
+	// Initializing mapper.
 	mapper := common.NewMapper(mapperConfig)
 	mapper.Run()
 	mapper.Stop()

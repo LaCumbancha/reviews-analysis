@@ -5,10 +5,11 @@ import (
 	"time"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/utils"
 	"github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/common"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/inputs/business-scatter/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -25,6 +26,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("bulk", "size")
 	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("citbiz", "mappers")
+	configEnv.BindEnv("log", "bulk", "rate")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -98,9 +100,17 @@ func main() {
 		CitbizMappers:			citbizMappers,
 	}
 
-	scatter := common.NewScatter(scatterConfig)
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
 
 	// Waiting for all other nodes to correctly configure before starting sending reviews.
+	scatter := common.NewScatter(scatterConfig)
 	time.Sleep(2000 * time.Millisecond)
 	scatter.Run()
 	scatter.Stop()

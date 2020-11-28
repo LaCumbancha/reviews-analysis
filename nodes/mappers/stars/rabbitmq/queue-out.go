@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"encoding/json"
 	"github.com/streadway/amqp"
+	
 	log "github.com/sirupsen/logrus"
-
-	"github.com/LaCumbancha/reviews-analysis/nodes/mappers/stars/logging"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/mappers/stars/logger"
 )
 
 type RabbitOutputQueue struct {
@@ -64,7 +64,7 @@ func (queue *RabbitOutputQueue) PublishData(bulkNumber int, starsDataList []Star
 		if err != nil {
 			log.Errorf("Error sending mapped bulk #%d to queue %s. Err: '%s'", bulkNumber, queue.name, err)
 		} else {
-			logging.Infof(fmt.Sprintf("Mapped bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
+			logb.Instance().Infof(fmt.Sprintf("Mapped bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
 		}
 	}
 }

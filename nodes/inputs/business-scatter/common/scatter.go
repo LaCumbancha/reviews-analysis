@@ -81,8 +81,7 @@ func (scatter *Scatter) Run() {
 				bulkNumber++
 				bulkMutex.Unlock()
 
-				log.Infof("Processing bulk #%d.", innerBulk)
-    			scatter.outputQueue.PublishBulk(bulk, innerBulk)
+    			scatter.outputQueue.PublishBulk(innerBulk, bulk)
     			wg.Done()
 			}
 		}()
