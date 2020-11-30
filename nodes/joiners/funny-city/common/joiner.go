@@ -77,9 +77,6 @@ func (joiner *Joiner) Run() {
 	var inputWg sync.WaitGroup
 	var joinWg sync.WaitGroup
 
-	outputBulksMutex := &sync.Mutex{}
-	outputBulks := 0
-
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
 	go func() {
@@ -97,7 +94,6 @@ func (joiner *Joiner) Run() {
 				inputWg.Add(1)
 				go func(bulkNumber int) {
 					joiner.calculator.AddFunnyBusiness(bulkNumber, messageBody)
-					joiner.sendJoinMatches(&outputBulks, outputBulksMutex, &joinWg)
 					inputWg.Done()
 				}(bulkCounter1)
 			}
@@ -121,7 +117,6 @@ func (joiner *Joiner) Run() {
 				inputWg.Add(1)
 				go func(bulkNumber int) {
 					joiner.calculator.AddCityBusiness(bulkNumber, messageBody)
-					joiner.sendJoinMatches(&outputBulks, outputBulksMutex, &joinWg)
 					inputWg.Done()
 				}(bulkCounter2)
 			}
@@ -132,7 +127,7 @@ func (joiner *Joiner) Run() {
     inputWg.Wait()
 
     // Processing last join matches.
-    joiner.sendJoinMatches(&outputBulks, outputBulksMutex, &joinWg)
+    joiner.sendJoinMatches(&joinWg)
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all joins are processed and sent.
     joinWg.Wait()
@@ -141,21 +136,18 @@ func (joiner *Joiner) Run() {
     joiner.outputDirect.PublishFinish()
 }
 
-func (joiner *Joiner) sendJoinMatches(bulksSent *int, bulksMutex *sync.Mutex, joinWg *sync.WaitGroup) {
+func (joiner *Joiner) sendJoinMatches(joinWg *sync.WaitGroup) {
+	outputBulks := 0
 	joinMatches := joiner.calculator.RetrieveMatches()
 
 	if len(joinMatches) == 0 {
-    	log.Tracef("No new join match to send in this round.")
+    	log.Warnf("No join matches to send.")
     }
 
     for _, joinedData := range joinMatches {
-    	bulksMutex.Lock()
-    	*bulksSent++
-    	innerBulk := *bulksSent
-    	bulksMutex.Unlock()
-
+    	outputBulks++
     	joinWg.Add(1)
-    	go joiner.outputDirect.PublishData(innerBulk, joinedData)
+    	go joiner.outputDirect.PublishData(outputBulks, joinedData)
 	}
 }
 
@@ -166,7 +158,9 @@ func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedE
 	signalsReceived := len(receivedEndSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
+	if newSignal {
+		log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == expectedEndSignals) && newSignal {

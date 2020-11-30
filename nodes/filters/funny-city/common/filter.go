@@ -106,7 +106,9 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == filter.endSignals) && newSignal {

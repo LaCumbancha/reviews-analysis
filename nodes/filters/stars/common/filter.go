@@ -97,7 +97,9 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == filter.endSignals) && newSignal {
@@ -108,22 +110,16 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 
 func (filter *Filter) filterLowStars(bulkNumber int, rawStarsDataBulk string) {
 	var starsDataList []rabbitmq.StarsData
+	var filteredStarsDataList []rabbitmq.StarsData
 	json.Unmarshal([]byte(rawStarsDataBulk), &starsDataList)
 
 	for _, starsData := range starsDataList {
-
 		if (starsData.Stars == 5) {
-			data, err := json.Marshal(starsData)
-			if err != nil {
-				log.Errorf("Error generating Json from (%s). Err: '%s'", starsData, err)
-			}
-
-			filter.outputDirect.PublishData(data, starsData.UserId)
-		} else {
-			log.Infof("Data '%s' filtered due to not having enough stars.", starsData)
+			filteredStarsDataList = append(filteredStarsDataList, starsData)	
 		}
-
 	}
+
+	filter.outputDirect.PublishData(bulkNumber, filteredStarsDataList)
 }
 
 func (filter *Filter) Stop() {

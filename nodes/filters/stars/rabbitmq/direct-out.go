@@ -1,9 +1,13 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"strconv"
+	"encoding/json"
 	"github.com/streadway/amqp"
+	
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/stars/logger"
 )
 
 type RabbitOutputDirect struct {
@@ -48,29 +52,50 @@ func (direct *RabbitOutputDirect) initialize() {
 	log.Tracef("Partition map generated for direct-exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
-func (direct *RabbitOutputDirect) PublishData(data []byte, businessId string) {
-	partition := direct.partitionMap[string(businessId[0])]
-	log.Debugf("Exchange %s partition calculated for %s: %s.", direct.exchange, businessId, partition)
+func (direct *RabbitOutputDirect) PublishData(bulkNumber int, starsDataList []StarsData) {
+	dataListByPartition := make(map[string][]StarsData)
 
-	if partition != "" {
-		err := direct.channel.Publish(
-  			direct.exchange, 						// Exchange
-  			partition,    							// Routing Key
-  			false,  								// Mandatory
-  			false,  								// Immediate
-  			amqp.Publishing{
-  			    ContentType: 	"text/plain",
-  			    Body:        	data,
-  			},
-  		)
+	for _, data := range starsDataList {
+		partition := direct.partitionMap[string(data.UserId[0])]
+
+		if partition != "" {
+			starsDataListPartitioned := dataListByPartition[partition]
+
+			if starsDataListPartitioned != nil {
+				dataListByPartition[partition] = append(starsDataListPartitioned, data)
+			} else {
+				dataListByPartition[partition] = append(make([]StarsData, 0), data)
+			}
+
+		} else {
+			log.Errorf("Couldn't calculate partition for user '%s'.", data.UserId)
+		}
+	}
+
+	for partition, starsDataListPartitioned := range dataListByPartition {
+		outputData, err := json.Marshal(starsDataListPartitioned)
 
 		if err != nil {
-			log.Errorf("Error sending funny data from business %s to direct-exchange %s (partition %s). Err: '%s'", businessId, direct.exchange, partition, err)
+			log.Errorf("Error generating Json from (%s). Err: '%s'", starsDataListPartitioned, err)
 		} else {
-			log.Infof("Funny data from business %s sent to direct-exchange %s (partition %s).", businessId, direct.exchange, partition)
-		}	
-	} else {
-		log.Errorf("Couldn't calculate partition for business %s", businessId)
+
+			err := direct.channel.Publish(
+				direct.exchange, 						// Exchange
+				partition,    							// Routing Key
+				false,  								// Mandatory
+				false,  								// Immediate
+				amqp.Publishing{
+				    ContentType: 	"text/plain",
+				    Body:        	outputData,
+				},
+			)
+
+			if err != nil {
+				log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, direct.exchange, partition, err)
+			} else {
+				logb.Instance().Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, direct.exchange, partition), bulkNumber)
+			}	
+		}
 	}
 }
 

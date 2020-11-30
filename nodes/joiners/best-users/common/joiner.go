@@ -5,9 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/logger"
 )
 
 const FLOW1 = "BEST_USERS"
@@ -78,6 +79,7 @@ func (joiner *Joiner) Run() {
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
 	go func() {
+		bulkCounter1 := 0
 		log.Infof("Starting to listen for users 5-stars reviews data.")
 		for message := range joiner.inputDirect1.ConsumeData() {
 			messageBody := string(message.Body)
@@ -85,14 +87,14 @@ func (joiner *Joiner) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkCounter1++
+				logb.Instance().Infof(fmt.Sprintf("Best users data bulk #%d received.", bulkCounter1), bulkCounter1)
 
 				inputWg.Add(1)
-				go func() {
-					joiner.calculator.AddBestUser(messageBody)
-					joiner.fetchJoinMatches(&joinWg)
+				go func(bulkNumber int) {
+					joiner.calculator.AddBestUser(bulkNumber, messageBody)
 					inputWg.Done()
-				}()
+				}(bulkCounter1)
 			}
 		}
 	}()
@@ -100,6 +102,7 @@ func (joiner *Joiner) Run() {
 	// Receiving messages from the city-business flow.
 	inputWg.Add(1)
 	go func() {
+		bulkCounter2 := 0
 		log.Infof("Starting to listen for users reviews data.")
 		for message := range joiner.inputDirect2.ConsumeData() {
 			messageBody := string(message.Body)
@@ -107,14 +110,14 @@ func (joiner *Joiner) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkCounter2++
+				logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d received.", bulkCounter2), bulkCounter2)
 
 				inputWg.Add(1)
-				go func() {
-					joiner.calculator.AddUser(messageBody)
-					joiner.fetchJoinMatches(&joinWg)
+				go func(bulkNumber int) {
+					joiner.calculator.AddUser(bulkNumber, messageBody)
 					inputWg.Done()
-				}()
+				}(bulkCounter2)
 			}
 		}
 	}()    
@@ -136,29 +139,12 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
 	joinMatches := joiner.calculator.RetrieveMatches()
 
 	if len(joinMatches) == 0 {
-    	log.Tracef("No new join match to send in this round.")
+    	log.Warnf("No join match to send.")
     }
 
     for _, joinedData := range joinMatches {
     	joinWg.Add(1)
-    	log.Infof("Starting to send joined best users data (user %s).", joinedData.UserId)
 		go joiner.sendJoinedData(joinedData, joinWg)
-	}
-}
-
-func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
-	mutex.Lock()
-	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
-	newSignal := receivedEndSignals[newMessage] == 1
-	signalsReceived := len(receivedEndSignals)
-	mutex.Unlock()
-
-	log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
-
-	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == expectedEndSignals) && newSignal {
-		log.Infof("All End-Messages from the %s flow were received.", flow)
-		wg.Done()
 	}
 }
 
@@ -170,6 +156,24 @@ func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.UserData, wg *sync.Wait
 		joiner.outputQueue.PublishData(data)
 	}
 	wg.Done()
+}
+
+func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
+	mutex.Lock()
+	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
+	newSignal := receivedEndSignals[newMessage] == 1
+	signalsReceived := len(receivedEndSignals)
+	mutex.Unlock()
+
+	if newSignal {
+		log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
+	}
+
+	// Waiting for the total needed End-Signals to send the own End-Message.
+	if (signalsReceived == expectedEndSignals) && newSignal {
+		log.Infof("All End-Messages from the %s flow were received.", flow)
+		wg.Done()
+	}
 }
 
 func (joiner *Joiner) Stop() {

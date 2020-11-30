@@ -26,6 +26,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("hash", "mappers")
 	configEnv.BindEnv("dishash", "aggregators")
 	configEnv.BindEnv("log", "bulk", "rate")
+	configEnv.BindEnv("output", "bulk", "size")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -90,6 +91,12 @@ func main() {
 		log.Fatalf("DistinctAggregators variable missing")
 	}
 
+	outputBulkSize := utils.GetConfigInt(configEnv, configFile, "output_bulk_size")
+	
+	if outputBulkSize == 0 {
+		log.Fatalf("OutputBulkSize variable missing")
+	}
+
 	aggregatorConfig := common.AggregatorConfig {
 		Instance:				instance,
 		RabbitIp:				rabbitIp,
@@ -97,6 +104,7 @@ func main() {
 		InputTopic: 			inputTopic,
 		HashMappers:			hashMappers,
 		DishashAggregators:		dishashAggregators,
+		OutputBulkSize:			outputBulkSize,
 	}
 
 	// Initializing custom logger.

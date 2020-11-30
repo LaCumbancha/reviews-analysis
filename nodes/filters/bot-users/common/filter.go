@@ -5,9 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/bot-users/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/bot-users/logger"
 )
 
 type FilterConfig struct {
@@ -66,19 +67,21 @@ func (filter *Filter) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		bulkCounter := 0
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("User data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func() {
-					filter.filterBots(messageBody)
+				go func(bulkNumber int) {
+					filter.filterMinimumRevies(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(bulkCounter)
 			}
 		}
 	}()
@@ -97,7 +100,9 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == filter.endSignals) && newSignal {
@@ -106,19 +111,18 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (filter *Filter) filterBots(rawData string) {
-	var mappedUserData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &mappedUserData)
+func (filter *Filter) filterMinimumRevies(bulkNumber int, rawUserDataList string) {
+	var userDataList []rabbitmq.UserData
+	var filteredUserDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawUserDataList), &userDataList)
 
-	if (mappedUserData.Reviews >= filter.minReviews) {
-		data, err := json.Marshal(mappedUserData)
-		if err != nil {
-			log.Errorf("Error generating Json from (%s). Err: '%s'", mappedUserData, err)
+	for _, userData := range userDataList {
+		if (userData.Reviews >= filter.minReviews) {
+			filteredUserDataList = append(filteredUserDataList, userData)	
 		}
-		filter.outputDirect.PublishData(data, mappedUserData.UserId)
-	} else {
-		log.Infof("Data '%s' filtered due to not having enough reviews.", rawData)
 	}
+
+	filter.outputDirect.PublishData(bulkNumber, filteredUserDataList)
 }
 
 func (filter *Filter) Stop() {

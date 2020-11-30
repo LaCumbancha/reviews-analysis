@@ -8,12 +8,16 @@ reviews_pool_size: 16
 business_pool_size: 16
 
 # Bulks
-log_bulk_rate: 200
+log_bulk_rate: 500
 reviews_bulk_size: 1000
 business_bulk_size: 1000
 funbizagg_bulk_size: 1000
 funcitjoin_bulk_size: 1000
 funcitagg_bulk_size: 1000
+hashagg_bulk_size: 1000
+dishashagg_bulk_size: 1000
+useragg_bulk_size: 1000
+starsagg_bulk_size: 1000
 
 # System specs.
 users_min_reviews: 50

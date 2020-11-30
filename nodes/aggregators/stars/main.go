@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/stars/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/stars/utils"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/stars/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -24,6 +25,8 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("stars", "filters")
 	configEnv.BindEnv("stars", "joiners")
+	configEnv.BindEnv("log", "bulk", "rate")
+	configEnv.BindEnv("output", "bulk", "size")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -88,6 +91,12 @@ func main() {
 		log.Fatalf("StarsJoiners variable missing")
 	}
 
+	outputBulkSize := utils.GetConfigInt(configEnv, configFile, "output_bulk_size")
+	
+	if outputBulkSize == 0 {
+		log.Fatalf("OutputBulkSize variable missing")
+	}
+
 	aggregatorConfig := common.AggregatorConfig {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
@@ -95,8 +104,19 @@ func main() {
 		InputTopic: 		inputTopic,
 		StarsFilters:		starsFilters,
 		StarsJoiners:		starsJoiners,
+		OutputBulkSize:		outputBulkSize,
 	}
 
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
+
+	// Initializing aggregator.
 	aggregator := common.NewAggregator(aggregatorConfig)
 	aggregator.Run()
 	aggregator.Stop()

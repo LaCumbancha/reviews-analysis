@@ -92,11 +92,9 @@ func (scatter *Scatter) Run() {
 		
 		go func() {
 			for bulk := range scatter.innerChannel {
-				var innerBulk int
-
 				bulkMutex.Lock()
 				bulkNumber++
-				innerBulk = bulkNumber
+				innerBulk := bulkNumber
 				bulkMutex.Unlock()
 
     			scatter.outputDirect.PublishBulk(innerBulk, bulk)

@@ -1,11 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/logger"
 )
 
 type Calculator struct {
@@ -26,28 +28,30 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) AddBotUser(rawData string) {
-	var userData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &userData)
+func (calculator *Calculator) AddBotUser(bulkNumber int, rawBotUserDataBulk string) {
+	var botUserDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawBotUserDataBulk), &botUserDataList)
 
-	calculator.mutex1.Lock()
+	for _, botUserData := range botUserDataList {
+		calculator.mutex1.Lock()
+		calculator.data1[botUserData.UserId] = 1
+		calculator.mutex1.Unlock()
+	}
 
-	calculator.data1[userData.UserId] = 1
-	log.Infof("Bot user %s with %d reviews stored.", userData.UserId, userData.Reviews)
-
-	calculator.mutex1.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Bot user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) AddUser(rawData string) {
-	var userData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &userData)
+func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
+	var userDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
-	calculator.mutex2.Lock()
+	for _, userData := range userDataList {
+		calculator.mutex2.Lock()
+		calculator.data2[userData.UserId] = userData.Reviews
+		calculator.mutex2.Unlock()
+	}
 
-	calculator.data2[userData.UserId] = userData.Reviews
-	log.Infof("User %s total reviews stored at %d.", userData.UserId, userData.Reviews)
-
-	calculator.mutex2.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Common user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
@@ -78,7 +82,6 @@ func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
 			
 		} else {
 			calculator.mutex2.Unlock()
-			log.Tracef("Still no user join match for user %s.", userId)
 		}
 
 		calculator.mutex1.Lock()

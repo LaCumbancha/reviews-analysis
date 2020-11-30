@@ -5,9 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/distinct-hash/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/distinct-hash/logger"
 )
 
 type FilterConfig struct {
@@ -66,19 +67,21 @@ func (filter *Filter) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		bulkCounter := 0
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func() {
-					filter.filterRepeatedTexts(messageBody)
+				go func(bulkNumber int) {
+					filter.filterRepeatedTexts(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(bulkCounter)
 			}
 		}
 	}()
@@ -97,7 +100,9 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == filter.endSignals) && newSignal {
@@ -106,19 +111,18 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (filter *Filter) filterRepeatedTexts(rawData string) {
-	var distinctHashesData rabbitmq.DistinctHashesData
-	json.Unmarshal([]byte(rawData), &distinctHashesData)
+func (filter *Filter) filterRepeatedTexts(bulkNumber int, rawDishashDataBulk string) {
+	var dishashDataList []rabbitmq.DistinctHashesData
+	var filteredDishashesDataList []rabbitmq.DistinctHashesData
+	json.Unmarshal([]byte(rawDishashDataBulk), &dishashDataList)
 
-	if (distinctHashesData.Distinct == 1) {
-		data, err := json.Marshal(distinctHashesData)
-		if err != nil {
-			log.Errorf("Error generating Json from (%s). Err: '%s'", distinctHashesData, err)
+	for _, dishashData := range dishashDataList {
+		if (dishashData.Distinct == 1) {
+			filteredDishashesDataList = append(filteredDishashesDataList, dishashData)	
 		}
-		filter.outputDirect.PublishData(data, distinctHashesData.UserId)
-	} else {
-		log.Infof("Data '%s' filtered due to different texts.", rawData)
 	}
+
+	filter.outputDirect.PublishData(bulkNumber, filteredDishashesDataList)
 }
 
 func (filter *Filter) Stop() {

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/distinct-hash/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/distinct-hash/utils"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/distinct-hash/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -23,6 +24,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("dishash", "aggregators")
 	configEnv.BindEnv("dishash", "joiners")
+	configEnv.BindEnv("log", "bulk", "rate")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -89,6 +91,16 @@ func main() {
 		DishashJoiners:		dishashJoiners,
 	}
 
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
+
+	// Initializing filter.
 	filter := common.NewFilter(filterConfig)
 	filter.Run()
 	filter.Stop()

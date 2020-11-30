@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/utils"
+
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/logger"
+	log "github.com/sirupsen/logrus"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -24,6 +25,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("dishash", "filters")
 	configEnv.BindEnv("botusers", "filters")
+	configEnv.BindEnv("log", "bulk", "rate")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -97,6 +99,16 @@ func main() {
 		BotUsersFilters:	botUsersFilters,
 	}
 
+	// Initializing custom logger.
+	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	
+	if logBulkRate == 0 {
+		log.Fatalf("LogBulkRate variable missing")
+	}
+
+	logb.Instance().SetBulkRate(logBulkRate)
+
+	// Initializing joiner.
 	joiner := common.NewJoiner(joinerConfig)
 	joiner.Run()
 	joiner.Stop()

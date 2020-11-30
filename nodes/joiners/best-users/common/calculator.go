@@ -1,11 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/best-users/logger"
 )
 
 type Calculator struct {
@@ -26,28 +28,30 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) AddBestUser(rawData string) {
-	var userData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &userData)
+func (calculator *Calculator) AddBestUser(bulkNumber int, rawBestUserDataBulk string) {
+	var bestUserDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawBestUserDataBulk), &bestUserDataList)
 
-	calculator.mutex1.Lock()
+	for _, bestUserData := range bestUserDataList {
+		calculator.mutex1.Lock()
+		calculator.data1[bestUserData.UserId] = 1
+		calculator.mutex1.Unlock()
+	}
 
-	calculator.data1[userData.UserId] = userData.Reviews
-	log.Infof("User %s 5-stars reviews stored at %d.", userData.UserId, userData.Reviews)
-
-	calculator.mutex1.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Best user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) AddUser(rawData string) {
-	var userData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &userData)
+func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
+	var userDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
-	calculator.mutex2.Lock()
+	for _, userData := range userDataList {
+		calculator.mutex2.Lock()
+		calculator.data2[userData.UserId] = userData.Reviews
+		calculator.mutex2.Unlock()
+	}
 
-	calculator.data2[userData.UserId] = userData.Reviews
-	log.Infof("User %s total reviews stored at %d.", userData.UserId, userData.Reviews)
-
-	calculator.mutex2.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Common user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
@@ -72,7 +76,6 @@ func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
 				log.Debugf("User %s had %d reviews but only %d where rated with 5 stars.", userId, totalReviews, bestReviews)
 			}
 
-
 			calculator.mutex1.Lock()
 			delete(calculator.data1, userId);
 			calculator.mutex1.Unlock()
@@ -83,7 +86,6 @@ func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
 			
 		} else {
 			calculator.mutex2.Unlock()
-			log.Tracef("Still no user join match for user %s.", userId)
 		}
 
 		calculator.mutex1.Lock()

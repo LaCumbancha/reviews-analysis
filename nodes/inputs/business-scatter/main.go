@@ -101,7 +101,7 @@ func main() {
 	}
 
 	// Initializing custom logger.
-	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
+	logBulkRate := int(utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")/5)
 	
 	if logBulkRate == 0 {
 		log.Fatalf("LogBulkRate variable missing")

@@ -3,11 +3,11 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
 )
 
 type AggregatorConfig struct {
@@ -17,6 +17,7 @@ type AggregatorConfig struct {
 	InputTopic			string
 	HashAggregators		int
 	DishashFilters		int
+	OutputBulkSize		int
 }
 
 type Aggregator struct {
@@ -48,7 +49,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
-		calculator:		NewCalculator(),
+		calculator:		NewCalculator(config.OutputBulkSize),
 		inputDirect:	inputDirect,
 		outputQueue:	outputQueue,
 		endSignals:		config.HashAggregators,
@@ -66,19 +67,21 @@ func (aggregator *Aggregator) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		bulkCounter := 0
 		for message := range aggregator.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("Distinct hashed texts data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func() {
-					aggregator.calculator.Aggregate(messageBody)
+				go func(bulkNumber int) {
+					aggregator.calculator.Aggregate(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(bulkCounter)
 			}
 		}
 	}()
@@ -86,9 +89,16 @@ func (aggregator *Aggregator) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
+    outputBulkNumber := 0
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
+		outputBulkNumber++
+    	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
+
 		wg.Add(1)
-		go aggregator.sendAggregatedData(aggregatedData, &wg)
+		go func(bulkNumber int) {
+			aggregator.outputQueue.PublishData(bulkNumber, aggregatedData)
+			wg.Done()
+		}(outputBulkNumber)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -105,23 +115,15 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == aggregator.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.DistinctHashesData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(aggregatedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
-	} else {
-		aggregator.outputQueue.PublishData(data)
-	}
-	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {

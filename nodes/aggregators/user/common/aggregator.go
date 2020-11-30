@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/user/rabbitmq"
 	
@@ -19,6 +18,7 @@ type AggregatorConfig struct {
 	UserMappers 		int
 	UserFilters 		int
 	BotUserFilters		int
+	OutputBulkSize		int
 }
 
 type Aggregator struct {
@@ -52,7 +52,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,
-		calculator:		NewCalculator(),
+		calculator:		NewCalculator(config.OutputBulkSize),
 		inputDirect:	inputDirect,
 		outputQueue1:	outputQueue1,
 		outputQueue2:	outputQueue2,
@@ -79,7 +79,7 @@ func (aggregator *Aggregator) Run() {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Weekday data bulk #%d received.", bulkCounter), bulkCounter)
+				logb.Instance().Infof(fmt.Sprintf("User data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
 				go func(bulkNumber int) {
@@ -93,9 +93,17 @@ func (aggregator *Aggregator) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
+    outputBulkNumber := 0
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
+		outputBulkNumber++
+    	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
+
 		wg.Add(1)
-		go aggregator.sendAggregatedData(aggregatedData, &wg)
+		go func(bulkNumber int) {
+			aggregator.outputQueue1.PublishData(bulkNumber, aggregatedData)
+			aggregator.outputQueue2.PublishData(bulkNumber, aggregatedData)
+			wg.Done()
+		}(outputBulkNumber)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -113,24 +121,15 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == aggregator.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.UserData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(aggregatedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
-	} else {
-		aggregator.outputQueue1.PublishData(data)
-		aggregator.outputQueue2.PublishData(data)
-	}
-	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {

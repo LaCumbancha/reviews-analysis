@@ -26,10 +26,10 @@ func NewCalculator() *Calculator {
 }
 
 func (calculator *Calculator) status(bulkNumber int) string {
-	statusResponse := fmt.Sprintf("Status by bulk $%d: ", bulkNumber)
+	statusResponse := fmt.Sprintf("Status by bulk #%d: ", bulkNumber)
 
 	for weekday, reviews := range calculator.data {
-		statusResponse += strings.ToUpper(fmt.Sprintf("%s (%d) ; ", weekday, reviews))
+		statusResponse += strings.ToUpper(fmt.Sprintf("%s (%d) ; ", weekday[0:3], reviews))
 	}
 
 	return statusResponse[0:len(statusResponse)-3]

@@ -115,7 +115,9 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 	signalsReceived := len(endSignals)
 	mutex.Unlock()
 
-	log.Infof("End-Message #%d received.", signalsReceived)
+	if newSignal {
+		log.Infof("End-Message #%d received.", signalsReceived)
+	}
 
 	// Waiting for the total needed End-Signals to send the own End-Message.
 	if (signalsReceived == aggregator.endSignals) && newSignal {

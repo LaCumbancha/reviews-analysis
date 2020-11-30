@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 )
@@ -39,21 +40,27 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(data []byte, userId string) {
-	err := queue.channel.Publish(
-		"",     							// Exchange
-		queue.name, 						// Routing Key
-		false,  							// Mandatory
-		false,  							// Immediate
-		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:        	data,
-		})
+func (queue *RabbitOutputQueue) PublishData(userData UserData) {
+	outputData, err := json.Marshal(userData)
 
 	if err != nil {
-		log.Errorf("Error sending user %s reviews data (%s) to queue %s. Err: '%s'", userId, data, queue.name, err)
+		log.Errorf("Error generating Json from (%s). Err: '%s'", userData, err)
 	} else {
-		log.Debugf("User %s reviews data (%s) sent to queue %s.", userId, data, queue.name)
+		err = queue.channel.Publish(
+			"",     							// Exchange
+			queue.name, 						// Routing Key
+			false,  							// Mandatory
+			false,  							// Immediate
+			amqp.Publishing{
+				ContentType: 	"text/plain",
+				Body:        	outputData,
+			})
+
+		if err != nil {
+			log.Errorf("Error sending user %s reviews data (%s) to queue %s. Err: '%s'", userData.UserId, outputData, queue.name, err)
+		} else {
+			log.Debugf("User %s reviews data (%s) sent to queue %s.", userData.UserId, outputData, queue.name)
+		}
 	}
 }
 
