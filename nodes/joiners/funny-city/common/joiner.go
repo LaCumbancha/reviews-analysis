@@ -144,10 +144,10 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     	log.Warnf("No join matches to send.")
     }
 
-    joinWg.Add(1)
     for _, joinedData := range joinMatches {
     	outputBulks++
 
+    	joinWg.Add(1)
     	go func(bulkNumber int, bulk []rabbitmq.FunnyCityData) {
     		joiner.outputDirect.PublishData(bulkNumber, bulk)
     		joinWg.Done()

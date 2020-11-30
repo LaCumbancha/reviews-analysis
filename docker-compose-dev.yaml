@@ -18,6 +18,8 @@ services:
     image: best_users_prettier:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -37,6 +39,8 @@ services:
     image: bestuser_joiner:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -75,6 +79,8 @@ services:
     image: bot_users_prettier:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -94,6 +100,8 @@ services:
     image: botuser_filter:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -113,6 +121,8 @@ services:
     image: botuser_joiner:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -151,6 +161,8 @@ services:
     image: dishash_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -169,6 +181,8 @@ services:
     image: dishash_filter:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -258,6 +272,7 @@ services:
     - FUNCITFIL_INSTANCE=0
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
     - FUNCITFIL_RABBITMQ_PORT=5672
+    - FUNCITFIL_TOP_SIZE=10
     - FUNCITFIL_FUNCIT_AGGREGATORS=1
     image: funcit_filter:latest
     links:
@@ -303,6 +318,8 @@ services:
     image: hash_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -321,6 +338,8 @@ services:
     image: hash_mapper:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -399,6 +418,8 @@ services:
     image: stars_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -417,6 +438,8 @@ services:
     image: stars_filter:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -435,6 +458,8 @@ services:
     image: stars_mapper:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -446,6 +471,7 @@ services:
     environment:
     - FUNCITPRE_RABBITMQ_IP=rabbitmq
     - FUNCITPRE_RABBITMQ_PORT=5672
+    - FUNCITPRE_TOP_SIZE=10
     - FUNCITPRE_FUNCIT_FILTERS=1
     image: top_funniest_cities_prettier:latest
     links:
@@ -466,6 +492,8 @@ services:
     image: top_users_prettier:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -488,6 +516,8 @@ services:
     image: user_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -508,6 +538,8 @@ services:
     image: user_filter:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -526,6 +558,8 @@ services:
     image: user_mapper:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -544,6 +578,8 @@ services:
     image: weekday_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -560,6 +596,8 @@ services:
     image: weekday_histogram_prettier:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -578,6 +616,8 @@ services:
     image: weekday_mapper:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure

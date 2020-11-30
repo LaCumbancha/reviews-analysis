@@ -17,7 +17,7 @@ else:
 	business_data = '/data/business.json'
 
 def config_logs(*flows, service):
-	if !any(map(lambda flow: input_yaml[flow], flows)):
+	if not any(map(lambda flow: input_yaml[flow], flows)):
 		service['logging'] = {'driver': 'none'}
 
 file = {}
@@ -94,7 +94,7 @@ file['services']['top_funniest_cities_prettier'] = {
 	'image': 'top_funniest_cities_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['FUNCITPRE_RABBITMQ_IP=rabbitmq', 'FUNCITPRE_RABBITMQ_PORT=5672', f'FUNCITPRE_FUNCIT_FILTERS={input_yaml["funcit_filters"]}'],
+	'environment': ['FUNCITPRE_RABBITMQ_IP=rabbitmq', 'FUNCITPRE_RABBITMQ_PORT=5672', f'FUNCITPRE_TOP_SIZE={input_yaml["funniest_cities_top_size"]}', f'FUNCITPRE_FUNCIT_FILTERS={input_yaml["funcit_filters"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(FUNCITPRE_DEPS),
 	'networks': ['testing_net'],
@@ -109,7 +109,7 @@ for idx in range(0, input_yaml['funcit_filters']):
 		'image': 'funcit_filter:latest',
 		'entrypoint': '/filter',
 		'restart': 'on-failure',
-		'environment': [f'FUNCITFIL_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITFIL_INSTANCE={idx}', 'FUNCITFIL_RABBITMQ_IP=rabbitmq', 'FUNCITFIL_RABBITMQ_PORT=5672', f'FUNCITFIL_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
+		'environment': [f'FUNCITFIL_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITFIL_INSTANCE={idx}', 'FUNCITFIL_RABBITMQ_IP=rabbitmq', 'FUNCITFIL_RABBITMQ_PORT=5672', f'FUNCITFIL_TOP_SIZE={input_yaml["funniest_cities_top_size"]}', f'FUNCITFIL_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITFIL_DEPS),
 		'networks': ['testing_net'],

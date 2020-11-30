@@ -13,12 +13,13 @@ type FilterConfig struct {
 	RabbitIp		string
 	RabbitPort		string
 	FuncitFilters	int
+	TopSize			int
 }
 
 type Filter struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
-	builder		*Builder
+	builder			*Builder
 	inputQueue 		*rabbitmq.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals		int
@@ -44,7 +45,7 @@ func NewFilter(config FilterConfig) *Filter {
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
-		builder:		NewBuilder(),
+		builder:		NewBuilder(config.TopSize),
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
 		endSignals:		config.FuncitFilters,

@@ -23,6 +23,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
 	configEnv.BindEnv("funcit", "aggregators")
+	configEnv.BindEnv("top", "size")
 	configEnv.BindEnv("log", "bulk", "rate")
 	configEnv.BindEnv("config", "file")
 
@@ -76,11 +77,18 @@ func main() {
 		log.Fatalf("FuncitAggregators variable missing")
 	}
 
+	topSize := utils.GetConfigInt(configEnv, configFile, "top_size")
+	
+	if topSize == 0 {
+		log.Fatalf("TopSize variable missing")
+	}
+
 	filterConfig := common.FilterConfig {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		FuncitAggregators:	funcitAggregators,
+		TopSize:			topSize,
 	}
 
 	// Initializing custom logger.

@@ -13,12 +13,14 @@ import (
 type Builder struct {
 	data 			[]rabbitmq.FunnyCityData
 	mutex 			*sync.Mutex
+	topSize			int
 }
 
-func NewBuilder() *Builder {
+func NewBuilder(topSize int) *Builder {
 	builder := &Builder {
 		data:		[]rabbitmq.FunnyCityData{},
 		mutex:		&sync.Mutex{},
+		topSize:	topSize,
 	}
 
 	return builder
@@ -42,9 +44,9 @@ func (builder *Builder) BuildTopTen() string {
 
 	var topTenCities []rabbitmq.FunnyCityData
 	funnyCities := len(builder.data)
-	if (funnyCities > 10) {
-		log.Infof("%d cities where discarded due to not being funny enoguh.", funnyCities - 10)
-		topTenCities = builder.data[0:9]
+	if (funnyCities > builder.topSize) {
+		log.Infof("%d cities where discarded due to not being funny enoguh.", funnyCities - builder.topSize)
+		topTenCities = builder.data[0:builder.topSize]
 	} else {
 		log.Infof("They where just %d cities with a funniness higher than 0!", funnyCities)
 		topTenCities = builder.data[0:funnyCities]

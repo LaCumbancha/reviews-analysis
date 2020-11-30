@@ -14,12 +14,14 @@ import (
 type Calculator struct {
 	data 			[]rabbitmq.FunnyCityData
 	mutex 			*sync.Mutex
+	topSize			int
 }
 
-func NewCalculator() *Calculator {
+func NewCalculator(topSize int) *Calculator {
 	calculator := &Calculator {
 		data:		[]rabbitmq.FunnyCityData{},
 		mutex:		&sync.Mutex{},
+		topSize:	topSize,
 	}
 
 	return calculator
@@ -44,9 +46,9 @@ func (calculator *Calculator) RetrieveTopTen() []rabbitmq.FunnyCityData {
 	})
 
 	funnyCities := len(calculator.data)
-	if (funnyCities > 10) {
-		log.Infof("%d cities where discarded due to not being funny enoguh.", funnyCities - 10)
-		return calculator.data[0:9]
+	if (funnyCities > calculator.topSize) {
+		log.Infof("%d cities where discarded due to not being funny enoguh.", funnyCities - calculator.topSize)
+		return calculator.data[0:calculator.topSize]
 	} else {
 		log.Infof("They where just %d cities with a funniness higher than 0!", funnyCities)
 		return calculator.data[0:funnyCities]

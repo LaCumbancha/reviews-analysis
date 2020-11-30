@@ -29,6 +29,7 @@ top_users_logging: false
 # System specs.
 users_min_reviews: 50
 bots_min_reviews: 5
+funniest_cities_top_size: 10
 
 # Funniest cities flow.
 citbiz_mappers: 1

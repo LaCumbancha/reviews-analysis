@@ -15,6 +15,7 @@ type FilterConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	FuncitAggregators	int
+	TopSize				int
 }
 
 type Filter struct {
@@ -46,7 +47,7 @@ func NewFilter(config FilterConfig) *Filter {
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
-		calculator:		NewCalculator(),
+		calculator:		NewCalculator(config.TopSize),
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,
 		endSignals:		config.FuncitAggregators,
