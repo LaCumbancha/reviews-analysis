@@ -64,30 +64,24 @@ func (aggregator *Aggregator) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
-	bulkMutex := &sync.Mutex{}
-	bulkCounter := 0
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		bulkCounter := 0
 		for message := range aggregator.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				bulkMutex.Lock()
 				bulkCounter++
-				innerBulk := bulkCounter
-				bulkMutex.Unlock()
-
-				logb.Instance().Infof(fmt.Sprintf("Weekday data bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Weekday data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
 				go func(bulkNumber int) {
 					aggregator.calculator.Aggregate(bulkNumber, messageBody)
 					wg.Done()
-				}(innerBulk)
+				}(bulkCounter)
 			}
 		}
 	}()

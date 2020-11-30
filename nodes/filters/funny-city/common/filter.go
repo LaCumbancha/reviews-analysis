@@ -5,9 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/logger"
 )
 
 type FilterConfig struct {
@@ -64,19 +65,21 @@ func (filter *Filter) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		bulkCounter := 0
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("Funcit data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func() {
-					filter.calculator.Save(messageBody)
+				go func(bulkNumber int) {
+					filter.calculator.Save(bulkNumber, messageBody)
 					wg.Done()
-				}()
+				}(bulkCounter)
 			}
 		}
 	}()

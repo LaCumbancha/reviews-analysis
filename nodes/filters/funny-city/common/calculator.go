@@ -1,12 +1,14 @@
 package common
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/logger"
 )
 
 type Calculator struct {
@@ -23,15 +25,17 @@ func NewCalculator() *Calculator {
 	return calculator
 }
 
-func (calculator *Calculator) Save(rawData string) {
-	var funnyCity rabbitmq.FunnyCityData
-	json.Unmarshal([]byte(rawData), &funnyCity)
+func (calculator *Calculator) Save(bulkNumber int, rawFuncitDataList string) {
+	var funcitDataList []rabbitmq.FunnyCityData
+	json.Unmarshal([]byte(rawFuncitDataList), &funcitDataList)
 
-	calculator.mutex.Lock()
-	calculator.data = append(calculator.data, funnyCity)
-	calculator.mutex.Unlock()
+	for _, funcitData := range funcitDataList {
+		calculator.mutex.Lock()
+		calculator.data = append(calculator.data, funcitData)
+		calculator.mutex.Unlock()
+	}
 
-	log.Infof("City %s saved with funniness at %d.", funnyCity.City, funnyCity.Funny)
+	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d funny cities stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveTopTen() []rabbitmq.FunnyCityData {

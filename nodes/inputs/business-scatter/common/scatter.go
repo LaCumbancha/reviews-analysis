@@ -66,7 +66,7 @@ func (scatter *Scatter) Run() {
 	go scatter.retrieveBusinesses(&wg)
 
 	bulkMutex := &sync.Mutex{}
-	bulkNumber := 1
+	bulkNumber := 0
 
 	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
 	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
@@ -75,8 +75,8 @@ func (scatter *Scatter) Run() {
 		go func() {
 			for bulk := range scatter.innerChannel {
 				bulkMutex.Lock()
-				innerBulk := bulkNumber
 				bulkNumber++
+				innerBulk := bulkNumber
 				bulkMutex.Unlock()
 
     			scatter.outputQueue.PublishBulk(innerBulk, bulk)

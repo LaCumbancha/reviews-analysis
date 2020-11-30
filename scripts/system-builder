@@ -3,7 +3,6 @@
 import sys
 import yaml
 
-
 input_yaml_file = open("./scripts/system-config.yaml")
 input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
@@ -83,7 +82,6 @@ file['services']['sink'] = {
 	'links': ['rabbitmq'],
 	'depends_on': list(SINK_DEPS),
 	'networks': ['testing_net'],
-	'logging': { 'driver': 'none' }
 }
 
 ## Funniest Cities flow
@@ -97,7 +95,6 @@ file['services']['top_funniest_cities_prettier'] = {
 	'links': ['rabbitmq'],
 	'depends_on': list(FUNCITPRE_DEPS),
 	'networks': ['testing_net'],
-	'logging': { 'driver': 'none' }
 }
 
 for idx in range(0, input_yaml['funcit_filters']):
@@ -112,7 +109,6 @@ for idx in range(0, input_yaml['funcit_filters']):
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITFIL_DEPS),
 		'networks': ['testing_net'],
-		'logging': { 'driver': 'none' }
 	}
 
 for idx in range(0, input_yaml['funcit_aggregators']):
@@ -123,11 +119,10 @@ for idx in range(0, input_yaml['funcit_aggregators']):
 		'image': 'funcit_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': [f'FUNCITAGG_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITAGG_INSTANCE={idx}', 'FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_filters"]}', f'FUNCITAGG_INPUT_TOPIC={idx}'],
+		'environment': [f'FUNCITAGG_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITAGG_INSTANCE={idx}', 'FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_filters"]}', f'FUNCITAGG_INPUT_TOPIC={idx}', f'FUNCITAGG_OUTPUT_BULK_SIZE={input_yaml["funcitagg_bulk_size"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITAGG_DEPS),
 		'networks': ['testing_net'],
-		'logging': { 'driver': 'none' }
 	}
 
 for idx in range(0, input_yaml['funcit_joiners']):
@@ -139,7 +134,7 @@ for idx in range(0, input_yaml['funcit_joiners']):
 		'image': 'funcit_joiner:latest',
 		'entrypoint': '/joiner',
 		'restart': 'on-failure',
-		'environment': [f'FUNCITJOIN_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITJOIN_INSTANCE={idx}', 'FUNCITJOIN_RABBITMQ_IP=rabbitmq', 'FUNCITJOIN_RABBITMQ_PORT=5672', f'FUNCITJOIN_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}', f'FUNCITJOIN_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}', f'FUNCITJOIN_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}', f'FUNCITJOIN_INPUT_TOPIC={idx}'],
+		'environment': [f'FUNCITJOIN_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITJOIN_INSTANCE={idx}', 'FUNCITJOIN_RABBITMQ_IP=rabbitmq', 'FUNCITJOIN_RABBITMQ_PORT=5672', f'FUNCITJOIN_FUNBIZ_AGGREGATORS={input_yaml["funbiz_aggregators"]}', f'FUNCITJOIN_CITBIZ_MAPPERS={input_yaml["citbiz_mappers"]}', f'FUNCITJOIN_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}', f'FUNCITJOIN_INPUT_TOPIC={idx}', f'FUNCITJOIN_OUTPUT_BULK_SIZE={input_yaml["funcitjoin_bulk_size"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITJOIN_DEPS),
 		'networks': ['testing_net']

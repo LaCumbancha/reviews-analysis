@@ -1,8 +1,12 @@
 package rabbitmq
 
 import (
+	"fmt"
+	"encoding/json"
 	"github.com/streadway/amqp"
+
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-city/logger"
 )
 
 type RabbitOutputQueue struct {
@@ -41,25 +45,32 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(data []byte) {
-	err := queue.channel.Publish(
-		"",     							// Exchange
-		queue.name, 						// Routing Key
-		false,  							// Mandatory
-		false,  							// Immediate
-		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:        	data,
-		})
-
+func (queue *RabbitOutputQueue) PublishData(bulkNumber int, funcitDataList []FunnyCityData) {
+	data, err := json.Marshal(funcitDataList)
 	if err != nil {
-		log.Errorf("Error sending aggregated data (%s) to queue %s. Err: '%s'", data, queue.name, err)
+		log.Errorf("Error generating Json from mapped bulk #%d. Err: '%s'", bulkNumber, err)
 	} else {
-		log.Debugf("Aggregated data (%s) sent to queue %s.", data, queue.name)
+		err := queue.channel.Publish(
+			"",     							// Exchange
+			queue.name, 						// Routing Key
+			false,  							// Mandatory
+			false,  							// Immediate
+			amqp.Publishing{
+				ContentType: 	"text/plain",
+				Body:        	data,
+			},
+		)
+
+		if err != nil {
+			log.Errorf("Error sending mapped bulk #%d to queue %s. Err: '%s'", bulkNumber, queue.name, err)
+		} else {
+			logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
+		}
 	}
 }
 
 func (queue *RabbitOutputQueue) PublishFinish() {
+	errors := false
 	for idx := 1; idx <= queue.endSignals; idx++ {
 		err := queue.channel.Publish(
   			"", 							// Exchange
@@ -74,8 +85,10 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 
 		if err != nil {
 			log.Errorf("Error sending End-Message #%d to queue %s. Err: '%s'", idx, queue.name, err)
-		} else {
-			log.Infof("End-Message #%d sent to queue %s.", idx, queue.name)
 		}
+	}
+
+	if !errors {
+		log.Infof("End-Message sent to queue %s.", queue.name)
 	}
 }

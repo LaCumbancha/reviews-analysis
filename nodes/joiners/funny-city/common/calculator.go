@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/rabbitmq"
 
-	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/logger"
 )
 
@@ -15,14 +14,16 @@ type Calculator struct {
 	data2 			map[string]string
 	mutex1 			*sync.Mutex
 	mutex2 			*sync.Mutex
+	maxBulkSize		int
 }
 
-func NewCalculator() *Calculator {
+func NewCalculator(bulkSize int) *Calculator {
 	calculator := &Calculator {
-		data1:		make(map[string]int),
-		data2:		make(map[string]string),
-		mutex1:		&sync.Mutex{},
-		mutex2:		&sync.Mutex{},
+		data1:			make(map[string]int),
+		data2:			make(map[string]string),
+		mutex1:			&sync.Mutex{},
+		mutex2:			&sync.Mutex{},
+		maxBulkSize:	bulkSize,
 	}
 
 	return calculator
@@ -54,9 +55,11 @@ func (calculator *Calculator) AddCityBusiness(bulkNumber int, rawCitbizDataBulk 
 	logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveMatches() []rabbitmq.FunnyCityData {
-	var list []rabbitmq.FunnyCityData
+func (calculator *Calculator) RetrieveMatches() [][]rabbitmq.FunnyCityData {
+	var bulkedList [][]rabbitmq.FunnyCityData
+	var bulk []rabbitmq.FunnyCityData
 
+	actualBulk := 0
 	calculator.mutex1.Lock()
 	for businessId, funny := range calculator.data1 {
 		calculator.mutex1.Unlock()
@@ -73,16 +76,27 @@ func (calculator *Calculator) RetrieveMatches() []rabbitmq.FunnyCityData {
 			delete(calculator.data1, businessId);
 			calculator.mutex1.Unlock()
 
-			log.Infof("City join match for business %s (from city %s with funniness %d).", businessId, city, funny)
-			list = append(list, joinedData)
+			bulk = append(bulk, joinedData)
+			actualBulk++
+
+			if actualBulk == calculator.maxBulkSize {
+				bulkedList = append(bulkedList, bulk)
+				bulk = make([]rabbitmq.FunnyCityData, 0)
+				actualBulk = 0
+			}
+
 		} else {
 			calculator.mutex2.Unlock()
-			log.Tracef("Still no city join match for businessId %s.", businessId)
 		}
 
 		calculator.mutex1.Lock()
 	}
 
 	calculator.mutex1.Unlock()
-	return list
+
+	if len(bulk) != 0 {
+		bulkedList = append(bulkedList, bulk)
+	}
+
+	return bulkedList
 }

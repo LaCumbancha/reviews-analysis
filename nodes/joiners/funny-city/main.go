@@ -27,6 +27,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("citbiz", "mappers")
 	configEnv.BindEnv("funcit", "aggregators")
 	configEnv.BindEnv("log", "bulk", "rate")
+	configEnv.BindEnv("output", "bulk", "size")
 	configEnv.BindEnv("config", "file")
 
 	// Read config file if it's present
@@ -97,6 +98,12 @@ func main() {
 		log.Fatalf("FuncitAggregators variable missing")
 	}
 
+	outputBulkSize := utils.GetConfigInt(configEnv, configFile, "output_bulk_size")
+	
+	if outputBulkSize == 0 {
+		log.Fatalf("OutputBulkSize variable missing")
+	}
+
 	joinerConfig := common.JoinerConfig {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
@@ -105,6 +112,7 @@ func main() {
 		FunbizAggregators:	funbizAggregators,
 		CitbizMappers:		citbizMappers,
 		FuncitAggregators:	funcitAggregators,
+		OutputBulkSize:		outputBulkSize,
 	}
 
 	// Initializing custom logger.

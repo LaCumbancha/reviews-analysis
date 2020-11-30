@@ -67,6 +67,7 @@ func (direct *RabbitOutputDirect) PublishBulk(bulkNumber int, bulkData string) {
 }
 
 func (direct *RabbitOutputDirect) PublishFinish() {
+	errors := false
 	for _, partition := range PARTITIONER_VALUES {
 		for idx := 0 ; idx < direct.endSignalsMap[partition]; idx++ {
 			err := direct.channel.Publish(
@@ -81,10 +82,13 @@ func (direct *RabbitOutputDirect) PublishFinish() {
 	  		)
 
 			if err != nil {
+				errors = true
 				log.Errorf("Error sending End-Message #%d to direct-exchange %s (partition %s). Err: '%s'", idx+1, direct.exchange, partition, err)
-			} else {
-				log.Infof("End-Message #%d sent to direct-exchange %s (partition %s).", idx+1, direct.exchange, partition)
 			}
+		}
+
+		if !errors {
+			log.Infof("End-Message sent to direct-exchange %s (partition %s).", direct.exchange, partition)
 		}
 	}
 }

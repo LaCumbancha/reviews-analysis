@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/funny-city/rabbitmq"
 
@@ -22,6 +21,7 @@ type JoinerConfig struct {
 	FunbizAggregators 	int
 	CitbizMappers		int
 	FuncitAggregators	int
+	OutputBulkSize		int
 }
 
 type Joiner struct {
@@ -56,7 +56,7 @@ func NewJoiner(config JoinerConfig) *Joiner {
 	joiner := &Joiner {
 		connection:		conn,
 		channel:		ch,
-		calculator:		NewCalculator(),
+		calculator:		NewCalculator(config.OutputBulkSize),
 		inputDirect1:	inputDirect1,
 		inputDirect2:	inputDirect2,
 		outputDirect:	outputDirect,
@@ -77,14 +77,13 @@ func (joiner *Joiner) Run() {
 	var inputWg sync.WaitGroup
 	var joinWg sync.WaitGroup
 
-	bulkMutex1 := &sync.Mutex{}
-	bulkMutex2 := &sync.Mutex{}
-	bulkCounter1 := 0
-	bulkCounter2 := 0
+	outputBulksMutex := &sync.Mutex{}
+	outputBulks := 0
 
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
 	go func() {
+		bulkCounter1 := 0
 		log.Infof("Starting to listen for funny-business data.")
 		for message := range joiner.inputDirect1.ConsumeData() {
 			messageBody := string(message.Body)
@@ -92,19 +91,15 @@ func (joiner *Joiner) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
-				bulkMutex1.Lock()
 				bulkCounter1++
-				innerBulk := bulkCounter1
-				bulkMutex1.Unlock()
-
-				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter1), bulkCounter1)
 
 				inputWg.Add(1)
 				go func(bulkNumber int) {
 					joiner.calculator.AddFunnyBusiness(bulkNumber, messageBody)
-					joiner.fetchJoinMatches(&joinWg)
+					joiner.sendJoinMatches(&outputBulks, outputBulksMutex, &joinWg)
 					inputWg.Done()
-				}(innerBulk)
+				}(bulkCounter1)
 			}
 		}
 	}()
@@ -112,6 +107,7 @@ func (joiner *Joiner) Run() {
 	// Receiving messages from the city-business flow.
 	inputWg.Add(1)
 	go func() {
+		bulkCounter2 := 0
 		log.Infof("Starting to listen for city-business data.")
 		for message := range joiner.inputDirect2.ConsumeData() {
 			messageBody := string(message.Body)
@@ -119,19 +115,15 @@ func (joiner *Joiner) Run() {
 			if rabbitmq.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
-				bulkMutex2.Lock()
 				bulkCounter2++
-				innerBulk := bulkCounter2
-				bulkMutex2.Unlock()
-
-				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", bulkCounter2), bulkCounter2)
 
 				inputWg.Add(1)
 				go func(bulkNumber int) {
 					joiner.calculator.AddCityBusiness(bulkNumber, messageBody)
-					joiner.fetchJoinMatches(&joinWg)
+					joiner.sendJoinMatches(&outputBulks, outputBulksMutex, &joinWg)
 					inputWg.Done()
-				}(innerBulk)
+				}(bulkCounter2)
 			}
 		}
 	}()
@@ -140,7 +132,7 @@ func (joiner *Joiner) Run() {
     inputWg.Wait()
 
     // Processing last join matches.
-    joiner.fetchJoinMatches(&joinWg)
+    joiner.sendJoinMatches(&outputBulks, outputBulksMutex, &joinWg)
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all joins are processed and sent.
     joinWg.Wait()
@@ -149,7 +141,7 @@ func (joiner *Joiner) Run() {
     joiner.outputDirect.PublishFinish()
 }
 
-func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
+func (joiner *Joiner) sendJoinMatches(bulksSent *int, bulksMutex *sync.Mutex, joinWg *sync.WaitGroup) {
 	joinMatches := joiner.calculator.RetrieveMatches()
 
 	if len(joinMatches) == 0 {
@@ -157,9 +149,13 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     }
 
     for _, joinedData := range joinMatches {
+    	bulksMutex.Lock()
+    	*bulksSent++
+    	innerBulk := *bulksSent
+    	bulksMutex.Unlock()
+
     	joinWg.Add(1)
-    	log.Infof("Starting to send joined funny city data (business %s).", joinedData.City)
-		go joiner.sendJoinedData(joinedData, joinWg)
+    	go joiner.outputDirect.PublishData(innerBulk, joinedData)
 	}
 }
 
@@ -177,16 +173,6 @@ func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedE
 		log.Infof("All End-Messages from the %s flow were received.", flow)
 		wg.Done()
 	}
-}
-
-func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.FunnyCityData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(joinedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", joinedData, err)
-	} else {
-		joiner.outputDirect.PublishData(data, joinedData.City)
-	}
-	wg.Done()
 }
 
 func (joiner *Joiner) Stop() {

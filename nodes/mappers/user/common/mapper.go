@@ -62,30 +62,24 @@ func (mapper *Mapper) Run() {
 	var endSignalsMutex = &sync.Mutex{}
 	var endSignals = make(map[string]int)
 
-	bulkMutex := &sync.Mutex{}
-	bulkCounter := 0
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		bulkCounter := 0
 		for message := range mapper.inputDirect.ConsumeReviews() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				bulkMutex.Lock()
 				bulkCounter++
-				innerBulk := bulkCounter
-				bulkMutex.Unlock()
-
-				logb.Instance().Infof(fmt.Sprintf("Review bulk #%d received.", innerBulk), innerBulk)
+				logb.Instance().Infof(fmt.Sprintf("Review bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
 				go func(bulkNumber int) {
 					mapper.processReviewsBulk(bulkNumber, messageBody)
 					wg.Done()
-				}(innerBulk)
+				}(bulkCounter)
 			}
 		}
 	}()

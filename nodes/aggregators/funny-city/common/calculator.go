@@ -1,56 +1,70 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-city/rabbitmq"
+
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/funny-city/logger"
 )
 
 type Calculator struct {
 	data 			map[string]int
 	mutex 			*sync.Mutex
+	bulkSize		int
 }
 
-func NewCalculator() *Calculator {
+func NewCalculator(bulkSize int) *Calculator {
 	calculator := &Calculator {
 		data:		make(map[string]int),
 		mutex:		&sync.Mutex{},
+		bulkSize:	bulkSize,
 	}
 
 	return calculator
 }
 
-func (calculator *Calculator) Aggregate(rawData string) {
-	var funnyCity rabbitmq.FunnyCityData
-	json.Unmarshal([]byte(rawData), &funnyCity)
+func (calculator *Calculator) Aggregate(bulkNumber int, rawFuncitDataList string) {
+	var funcitDataList []rabbitmq.FunnyCityData
+	json.Unmarshal([]byte(rawFuncitDataList), &funcitDataList)
 
-	calculator.mutex.Lock()
+	for _, funcitData := range funcitDataList {
 
-	if value, found := calculator.data[funnyCity.City]; found {
-		newFunny := value + funnyCity.Funny
-	    calculator.data[funnyCity.City] = newFunny
-	    log.Infof("%s funniness incremented to %d.", funnyCity.City, newFunny)
-	} else {
-		calculator.data[funnyCity.City] = funnyCity.Funny
-		log.Infof("Initialized %s funniness at %d.", funnyCity.City, funnyCity.Funny)
+		calculator.mutex.Lock()
+		if value, found := calculator.data[funcitData.City]; found {
+			newAmount := value + funcitData.Funny
+		    calculator.data[funcitData.City] = newAmount
+		} else {
+			calculator.data[funcitData.City] = funcitData.Funny
+		}
+		calculator.mutex.Unlock()
+
 	}
 
-	calculator.mutex.Unlock()
+	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d funny cities stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveData() []rabbitmq.FunnyCityData {
-	var list []rabbitmq.FunnyCityData
+func (calculator *Calculator) RetrieveData() [][]rabbitmq.FunnyCityData {
+	bulk := make([]rabbitmq.FunnyCityData, 0)
+	bulkedList := make([][]rabbitmq.FunnyCityData, 0)
 
+	actualBulk := 0
 	for city, funny := range calculator.data {
-		log.Infof("%s funniness aggregated: %d.", city, funny)
-		aggregatedData := rabbitmq.FunnyCityData {
-			City:		city,
-			Funny:			funny,
+		actualBulk++
+		aggregatedData := rabbitmq.FunnyCityData { City: city, Funny: funny }
+		bulk = append(bulk, aggregatedData)
+
+		if actualBulk == calculator.bulkSize {
+			bulkedList = append(bulkedList, bulk)
+			bulk = make([]rabbitmq.FunnyCityData, 0)
+			actualBulk = 0
 		}
-		list = append(list, aggregatedData)
 	}
 
-	return list
+	if len(bulk) != 0 {
+		bulkedList = append(bulkedList, bulk)
+	}
+
+	return bulkedList
 }

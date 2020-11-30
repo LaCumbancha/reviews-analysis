@@ -70,6 +70,7 @@ func (queue *RabbitOutputQueue) PublishData(bulkNumber int, starsDataList []Star
 }
 
 func (queue *RabbitOutputQueue) PublishFinish() {
+	errors := false
 	for idx := 1; idx <= queue.endSignals; idx++ {
 		err := queue.channel.Publish(
   			"", 							// Exchange
@@ -83,9 +84,12 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 	  	)
 
 		if err != nil {
+			errors = true
 			log.Errorf("Error sending End-Message #%d to queue %s. Err: '%s'", idx, queue.name, err)
-		} else {
-			log.Infof("End-Message #%d sent to queue %s.", idx, queue.name)
 		}
+	}
+
+	if !errors {
+		log.Infof("End-Message sent to queue %s.", queue.name)
 	}
 }
