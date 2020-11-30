@@ -78,10 +78,10 @@ func (aggregator *Aggregator) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Stars bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					aggregator.calculator.Aggregate(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					aggregator.calculator.Aggregate(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -95,10 +95,10 @@ func (aggregator *Aggregator) Run() {
     	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
 
 		wg.Add(1)
-		go func(bulkNumber int) {
-			aggregator.outputDirect.PublishData(bulkNumber, aggregatedData)
+		go func(bulkNumber int, aggregatedBulk []rabbitmq.UserData) {
+			aggregator.outputDirect.PublishData(bulkNumber, aggregatedBulk)
 			wg.Done()
-		}(outputBulkNumber)
+		}(outputBulkNumber, aggregatedData)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.

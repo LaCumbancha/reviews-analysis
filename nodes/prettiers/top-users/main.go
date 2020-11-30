@@ -81,6 +81,7 @@ func main() {
 		UserFilters:		userFilters,
 	}
 
+	// Initializing prettier.
 	mapper := common.NewMapper(mapperConfig)
 	mapper.Run()
 	mapper.Stop()

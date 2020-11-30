@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 )
@@ -39,22 +40,27 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(data []byte) {
-	err := queue.channel.Publish(
-		"",     							// Exchange
-		queue.name, 						// Routing Key
-		false,  							// Mandatory
-		false,  							// Immediate
-		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:        	data,
-		})
-
+func (queue *RabbitOutputQueue) PublishData(messageNumber int, botUser UserData) {
+	data, err := json.Marshal(botUser)
 	if err != nil {
-		log.Errorf("Error sending joined data (%s) to queue %s. Err: '%s'", data, queue.name, err)
+		log.Errorf("Error generating Json from (%s). Err: '%s'", botUser, err)
 	} else {
-		log.Debugf("Joined data (%s) sent to queue %s.", data, queue.name)
-	}
+		err := queue.channel.Publish(
+			"",     							// Exchange
+			queue.name, 						// Routing Key
+			false,  							// Mandatory
+			false,  							// Immediate
+			amqp.Publishing{
+				ContentType: 	"text/plain",
+				Body:        	data,
+			})
+
+		if err != nil {
+			log.Errorf("Error sending bot user #%d (%s) to queue %s. Err: '%s'", messageNumber, botUser.UserId, queue.name, err)
+		} else {
+			log.Debugf("Joined bot user %d (%s) sent to queue %s.", messageNumber, botUser.UserId, queue.name)
+		}
+	}	
 }
 
 func (queue *RabbitOutputQueue) PublishFinish() {

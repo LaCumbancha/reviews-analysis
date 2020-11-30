@@ -12,10 +12,13 @@ if input_yaml['testing_mode']:
 
 	import subprocess
 	subprocess.call(['./scripts/test-builder', str(input_yaml["test_file_size"])])
-
 else: 
 	reviews_data = '/data/reviews.json'
 	business_data = '/data/business.json'
+
+def config_logs(*flows, service):
+	if !any(map(lambda flow: input_yaml[flow], flows)):
+		service['logging'] = {'driver': 'none'}
 
 file = {}
 
@@ -63,7 +66,7 @@ file['services']['rabbitmq'] = {
 	'image': 'rabbitmq:custom',
 	'ports': ['15672:15672'],
 	'networks': ['testing_net'],
-	'logging': { 'driver': 'none' },
+	'logging': {'driver': 'none'},
 	'healthcheck': {
 		'test': '''["CMD", "curl", "-f", "http://rabbitmq:156722]''',
 		'interval': '10s',
@@ -96,6 +99,7 @@ file['services']['top_funniest_cities_prettier'] = {
 	'depends_on': list(FUNCITPRE_DEPS),
 	'networks': ['testing_net'],
 }
+config_logs('funniest_cities_logging', service=file['services']['top_funniest_cities_prettier'])
 
 for idx in range(0, input_yaml['funcit_filters']):
 	container_name = f'funcit_filter{idx}'
@@ -110,6 +114,7 @@ for idx in range(0, input_yaml['funcit_filters']):
 		'depends_on': list(FUNCITFIL_DEPS),
 		'networks': ['testing_net'],
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['funcit_aggregators']):
 	container_name = f'funcit_aggregator{idx}'
@@ -124,6 +129,7 @@ for idx in range(0, input_yaml['funcit_aggregators']):
 		'depends_on': list(FUNCITAGG_DEPS),
 		'networks': ['testing_net'],
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['funcit_joiners']):
 	container_name = f'funcit_joiner{idx}'
@@ -139,6 +145,7 @@ for idx in range(0, input_yaml['funcit_joiners']):
 		'depends_on': list(FUNCITJOIN_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['citbiz_mappers']):
 	container_name = f'citbiz_mapper{idx}'
@@ -153,6 +160,7 @@ for idx in range(0, input_yaml['citbiz_mappers']):
 		'depends_on': list(CITBIZMAP_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 file['services']['biz_scatter'] = {
 	'container_name': 'biz_scatter',
@@ -165,6 +173,7 @@ file['services']['biz_scatter'] = {
 	'networks': ['testing_net'],
 	'volumes': ['business_dataset:/data']
 }
+config_logs('funniest_cities_logging', service=file['services']['biz_scatter'])
 
 for idx in range(0, input_yaml['funbiz_aggregators']):
 	container_name = f'funbiz_aggregator{idx}'
@@ -179,6 +188,7 @@ for idx in range(0, input_yaml['funbiz_aggregators']):
 		'depends_on': list(FUNBIZAGG_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['funbiz_filters']):
 	container_name = f'funbiz_filter{idx}'
@@ -193,6 +203,7 @@ for idx in range(0, input_yaml['funbiz_filters']):
 		'depends_on': list(FUNBIZFIL_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['funbiz_mappers']):
 	container_name = f'funbiz_mapper{idx}'
@@ -207,6 +218,7 @@ for idx in range(0, input_yaml['funbiz_mappers']):
 		'depends_on': list(FUNBIZMAP_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('funniest_cities_logging', service=file['services'][container_name])
 
 ## Weekday Histogram flow.
 WEEKDAYAGG_DEPS += ['weekday_histogram_prettier']
@@ -220,6 +232,7 @@ file['services']['weekday_histogram_prettier'] = {
 	'depends_on': list(HISTOPRE_DEPS),
 	'networks': ['testing_net']
 }
+config_logs('weekday_histogram_logging', service=file['services']['weekday_histogram_prettier'])
 
 for idx in range(0, input_yaml['weekday_aggregators']):
 	container_name = f'weekday_aggregator{idx}'
@@ -234,6 +247,7 @@ for idx in range(0, input_yaml['weekday_aggregators']):
 		'depends_on': list(WEEKDAYAGG_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('weekday_histogram_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['weekday_mappers']):
 	container_name = f'weekday_mapper{idx}'
@@ -248,6 +262,7 @@ for idx in range(0, input_yaml['weekday_mappers']):
 		'depends_on': list(WEEKDAYMAP_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('weekday_histogram_logging', service=file['services'][container_name])
 
 ## Best Users flow.
 BESTUSERJOIN_DEPS += ['best_users_prettier']
@@ -261,6 +276,7 @@ file['services']['best_users_prettier'] = {
 	'depends_on': list(BESTUSERPRE_DEPS),
 	'networks': ['testing_net']
 }
+config_logs('best_users_logging', service=file['services']['best_users_prettier'])
 
 for idx in range(0, input_yaml['bestuser_joiners']):
 	container_name = f'bestuser_joiner{idx}'
@@ -276,6 +292,7 @@ for idx in range(0, input_yaml['bestuser_joiners']):
 		'depends_on': list(BESTUSERJOIN_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('best_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['stars_aggregators']):
 	container_name = f'stars_aggregator{idx}'
@@ -290,6 +307,7 @@ for idx in range(0, input_yaml['stars_aggregators']):
 		'depends_on': list(STARSAGG_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('best_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['stars_filters']):
 	container_name = f'stars_filter{idx}'
@@ -304,6 +322,7 @@ for idx in range(0, input_yaml['stars_filters']):
 		'depends_on': list(STARSFIL_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('best_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['stars_mappers']):
 	container_name = f'stars_mapper{idx}'
@@ -318,6 +337,7 @@ for idx in range(0, input_yaml['stars_mappers']):
 		'depends_on': list(STARSMAP_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('best_users_logging', service=file['services'][container_name])
 
 # Bot Users flow.
 BOTUSERJOIN_DEPS += ['bot_users_prettier']
@@ -331,6 +351,7 @@ file['services']['bot_users_prettier'] = {
 	'depends_on': list(BOTUSERPRE_DEPS),
 	'networks': ['testing_net']
 }
+config_logs('bot_users_logging', service=file['services']['bot_users_prettier'])
 
 for idx in range(0, input_yaml['botuser_joiners']):
 	container_name = f'botuser_joiner{idx}'
@@ -346,6 +367,7 @@ for idx in range(0, input_yaml['botuser_joiners']):
 		'depends_on': list(BOTUSERJOIN_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('bot_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['botuser_filters']):
 	container_name = f'botuser_filter{idx}'
@@ -360,6 +382,7 @@ for idx in range(0, input_yaml['botuser_filters']):
 		'depends_on': list(BOTUSERFIL_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('bot_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['dishash_filters']):
 	container_name = f'dishash_filter{idx}'
@@ -374,6 +397,7 @@ for idx in range(0, input_yaml['dishash_filters']):
 		'depends_on': list(DISHASHFIL_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('bot_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['dishash_aggregators']):
 	container_name = f'dishash_aggregator{idx}'
@@ -388,6 +412,7 @@ for idx in range(0, input_yaml['dishash_aggregators']):
 		'depends_on': list(DISHASHAGG_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('bot_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['hash_aggregators']):
 	container_name = f'hash_aggregator{idx}'
@@ -402,6 +427,7 @@ for idx in range(0, input_yaml['hash_aggregators']):
 		'depends_on': list(HASHAGG_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('bot_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['hash_mappers']):
 	container_name = f'hash_mapper{idx}'
@@ -416,6 +442,7 @@ for idx in range(0, input_yaml['hash_mappers']):
 		'depends_on': list(HASHMAP_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('bot_users_logging', service=file['services'][container_name])
 
 ## Top Users flow.
 USERFIL_DEPS += ['top_users_prettier']
@@ -429,6 +456,7 @@ file['services']['top_users_prettier'] = {
 	'depends_on': list(TOPUSERPRE_DEPS),
 	'networks': ['testing_net']
 }
+config_logs('top_users_logging', service=file['services']['top_users_prettier'])
 
 for idx in range(0, input_yaml['user_filters']):
 	container_name = f'user_filter{idx}'
@@ -443,6 +471,7 @@ for idx in range(0, input_yaml['user_filters']):
 		'depends_on': list(USERFIL_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('top_users_logging', 'best_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['user_aggregators']):
 	container_name = f'user_aggregator{idx}'
@@ -457,6 +486,7 @@ for idx in range(0, input_yaml['user_aggregators']):
 		'depends_on': list(USERAGG_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('top_users_logging', 'best_users_logging', 'bot_users_logging', service=file['services'][container_name])
 
 for idx in range(0, input_yaml['user_mappers']):
 	container_name = f'user_mapper{idx}'
@@ -471,6 +501,7 @@ for idx in range(0, input_yaml['user_mappers']):
 		'depends_on': list(USERMAP_DEPS),
 		'networks': ['testing_net']
 	}
+	config_logs('top_users_logging', 'best_users_logging', 'bot_users_logging', service=file['services'][container_name])
 
 ## Reviews Scatter
 file['services']['rvw_scatter'] = {
@@ -484,6 +515,7 @@ file['services']['rvw_scatter'] = {
 	'networks': ['testing_net'],
 	'volumes': ['reviews_dataset:/data']
 }
+config_logs('funniest_cities_logging', 'weekday_histogram_logging', 'top_users_logging', 'best_users_logging', 'bot_users_logging', service=file['services']['rvw_scatter'])
 
 #### VOLUMES
 file['volumes'] = {

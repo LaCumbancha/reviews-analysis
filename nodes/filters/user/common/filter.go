@@ -81,10 +81,10 @@ func (filter *Filter) Run() {
 				logb.Instance().Infof(fmt.Sprintf("User data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					filter.filterActiveUsers(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					filter.filterActiveUsers(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -123,10 +123,10 @@ func (filter *Filter) filterActiveUsers(bulkNumber int, rawUserDataBulk string) 
 	for _, userData := range userDataList {
 		if (userData.Reviews >= filter.minReviews) {
 			filteredUserDataList = append(filteredUserDataList, userData)
-			filter.outputQueue.PublishData(userData)
 		}
 	}
 
+	filter.outputQueue.PublishData(bulkNumber, filteredUserDataList)
 	filter.outputDirect.PublishData(bulkNumber, filteredUserDataList)
 }
 

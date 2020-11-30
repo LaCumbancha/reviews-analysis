@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/nodes/filters/funny-city/rabbitmq"
 
@@ -76,10 +75,10 @@ func (filter *Filter) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Funcit data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					filter.calculator.Save(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					filter.calculator.Save(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -87,9 +86,15 @@ func (filter *Filter) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
+    messageCounter := 0
     for _, topTenData := range filter.calculator.RetrieveTopTen() {
-		wg.Add(1)
-		go filter.sendTopTenData(topTenData, &wg)
+    	messageCounter++
+
+    	wg.Add(1)
+    	go func(messageNumber int, topTenCity rabbitmq.FunnyCityData) {
+    		filter.outputQueue.PublishData(messageNumber, topTenCity)
+    		wg.Done()
+    	}(messageCounter, topTenData)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -115,16 +120,6 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (filter *Filter) sendTopTenData(topTenData rabbitmq.FunnyCityData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(topTenData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", topTenData, err)
-	} else {
-		filter.outputQueue.PublishData(data)
-	}
-	wg.Done()
 }
 
 func (filter *Filter) Stop() {

@@ -6,7 +6,7 @@ import (
 	"github.com/streadway/amqp"
 
 	log "github.com/sirupsen/logrus"
-	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/logger"
 )
 
 type RabbitOutputQueue struct {

@@ -44,7 +44,7 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawHashedDataBulk string
 
 	}
 
-	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
+	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d users with texts stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveData() [][]rabbitmq.HashedTextData {

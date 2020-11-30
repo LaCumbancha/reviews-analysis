@@ -78,10 +78,10 @@ func (filter *Filter) Run() {
 				logb.Instance().Infof(fmt.Sprintf("User data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					filter.filterMinimumRevies(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					filter.filterMinimumReviews(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -111,7 +111,7 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (filter *Filter) filterMinimumRevies(bulkNumber int, rawUserDataList string) {
+func (filter *Filter) filterMinimumReviews(bulkNumber int, rawUserDataList string) {
 	var userDataList []rabbitmq.UserData
 	var filteredUserDataList []rabbitmq.UserData
 	json.Unmarshal([]byte(rawUserDataList), &userDataList)

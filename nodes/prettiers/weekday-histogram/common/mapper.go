@@ -62,19 +62,21 @@ func (mapper *Mapper) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		messageCounter := 0
 		for message := range mapper.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Weekday reviews '%s' received.", messageBody)
+				messageCounter++
+				log.Infof("Aggregated weekday reviews #%d received.", messageCounter)
 
 				wg.Add(1)
-				go func() {
-					mapper.builder.Save(messageBody)
+				go func(message string) {
+					mapper.builder.Save(message)
 					wg.Done()
-				}()
+				}(messageBody)
 			}
 		}
 	}()
@@ -82,7 +84,8 @@ func (mapper *Mapper) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
-    mapper.sendResults()
+    // Sending results
+    mapper.outputQueue.PublishData(mapper.builder.BuildData())
 
     // Publishing end messages.
     mapper.outputQueue.PublishFinish()
@@ -104,11 +107,6 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (mapper *Mapper) sendResults() {
-	results := mapper.builder.BuildData()
-	mapper.outputQueue.PublishData(fmt.Sprintf("Reviews by Weekday --- %s", results))
 }
 
 func (mapper *Mapper) Stop() {

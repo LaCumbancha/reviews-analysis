@@ -92,10 +92,10 @@ func (joiner *Joiner) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter1), bulkCounter1)
 
 				inputWg.Add(1)
-				go func(bulkNumber int) {
-					joiner.calculator.AddFunnyBusiness(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					joiner.calculator.AddFunnyBusiness(bulkNumber, bulk)
 					inputWg.Done()
-				}(bulkCounter1)
+				}(bulkCounter1, messageBody)
 			}
 		}
 	}()
@@ -112,13 +112,13 @@ func (joiner *Joiner) Run() {
 				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
 				bulkCounter2++
-				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", bulkCounter2), bulkCounter2)
+				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", bulkCounter2), bulkCounter2 * 5)
 
 				inputWg.Add(1)
-				go func(bulkNumber int) {
-					joiner.calculator.AddCityBusiness(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					joiner.calculator.AddCityBusiness(bulkNumber, bulk)
 					inputWg.Done()
-				}(bulkCounter2)
+				}(bulkCounter2, messageBody)
 			}
 		}
 	}()
@@ -127,7 +127,7 @@ func (joiner *Joiner) Run() {
     inputWg.Wait()
 
     // Processing last join matches.
-    joiner.sendJoinMatches(&joinWg)
+    joiner.fetchJoinMatches(&joinWg)
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all joins are processed and sent.
     joinWg.Wait()
@@ -136,7 +136,7 @@ func (joiner *Joiner) Run() {
     joiner.outputDirect.PublishFinish()
 }
 
-func (joiner *Joiner) sendJoinMatches(joinWg *sync.WaitGroup) {
+func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
 	outputBulks := 0
 	joinMatches := joiner.calculator.RetrieveMatches()
 
@@ -144,10 +144,14 @@ func (joiner *Joiner) sendJoinMatches(joinWg *sync.WaitGroup) {
     	log.Warnf("No join matches to send.")
     }
 
+    joinWg.Add(1)
     for _, joinedData := range joinMatches {
     	outputBulks++
-    	joinWg.Add(1)
-    	go joiner.outputDirect.PublishData(outputBulks, joinedData)
+
+    	go func(bulkNumber int, bulk []rabbitmq.FunnyCityData) {
+    		joiner.outputDirect.PublishData(bulkNumber, bulk)
+    		joinWg.Done()
+    	}(outputBulks, joinedData)
 	}
 }
 

@@ -60,10 +60,7 @@ func (calculator *Calculator) RetrieveData() []rabbitmq.WeekdayData {
 
 	for weekday, reviews := range calculator.data {
 		log.Infof("%s reviews aggregated: %d.", weekday, reviews)
-		aggregatedData := rabbitmq.WeekdayData {
-			Weekday:		weekday,
-			Reviews:		reviews,
-		}
+		aggregatedData := rabbitmq.WeekdayData { Weekday: weekday, Reviews: reviews }
 		list = append(list, aggregatedData)
 	}
 

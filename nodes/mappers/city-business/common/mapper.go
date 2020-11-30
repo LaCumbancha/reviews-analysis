@@ -76,10 +76,10 @@ func (mapper *Mapper) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Business bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					mapper.processBusinessesBulk(bulkCounter, messageBody)
+				go func(bulkNumber int, bulk string) {
+					mapper.processBusinessesBulk(bulkCounter, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()

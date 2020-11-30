@@ -7,8 +7,8 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/common"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/utils"
 
-	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {

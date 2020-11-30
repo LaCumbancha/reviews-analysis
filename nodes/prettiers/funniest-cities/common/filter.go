@@ -62,19 +62,21 @@ func (filter *Filter) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		messageCounter := 0
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				log.Infof("Data '%s' received.", messageBody)
+				messageCounter++
+				log.Infof("Funniest city #%d received.", messageCounter)
 
 				wg.Add(1)
-				go func() {
-					filter.builder.Save(messageBody)
+				go func(message string) {
+					filter.builder.Save(message)
 					wg.Done()
-				}()
+				}(messageBody)
 			}
 		}
 	}()
@@ -82,7 +84,8 @@ func (filter *Filter) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
-    filter.sendResults()
+    // Sending results
+    filter.outputQueue.PublishData(filter.builder.BuildTopTen())
 
     // Sending End-Message to consumers.
     filter.outputQueue.PublishFinish()
@@ -104,11 +107,6 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (filter *Filter) sendResults() {
-	results := filter.builder.BuildTopTen()
-	filter.outputQueue.PublishData(fmt.Sprintf("Top 10 Funniest Cities --- %s", results))
 }
 
 func (filter *Filter) Stop() {

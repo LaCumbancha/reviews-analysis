@@ -64,7 +64,7 @@ func (queue *RabbitOutputQueue) PublishData(bulkNumber int, userDataList []UserD
 		if err != nil {
 			log.Errorf("Error sending mapped bulk #%d to queue %s. Err: '%s'", bulkNumber, queue.name, err)
 		} else {
-			logb.Instance().Infof(fmt.Sprintf("Mapped bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
+			logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
 		}
 	}
 }

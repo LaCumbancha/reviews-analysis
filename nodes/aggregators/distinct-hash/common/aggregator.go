@@ -7,7 +7,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
-	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/logger"
 )
 
 type AggregatorConfig struct {
@@ -78,10 +78,10 @@ func (aggregator *Aggregator) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Distinct hashed texts data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					aggregator.calculator.Aggregate(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					aggregator.calculator.Aggregate(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -95,10 +95,10 @@ func (aggregator *Aggregator) Run() {
     	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
 
 		wg.Add(1)
-		go func(bulkNumber int) {
-			aggregator.outputQueue.PublishData(bulkNumber, aggregatedData)
+		go func(bulkNumber int, aggregatedBulk []rabbitmq.DistinctHashesData) {
+			aggregator.outputQueue.PublishData(bulkNumber, aggregatedBulk)
 			wg.Done()
-		}(outputBulkNumber)
+		}(outputBulkNumber, aggregatedData)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.

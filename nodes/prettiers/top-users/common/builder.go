@@ -25,16 +25,21 @@ func NewBuilder(minReviews int) *Builder {
 	return builder
 }
 
-func (builder *Builder) Save(rawData string) {
-	var userData rabbitmq.UserData
-	json.Unmarshal([]byte(rawData), &userData)
+func (builder *Builder) Save(rawUserDataBulk string) {
+	var userDataList []rabbitmq.UserData
+	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
-	builder.mutex.Lock()
+	for _, userData := range userDataList {
+		builder.mutex.Lock()
 
-	builder.data[userData.UserId] = userData.Reviews
-	log.Infof("Saved user %s reviews at %d.", userData.UserId, userData.Reviews)
-
-	builder.mutex.Unlock()
+		if oldReviews, found := builder.data[userData.UserId]; found {
+		    log.Warnf("User %s was already stored with %d reviews (new value: %d).", userData.UserId, oldReviews, userData.Reviews)
+		} else {
+			builder.data[userData.UserId] = userData.Reviews
+		}
+		
+		builder.mutex.Unlock()
+	}
 }
 
 func (builder *Builder) BuildData() string {

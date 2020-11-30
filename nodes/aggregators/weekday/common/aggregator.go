@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/weekday/rabbitmq"
 
@@ -89,8 +88,13 @@ func (aggregator *Aggregator) Run() {
     wg.Wait()
 
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
+
 		wg.Add(1)
-		go aggregator.sendAggregatedData(aggregatedData, &wg)
+		go func(message rabbitmq.WeekdayData) {
+			aggregator.outputQueue.PublishData(message)
+			wg.Done()
+		}(aggregatedData)
+
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -116,16 +120,6 @@ func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map
 		log.Infof("All End-Messages were received.")
 		wg.Done()
 	}
-}
-
-func (aggregator *Aggregator) sendAggregatedData(aggregatedData rabbitmq.WeekdayData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(aggregatedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
-	} else {
-		aggregator.outputQueue.PublishData(data)
-	}
-	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {

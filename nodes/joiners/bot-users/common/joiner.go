@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"sync"
-	"encoding/json"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/nodes/joiners/bot-users/rabbitmq"
 
@@ -91,10 +90,10 @@ func (joiner *Joiner) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Bot users data bulk #%d received.", bulkCounter1), bulkCounter1)
 
 				inputWg.Add(1)
-				go func(bulkNumber int) {
-					joiner.calculator.AddBotUser(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					joiner.calculator.AddBotUser(bulkNumber, bulk)
 					inputWg.Done()
-				}(bulkCounter1)
+				}(bulkCounter1, messageBody)
 			}
 		}
 	}()
@@ -114,10 +113,10 @@ func (joiner *Joiner) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d received.", bulkCounter2), bulkCounter2)
 
 				inputWg.Add(1)
-				go func(bulkNumber int) {
-					joiner.calculator.AddUser(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					joiner.calculator.AddUser(bulkNumber, bulk)
 					inputWg.Done()
-				}(bulkCounter2)
+				}(bulkCounter2, messageBody)
 			}
 		}
 	}()
@@ -142,20 +141,16 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     	log.Warnf("No join match to send.")
     }
 
+    messageCounter := 0
     for _, joinedData := range joinMatches {
-    	joinWg.Add(1)
-		go joiner.sendJoinedData(joinedData, joinWg)
-	}
-}
+    	messageCounter++
 
-func (joiner *Joiner) sendJoinedData(joinedData rabbitmq.UserData, wg *sync.WaitGroup) {
-	data, err := json.Marshal(joinedData)
-	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", joinedData, err)
-	} else {
-		joiner.outputQueue.PublishData(data)
+    	joinWg.Add(1)
+    	go func(messageNumber int, botUser rabbitmq.UserData) {
+    		joiner.outputQueue.PublishData(messageNumber, botUser)
+    		joinWg.Done()
+    	}(messageCounter, joinedData)
 	}
-	wg.Done()
 }
 
 func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

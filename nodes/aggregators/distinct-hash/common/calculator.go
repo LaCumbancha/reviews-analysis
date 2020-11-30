@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/rabbitmq"
 
-	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/hash-text/logger"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/aggregators/distinct-hash/logger"
 )
 
 type Calculator struct {

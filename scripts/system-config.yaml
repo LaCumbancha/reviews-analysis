@@ -7,7 +7,7 @@ reviews_streaming: false
 reviews_pool_size: 16
 business_pool_size: 16
 
-# Bulks
+# Bulks.
 log_bulk_rate: 500
 reviews_bulk_size: 1000
 business_bulk_size: 1000
@@ -18,6 +18,13 @@ hashagg_bulk_size: 1000
 dishashagg_bulk_size: 1000
 useragg_bulk_size: 1000
 starsagg_bulk_size: 1000
+
+# Logs
+funniest_cities_logging: true
+weekday_histogram_logging: false
+best_users_logging: false
+bot_users_logging: false
+top_users_logging: false
 
 # System specs.
 users_min_reviews: 50

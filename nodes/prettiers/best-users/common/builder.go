@@ -31,8 +31,11 @@ func (builder *Builder) Save(rawData string) {
 
 	builder.mutex.Lock()
 
-	builder.data[userData.UserId] = userData.Reviews
-	log.Infof("Saved user %s 5-star reviews at %d.", userData.UserId, userData.Reviews)
+	if oldReviews, found := builder.data[userData.UserId]; found {
+	    log.Warnf("User %s was already stored with %d 5-stars reviews (new value: %d).", userData.UserId, oldReviews, userData.Reviews)
+	} else {
+		builder.data[userData.UserId] = userData.Reviews
+	}
 
 	builder.mutex.Unlock()
 }

@@ -78,10 +78,10 @@ func (filter *Filter) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					filter.filterRepeatedTexts(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					filter.filterRepeatedTexts(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()

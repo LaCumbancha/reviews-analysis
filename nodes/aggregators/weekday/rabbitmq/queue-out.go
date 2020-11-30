@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"encoding/json"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 )
@@ -39,21 +40,26 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(data []byte) {
-	err := queue.channel.Publish(
-		"",     							// Exchange
-		queue.name, 						// Routing Key
-		false,  							// Mandatory
-		false,  							// Immediate
-		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:        	data,
-		})
-
+func (queue *RabbitOutputQueue) PublishData(aggregatedData WeekdayData) {
+	data, err := json.Marshal(aggregatedData)
 	if err != nil {
-		log.Errorf("Error sending weekday data (%s) to queue %s. Err: '%s'", data, queue.name, err)
+		log.Errorf("Error generating Json from (%s). Err: '%s'", aggregatedData, err)
 	} else {
-		log.Debugf("Weekday data (%s) sent to queue %s.", data, queue.name)
+		err := queue.channel.Publish(
+			"",     							// Exchange
+			queue.name, 						// Routing Key
+			false,  							// Mandatory
+			false,  							// Immediate
+			amqp.Publishing{
+				ContentType: 	"text/plain",
+				Body:        	data,
+			})
+
+		if err != nil {
+			log.Errorf("Error sending %s aggregated reviews to queue %s. Err: '%s'", aggregatedData.Weekday, queue.name, err)
+		} else {
+			log.Debugf("%s aggregated reviews sent to queue %s.", aggregatedData.Weekday, queue.name)
+		}
 	}
 }
 

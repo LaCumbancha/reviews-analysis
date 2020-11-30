@@ -1,9 +1,12 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"encoding/json"
 	"github.com/streadway/amqp"
+
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/filters/user/logger"
 )
 
 type RabbitOutputQueue struct {
@@ -40,26 +43,26 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(userData UserData) {
-	outputData, err := json.Marshal(userData)
-
+func (queue *RabbitOutputQueue) PublishData(bulkNumber int, userDataList []UserData) {
+	data, err := json.Marshal(userDataList)
 	if err != nil {
-		log.Errorf("Error generating Json from (%s). Err: '%s'", userData, err)
+		log.Errorf("Error generating Json from mapped bulk #%d. Err: '%s'", bulkNumber, err)
 	} else {
-		err = queue.channel.Publish(
+		err := queue.channel.Publish(
 			"",     							// Exchange
 			queue.name, 						// Routing Key
 			false,  							// Mandatory
 			false,  							// Immediate
 			amqp.Publishing{
 				ContentType: 	"text/plain",
-				Body:        	outputData,
-			})
+				Body:        	data,
+			},
+		)
 
 		if err != nil {
-			log.Errorf("Error sending user %s reviews data (%s) to queue %s. Err: '%s'", userData.UserId, outputData, queue.name, err)
+			log.Errorf("Error sending mapped bulk #%d to queue %s. Err: '%s'", bulkNumber, queue.name, err)
 		} else {
-			log.Debugf("User %s reviews data (%s) sent to queue %s.", userData.UserId, outputData, queue.name)
+			logb.Instance().Infof(fmt.Sprintf("Filtered bulk #%d sent to queue %s.", bulkNumber, queue.name), bulkNumber)
 		}
 	}
 }

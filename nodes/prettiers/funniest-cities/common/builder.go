@@ -32,7 +32,7 @@ func (builder *Builder) Save(rawData string) {
 	builder.data = append(builder.data, funnyCity)
 	builder.mutex.Unlock()
 
-	log.Infof("City %s saved with funniness at %d.", funnyCity.City, funnyCity.Funny)
+	log.Infof("City %s stored with funniness at %d.", funnyCity.City, funnyCity.Funny)
 }
 
 func (builder *Builder) BuildTopTen() string {
