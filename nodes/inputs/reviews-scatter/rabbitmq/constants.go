@@ -6,7 +6,7 @@ const OUTPUT_EXCHANGE_NAME = "ReviewsScatter"
 // Protocol special messages
 const END_MESSAGE = "END-MESSAGE"
 
-// This configuration allows at max 63 partitions.
+// Topics
 const FUNBIZ = "Funbiz-Mapper"
 const WEEKDAYS = "Weekday-Mapper"
 const HASHES = "Hashes-Mapper"

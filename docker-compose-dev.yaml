@@ -57,8 +57,6 @@ services:
     image: biz_scatter:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -77,8 +75,6 @@ services:
     image: bot_users_prettier:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -98,8 +94,6 @@ services:
     image: botuser_filter:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -119,8 +113,6 @@ services:
     image: botuser_joiner:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -139,8 +131,6 @@ services:
     image: citbiz_mapper:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -161,8 +151,6 @@ services:
     image: dishash_aggregator:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -181,8 +169,6 @@ services:
     image: dishash_filter:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -203,8 +189,6 @@ services:
     image: funbiz_aggregator:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -223,8 +207,6 @@ services:
     image: funbiz_filter:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -238,13 +220,11 @@ services:
     - FUNBIZMAP_INSTANCE=0
     - FUNBIZMAP_RABBITMQ_IP=rabbitmq
     - FUNBIZMAP_RABBITMQ_PORT=5672
-    - FUNBIZMAP_REVIEWS_INPUTS=1
+    - FUNBIZMAP_REVIEWS_INPUTS=2
     - FUNBIZMAP_FUNBIZ_FILTERS=1
     image: funbiz_mapper:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -265,8 +245,6 @@ services:
     image: funcit_aggregator:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -285,8 +263,6 @@ services:
     image: funcit_filter:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -308,8 +284,6 @@ services:
     image: funcit_joiner:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -330,8 +304,6 @@ services:
     image: hash_aggregator:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -345,13 +317,11 @@ services:
     - HASHMAP_INSTANCE=0
     - HASHMAP_RABBITMQ_IP=rabbitmq
     - HASHMAP_RABBITMQ_PORT=5672
-    - HASHMAP_REVIEWS_INPUTS=1
+    - HASHMAP_REVIEWS_INPUTS=2
     - HASHMAP_HASH_AGGREGATORS=1
     image: hash_mapper:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -369,6 +339,7 @@ services:
     - testing_net
     ports:
     - 15672:15672
+    - 5672:5672
   rvw_scatter:
     container_name: rvw_scatter
     depends_on:
@@ -461,7 +432,7 @@ services:
     - STARSMAP_INSTANCE=0
     - STARSMAP_RABBITMQ_IP=rabbitmq
     - STARSMAP_RABBITMQ_PORT=5672
-    - STARSMAP_REVIEWS_INPUTS=1
+    - STARSMAP_REVIEWS_INPUTS=2
     - STARSMAP_STARS_FILTERS=1
     image: stars_mapper:latest
     links:
@@ -482,8 +453,6 @@ services:
     image: top_funniest_cities_prettier:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -501,8 +470,6 @@ services:
     image: top_users_prettier:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -558,7 +525,7 @@ services:
     - USERMAP_INSTANCE=0
     - USERMAP_RABBITMQ_IP=rabbitmq
     - USERMAP_RABBITMQ_PORT=5672
-    - USERMAP_REVIEWS_INPUTS=1
+    - USERMAP_REVIEWS_INPUTS=2
     - USERMAP_USER_AGGREGATORS=1
     image: user_mapper:latest
     links:
@@ -581,8 +548,6 @@ services:
     image: weekday_aggregator:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -599,8 +564,6 @@ services:
     image: weekday_histogram_prettier:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -614,13 +577,11 @@ services:
     - WEEKDAYMAP_INSTANCE=0
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
-    - WEEKDAYMAP_REVIEWS_INPUTS=1
+    - WEEKDAYMAP_REVIEWS_INPUTS=2
     - WEEKDAYMAP_WEEKDAY_AGGREGATORS=1
     image: weekday_mapper:latest
     links:
     - rabbitmq
-    logging:
-      driver: none
     networks:
     - testing_net
     restart: on-failure

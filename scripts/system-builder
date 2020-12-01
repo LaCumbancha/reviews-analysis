@@ -3,6 +3,11 @@
 import sys
 import yaml
 
+def config_logs(*flows, service):
+	if not any(map(lambda flow: input_yaml[flow], flows)):
+		service['logging'] = {'driver': 'none'}
+
+
 input_yaml_file = open("./scripts/system-config.yaml")
 input_yaml = yaml.load(input_yaml_file, Loader=yaml.FullLoader)
 
@@ -16,9 +21,7 @@ else:
 	reviews_data = '/data/reviews.json'
 	business_data = '/data/business.json'
 
-def config_logs(*flows, service):
-	if not any(map(lambda flow: input_yaml[flow], flows)):
-		service['logging'] = {'driver': 'none'}
+reviews_inputs = 2 if input_yaml["reviews_streaming"] else 1
 
 file = {}
 
@@ -64,7 +67,7 @@ RVWSCA_DEPS = []
 file['services']['rabbitmq'] = {
 	'container_name': f'rabbitmq',
 	'image': 'rabbitmq:custom',
-	'ports': ['15672:15672'],
+	'ports': ['15672:15672', '5672:5672'],
 	'networks': ['testing_net'],
 	'logging': {'driver': 'none'},
 	'healthcheck': {
@@ -213,7 +216,7 @@ for idx in range(0, input_yaml['funbiz_mappers']):
 		'image': 'funbiz_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': [f'FUNBIZMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNBIZMAP_INSTANCE={idx}', 'FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_REVIEWS_INPUTS=1', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
+		'environment': [f'FUNBIZMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNBIZMAP_INSTANCE={idx}', 'FUNBIZMAP_RABBITMQ_IP=rabbitmq', 'FUNBIZMAP_RABBITMQ_PORT=5672', f'FUNBIZMAP_REVIEWS_INPUTS={reviews_inputs}', f'FUNBIZMAP_FUNBIZ_FILTERS={input_yaml["funbiz_filters"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNBIZMAP_DEPS),
 		'networks': ['testing_net']
@@ -257,7 +260,7 @@ for idx in range(0, input_yaml['weekday_mappers']):
 		'image': 'weekday_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': [f'WEEKDAYMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'WEEKDAYMAP_INSTANCE={idx}', 'WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_REVIEWS_INPUTS=1', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
+		'environment': [f'WEEKDAYMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'WEEKDAYMAP_INSTANCE={idx}', 'WEEKDAYMAP_RABBITMQ_IP=rabbitmq', 'WEEKDAYMAP_RABBITMQ_PORT=5672', f'WEEKDAYMAP_REVIEWS_INPUTS={reviews_inputs}', f'WEEKDAYMAP_WEEKDAY_AGGREGATORS={input_yaml["weekday_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(WEEKDAYMAP_DEPS),
 		'networks': ['testing_net']
@@ -332,7 +335,7 @@ for idx in range(0, input_yaml['stars_mappers']):
 		'image': 'stars_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': [f'STARSMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'STARSMAP_INSTANCE={idx}', 'STARSMAP_RABBITMQ_IP=rabbitmq', 'STARSMAP_RABBITMQ_PORT=5672', f'STARSMAP_REVIEWS_INPUTS=1', f'STARSMAP_STARS_FILTERS={input_yaml["stars_filters"]}'],
+		'environment': [f'STARSMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'STARSMAP_INSTANCE={idx}', 'STARSMAP_RABBITMQ_IP=rabbitmq', 'STARSMAP_RABBITMQ_PORT=5672', f'STARSMAP_REVIEWS_INPUTS={reviews_inputs}', f'STARSMAP_STARS_FILTERS={input_yaml["stars_filters"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(STARSMAP_DEPS),
 		'networks': ['testing_net']
@@ -437,7 +440,7 @@ for idx in range(0, input_yaml['hash_mappers']):
 		'image': 'hash_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': [f'HASHMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'HASHMAP_INSTANCE={idx}', 'HASHMAP_RABBITMQ_IP=rabbitmq', 'HASHMAP_RABBITMQ_PORT=5672', f'HASHMAP_REVIEWS_INPUTS=1', f'HASHMAP_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}'],
+		'environment': [f'HASHMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'HASHMAP_INSTANCE={idx}', 'HASHMAP_RABBITMQ_IP=rabbitmq', 'HASHMAP_RABBITMQ_PORT=5672', f'HASHMAP_REVIEWS_INPUTS={reviews_inputs}', f'HASHMAP_HASH_AGGREGATORS={input_yaml["hash_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(HASHMAP_DEPS),
 		'networks': ['testing_net']
@@ -496,7 +499,7 @@ for idx in range(0, input_yaml['user_mappers']):
 		'image': 'user_mapper:latest',
 		'entrypoint': '/mapper',
 		'restart': 'on-failure',
-		'environment': [f'USERMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'USERMAP_INSTANCE={idx}', 'USERMAP_RABBITMQ_IP=rabbitmq', 'USERMAP_RABBITMQ_PORT=5672', f'USERMAP_REVIEWS_INPUTS=1', f'USERMAP_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
+		'environment': [f'USERMAP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'USERMAP_INSTANCE={idx}', 'USERMAP_RABBITMQ_IP=rabbitmq', 'USERMAP_RABBITMQ_PORT=5672', f'USERMAP_REVIEWS_INPUTS={reviews_inputs}', f'USERMAP_USER_AGGREGATORS={input_yaml["user_aggregators"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(USERMAP_DEPS),
 		'networks': ['testing_net']
