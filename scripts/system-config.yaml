@@ -20,8 +20,8 @@ useragg_bulk_size: 1000
 starsagg_bulk_size: 1000
 
 # Logs
-funniest_cities_logging: false
-weekday_histogram_logging: false
+funniest_cities_logging: true
+weekday_histogram_logging: true
 best_users_logging: true
 bot_users_logging: true
 top_users_logging: true

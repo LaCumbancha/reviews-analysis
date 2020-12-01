@@ -34,7 +34,7 @@ func (calculator *Calculator) AddBestUser(bulkNumber int, rawBestUserDataBulk st
 
 	for _, bestUserData := range bestUserDataList {
 		calculator.mutex1.Lock()
-		calculator.data1[bestUserData.UserId] = 1
+		calculator.data1[bestUserData.UserId] = bestUserData.Reviews
 		calculator.mutex1.Unlock()
 	}
 

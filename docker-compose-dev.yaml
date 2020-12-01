@@ -77,6 +77,8 @@ services:
     image: bot_users_prettier:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -96,6 +98,8 @@ services:
     image: botuser_filter:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -115,6 +119,8 @@ services:
     image: botuser_joiner:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -155,6 +161,8 @@ services:
     image: dishash_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -173,6 +181,8 @@ services:
     image: dishash_filter:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -320,6 +330,8 @@ services:
     image: hash_aggregator:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -338,6 +350,8 @@ services:
     image: hash_mapper:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
@@ -487,6 +501,8 @@ services:
     image: top_users_prettier:latest
     links:
     - rabbitmq
+    logging:
+      driver: none
     networks:
     - testing_net
     restart: on-failure
