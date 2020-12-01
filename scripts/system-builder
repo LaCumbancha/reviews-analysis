@@ -451,7 +451,7 @@ file['services']['top_users_prettier'] = {
 	'image': 'top_users_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_MIN_REVIEWS={input_yaml["users_min_reviews"]}', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
+	'environment': [f'TOPUSERPRE_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', 'TOPUSERPRE_RABBITMQ_IP=rabbitmq', 'TOPUSERPRE_RABBITMQ_PORT=5672', f'TOPUSERPRE_MIN_REVIEWS={input_yaml["users_min_reviews"]}', f'TOPUSERPRE_USER_FILTERS={input_yaml["user_filters"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(TOPUSERPRE_DEPS),
 	'networks': ['testing_net']

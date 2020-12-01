@@ -20,11 +20,11 @@ useragg_bulk_size: 1000
 starsagg_bulk_size: 1000
 
 # Logs
-funniest_cities_logging: true
+funniest_cities_logging: false
 weekday_histogram_logging: false
-best_users_logging: false
-bot_users_logging: false
-top_users_logging: false
+best_users_logging: true
+bot_users_logging: true
+top_users_logging: true
 
 # System specs.
 users_min_reviews: 50

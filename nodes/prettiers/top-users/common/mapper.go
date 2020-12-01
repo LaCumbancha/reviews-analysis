@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/rabbitmq"
+	
+	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/nodes/prettiers/top-users/logger"
 )
 
 type MapperConfig struct {
@@ -63,15 +64,15 @@ func (mapper *Mapper) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		messageCounter := 0
+		bulkCounter := 0
 		for message := range mapper.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if rabbitmq.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
-				messageCounter++
-				log.Infof("Top user #%d received.", messageCounter)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("Top user #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
 				go func(message string) {

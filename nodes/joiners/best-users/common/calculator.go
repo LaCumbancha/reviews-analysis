@@ -38,7 +38,7 @@ func (calculator *Calculator) AddBestUser(bulkNumber int, rawBestUserDataBulk st
 		calculator.mutex1.Unlock()
 	}
 
-	logb.Instance().Infof(fmt.Sprintf("Best user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
+	logb.Instance().Infof(fmt.Sprintf("Best users data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
@@ -51,7 +51,7 @@ func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
 		calculator.mutex2.Unlock()
 	}
 
-	logb.Instance().Infof(fmt.Sprintf("Common user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
+	logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
@@ -72,8 +72,6 @@ func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
 					Reviews:	totalReviews,
 				}
 				list = append(list, joinedData)
-			} else {
-				log.Debugf("User %s had %d reviews but only %d where rated with 5 stars.", userId, totalReviews, bestReviews)
 			}
 
 			calculator.mutex1.Lock()

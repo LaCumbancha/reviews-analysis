@@ -45,13 +45,15 @@ func (builder *Builder) Save(rawUserDataBulk string) {
 func (builder *Builder) BuildData() string {
 	response := fmt.Sprintf("Users with +%d reviews: ", builder.reviews)
 
-	for userId, reviews := range builder.data {
-		response += fmt.Sprintf("%s (%d) ; ", userId, reviews)
+	totalReviews := 0
+	for _, reviews := range builder.data {
+		totalReviews += reviews
     }
 
-    if len(builder.data) == 0 {
+    totalUsers := len(builder.data)
+    if totalUsers == 0 {
     	return response + "no users accomplish that requirements."
     } else {
-    	return response[0:len(response)-3]
+    	return response + fmt.Sprintf("%d, with %d total reviews (average: %3.2f per user).", totalUsers, totalReviews, float32(totalReviews)/float32(totalUsers))
     }
 }

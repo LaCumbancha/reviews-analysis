@@ -38,7 +38,7 @@ func (calculator *Calculator) AddBotUser(bulkNumber int, rawBotUserDataBulk stri
 		calculator.mutex1.Unlock()
 	}
 
-	logb.Instance().Infof(fmt.Sprintf("Bot user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
+	logb.Instance().Infof(fmt.Sprintf("Bot users data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
@@ -51,7 +51,7 @@ func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
 		calculator.mutex2.Unlock()
 	}
 
-	logb.Instance().Infof(fmt.Sprintf("Common user data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
+	logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
 func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
