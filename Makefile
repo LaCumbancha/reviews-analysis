@@ -56,7 +56,6 @@ build: deps
 
 	# Outputs
 	GOOS=linux go build -o bin/sink $(GIT_REMOTE)/nodes/outputs/sink
-	GOOS=linux go build -o bin/mock-receiver $(GIT_REMOTE)/nodes/outputs/mock-receiver
 .PHONY: build
 
 docker-image:
@@ -106,7 +105,6 @@ docker-image:
 
 	# Outputs
 	docker build -f ./nodes/outputs/sink/Dockerfile -t "sink:latest" .
-	docker build -f ./nodes/outputs/mock-receiver/Dockerfile -t "mock_receiver:latest" .
 .PHONY: docker-image
 
 docker-compose-up: docker-image

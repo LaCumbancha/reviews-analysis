@@ -220,7 +220,7 @@ services:
     - FUNBIZMAP_INSTANCE=0
     - FUNBIZMAP_RABBITMQ_IP=rabbitmq
     - FUNBIZMAP_RABBITMQ_PORT=5672
-    - FUNBIZMAP_REVIEWS_INPUTS=2
+    - FUNBIZMAP_REVIEWS_INPUTS=1
     - FUNBIZMAP_FUNBIZ_FILTERS=1
     image: funbiz_mapper:latest
     links:
@@ -317,7 +317,7 @@ services:
     - HASHMAP_INSTANCE=0
     - HASHMAP_RABBITMQ_IP=rabbitmq
     - HASHMAP_RABBITMQ_PORT=5672
-    - HASHMAP_REVIEWS_INPUTS=2
+    - HASHMAP_REVIEWS_INPUTS=1
     - HASHMAP_HASH_AGGREGATORS=1
     image: hash_mapper:latest
     links:
@@ -432,7 +432,7 @@ services:
     - STARSMAP_INSTANCE=0
     - STARSMAP_RABBITMQ_IP=rabbitmq
     - STARSMAP_RABBITMQ_PORT=5672
-    - STARSMAP_REVIEWS_INPUTS=2
+    - STARSMAP_REVIEWS_INPUTS=1
     - STARSMAP_STARS_FILTERS=1
     image: stars_mapper:latest
     links:
@@ -525,7 +525,7 @@ services:
     - USERMAP_INSTANCE=0
     - USERMAP_RABBITMQ_IP=rabbitmq
     - USERMAP_RABBITMQ_PORT=5672
-    - USERMAP_REVIEWS_INPUTS=2
+    - USERMAP_REVIEWS_INPUTS=1
     - USERMAP_USER_AGGREGATORS=1
     image: user_mapper:latest
     links:
@@ -577,7 +577,7 @@ services:
     - WEEKDAYMAP_INSTANCE=0
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672
-    - WEEKDAYMAP_REVIEWS_INPUTS=2
+    - WEEKDAYMAP_REVIEWS_INPUTS=1
     - WEEKDAYMAP_WEEKDAY_AGGREGATORS=1
     image: weekday_mapper:latest
     links:
