@@ -22,7 +22,7 @@ func NewRabbitOutputQueue(name string, instance string, endSignals int, channel 
 		instance:		instance,
 		channel: 		channel,
 		name:			name,
-		endSignals:		comms.RETRIES * endSignals,
+		endSignals:		comms.Retries * endSignals,
 	}
 
 	queue.initialize()
@@ -80,7 +80,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 	  		false,  						// Immediate
 	  		amqp.Publishing{
 	  		    ContentType: 	"text/plain",
-	  		    Body:        	[]byte(comms.END_MESSAGE + queue.instance),
+	  		    Body:        	[]byte(comms.EndMessage + queue.instance),
 	  		},
 	  	)
 

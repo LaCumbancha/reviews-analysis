@@ -66,7 +66,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 		false,  						// Immediate
 		amqp.Publishing{
 			ContentType: 	"text/plain",
-			Body:        	[]byte(comms.END_MESSAGE),
+			Body:        	[]byte(comms.EndMessage),
 		},
 	)
 

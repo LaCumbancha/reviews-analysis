@@ -109,7 +109,7 @@ func (direct *RabbitOutputDirect) PublishFinish() {
   			false,  							// Immediate
   			amqp.Publishing{
   			    ContentType: 	"text/plain",
-  			    Body:        	[]byte(comms.END_MESSAGE + direct.instance),
+  			    Body:        	[]byte(comms.EndMessage + direct.instance),
   			},
   		)
 
