@@ -526,7 +526,7 @@ file['volumes'] = {
 		'driver': 'local',
 		'driver_opts': {
 			'type': 'none',
-			'device': '$PWD/datasets/reviews',
+			'device': '$PWD/data/reviews',
 			'o': 'bind'
 		}
 	},
@@ -534,7 +534,7 @@ file['volumes'] = {
 		'driver': 'local',
 		'driver_opts': {
 			'type': 'none',
-			'device': '$PWD/datasets/business',
+			'device': '$PWD/data/business',
 			'o': 'bind'
 		}
 	}

@@ -590,12 +590,12 @@ volumes:
   business_dataset:
     driver: local
     driver_opts:
-      device: $PWD/datasets/business
+      device: $PWD/data/business
       o: bind
       type: none
   reviews_dataset:
     driver: local
     driver_opts:
-      device: $PWD/datasets/reviews
+      device: $PWD/data/reviews
       o: bind
       type: none

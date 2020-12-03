@@ -56,7 +56,7 @@ stars_aggregators: 1
 bestuser_joiners: 1
 
 # Users w/+5 reviews with same text.
-hash_mappers: 1
+hash_mappers: 3
 hash_aggregators: 1
 dishash_aggregators: 1
 dishash_filters: 1
