@@ -27,7 +27,7 @@ services:
     - best_users_prettier
     entrypoint: /joiner
     environment:
-    - BESTUSERJOIN_LOG_BULK_RATE=500
+    - BESTUSERJOIN_LOG_BULK_RATE=50
     - BESTUSERJOIN_INSTANCE=0
     - BESTUSERJOIN_RABBITMQ_IP=rabbitmq
     - BESTUSERJOIN_RABBITMQ_PORT=5672
@@ -46,12 +46,12 @@ services:
     - citbiz_mapper0
     entrypoint: /scatter
     environment:
-    - BIZSCA_LOG_BULK_RATE=500
+    - BIZSCA_LOG_BULK_RATE=50
     - BIZSCA_INSTANCE=0
     - BIZSCA_BUSINESS_DATA=/data/business.json
     - BIZSCA_RABBITMQ_IP=rabbitmq
     - BIZSCA_RABBITMQ_PORT=5672
-    - BIZSCA_BULK_SIZE=1000
+    - BIZSCA_BULK_SIZE=10000
     - BIZSCA_WORKERS_POOL=16
     - BIZSCA_CITBIZ_MAPPERS=1
     image: biz_scatter:latest
@@ -84,7 +84,7 @@ services:
     - botuser_joiner0
     entrypoint: /filter
     environment:
-    - BOTUSERFIL_LOG_BULK_RATE=500
+    - BOTUSERFIL_LOG_BULK_RATE=50
     - BOTUSERFIL_INSTANCE=0
     - BOTUSERFIL_RABBITMQ_IP=rabbitmq
     - BOTUSERFIL_RABBITMQ_PORT=5672
@@ -103,7 +103,7 @@ services:
     - bot_users_prettier
     entrypoint: /joiner
     environment:
-    - BOTUSERJOIN_LOG_BULK_RATE=500
+    - BOTUSERJOIN_LOG_BULK_RATE=50
     - BOTUSERJOIN_INSTANCE=0
     - BOTUSERJOIN_RABBITMQ_IP=rabbitmq
     - BOTUSERJOIN_RABBITMQ_PORT=5672
@@ -122,7 +122,7 @@ services:
     - funcit_joiner0
     entrypoint: /mapper
     environment:
-    - CITBIZMAP_LOG_BULK_RATE=500
+    - CITBIZMAP_LOG_BULK_RATE=50
     - CITBIZMAP_INSTANCE=0
     - CITBIZMAP_RABBITMQ_IP=rabbitmq
     - CITBIZMAP_RABBITMQ_PORT=5672
@@ -140,14 +140,14 @@ services:
     - dishash_filter0
     entrypoint: /aggregator
     environment:
-    - DISHASHAGG_LOG_BULK_RATE=500
+    - DISHASHAGG_LOG_BULK_RATE=50
     - DISHASHAGG_INSTANCE=0
     - DISHASHAGG_RABBITMQ_IP=rabbitmq
     - DISHASHAGG_RABBITMQ_PORT=5672
     - DISHASHAGG_INPUT_TOPIC=0
     - DISHASHAGG_HASH_AGGREGATORS=1
     - DISHASHAGG_DISHASH_FILTERS=1
-    - DISHASHAGG_OUTPUT_BULK_SIZE=1000
+    - DISHASHAGG_OUTPUT_BULK_SIZE=10000
     image: dishash_aggregator:latest
     links:
     - rabbitmq
@@ -160,7 +160,7 @@ services:
     - botuser_joiner0
     entrypoint: /filter
     environment:
-    - DISHASHFIL_LOG_BULK_RATE=500
+    - DISHASHFIL_LOG_BULK_RATE=50
     - DISHASHFIL_INSTANCE=0
     - DISHASHFIL_RABBITMQ_IP=rabbitmq
     - DISHASHFIL_RABBITMQ_PORT=5672
@@ -178,14 +178,14 @@ services:
     - funcit_joiner0
     entrypoint: /aggregator
     environment:
-    - FUNBIZAGG_LOG_BULK_RATE=500
+    - FUNBIZAGG_LOG_BULK_RATE=50
     - FUNBIZAGG_INSTANCE=0
     - FUNBIZAGG_RABBITMQ_IP=rabbitmq
     - FUNBIZAGG_RABBITMQ_PORT=5672
     - FUNBIZAGG_FUNBIZ_FILTERS=1
     - FUNBIZAGG_FUNCIT_JOINERS=1
     - FUNBIZAGG_INPUT_TOPIC=0
-    - FUNBIZAGG_OUTPUT_BULK_SIZE=1000
+    - FUNBIZAGG_OUTPUT_BULK_SIZE=10000
     image: funbiz_aggregator:latest
     links:
     - rabbitmq
@@ -198,7 +198,7 @@ services:
     - funbiz_aggregator0
     entrypoint: /filter
     environment:
-    - FUNBIZFIL_LOG_BULK_RATE=500
+    - FUNBIZFIL_LOG_BULK_RATE=50
     - FUNBIZFIL_INSTANCE=0
     - FUNBIZFIL_RABBITMQ_IP=rabbitmq
     - FUNBIZFIL_RABBITMQ_PORT=5672
@@ -216,7 +216,7 @@ services:
     - funbiz_filter0
     entrypoint: /mapper
     environment:
-    - FUNBIZMAP_LOG_BULK_RATE=500
+    - FUNBIZMAP_LOG_BULK_RATE=50
     - FUNBIZMAP_INSTANCE=0
     - FUNBIZMAP_RABBITMQ_IP=rabbitmq
     - FUNBIZMAP_RABBITMQ_PORT=5672
@@ -234,14 +234,14 @@ services:
     - funcit_filter0
     entrypoint: /aggregator
     environment:
-    - FUNCITAGG_LOG_BULK_RATE=500
+    - FUNCITAGG_LOG_BULK_RATE=50
     - FUNCITAGG_INSTANCE=0
     - FUNCITAGG_RABBITMQ_IP=rabbitmq
     - FUNCITAGG_RABBITMQ_PORT=5672
     - FUNCITAGG_FUNCIT_JOINERS=1
     - FUNCITAGG_FUNCIT_FILTERS=1
     - FUNCITAGG_INPUT_TOPIC=0
-    - FUNCITAGG_OUTPUT_BULK_SIZE=1000
+    - FUNCITAGG_OUTPUT_BULK_SIZE=10000
     image: funcit_aggregator:latest
     links:
     - rabbitmq
@@ -254,7 +254,7 @@ services:
     - top_funniest_cities_prettier
     entrypoint: /filter
     environment:
-    - FUNCITFIL_LOG_BULK_RATE=500
+    - FUNCITFIL_LOG_BULK_RATE=50
     - FUNCITFIL_INSTANCE=0
     - FUNCITFIL_RABBITMQ_IP=rabbitmq
     - FUNCITFIL_RABBITMQ_PORT=5672
@@ -272,7 +272,7 @@ services:
     - funcit_aggregator0
     entrypoint: /joiner
     environment:
-    - FUNCITJOIN_LOG_BULK_RATE=500
+    - FUNCITJOIN_LOG_BULK_RATE=50
     - FUNCITJOIN_INSTANCE=0
     - FUNCITJOIN_RABBITMQ_IP=rabbitmq
     - FUNCITJOIN_RABBITMQ_PORT=5672
@@ -280,7 +280,7 @@ services:
     - FUNCITJOIN_CITBIZ_MAPPERS=1
     - FUNCITJOIN_FUNCIT_AGGREGATORS=1
     - FUNCITJOIN_INPUT_TOPIC=0
-    - FUNCITJOIN_OUTPUT_BULK_SIZE=1000
+    - FUNCITJOIN_OUTPUT_BULK_SIZE=10000
     image: funcit_joiner:latest
     links:
     - rabbitmq
@@ -293,14 +293,14 @@ services:
     - dishash_aggregator0
     entrypoint: /aggregator
     environment:
-    - HASHAGG_LOG_BULK_RATE=500
+    - HASHAGG_LOG_BULK_RATE=50
     - HASHAGG_INSTANCE=0
     - HASHAGG_RABBITMQ_IP=rabbitmq
     - HASHAGG_RABBITMQ_PORT=5672
     - HASHAGG_INPUT_TOPIC=0
     - HASHAGG_HASH_MAPPERS=1
     - HASHAGG_DISHASH_AGGREGATORS=1
-    - HASHAGG_OUTPUT_BULK_SIZE=1000
+    - HASHAGG_OUTPUT_BULK_SIZE=10000
     image: hash_aggregator:latest
     links:
     - rabbitmq
@@ -313,7 +313,7 @@ services:
     - hash_aggregator0
     entrypoint: /mapper
     environment:
-    - HASHMAP_LOG_BULK_RATE=500
+    - HASHMAP_LOG_BULK_RATE=50
     - HASHMAP_INSTANCE=0
     - HASHMAP_RABBITMQ_IP=rabbitmq
     - HASHMAP_RABBITMQ_PORT=5672
@@ -350,12 +350,12 @@ services:
     - user_mapper0
     entrypoint: /scatter
     environment:
-    - RVWSCA_LOG_BULK_RATE=500
+    - RVWSCA_LOG_BULK_RATE=50
     - RVWSCA_INSTANCE=0
     - RVWSCA_REVIEWS_DATA=/data/reviews.json
     - RVWSCA_RABBITMQ_IP=rabbitmq
     - RVWSCA_RABBITMQ_PORT=5672
-    - RVWSCA_BULK_SIZE=1000
+    - RVWSCA_BULK_SIZE=10000
     - RVWSCA_WORKERS_POOL=16
     - RVWSCA_FUNBIZ_MAPPERS=1
     - RVWSCA_WEEKDAYS_MAPPERS=1
@@ -390,14 +390,14 @@ services:
     - bestuser_joiner0
     entrypoint: /aggregator
     environment:
-    - STARSAGG_LOG_BULK_RATE=500
+    - STARSAGG_LOG_BULK_RATE=50
     - STARSAGG_INSTANCE=0
     - STARSAGG_RABBITMQ_IP=rabbitmq
     - STARSAGG_RABBITMQ_PORT=5672
     - STARSAGG_INPUT_TOPIC=0
     - STARSAGG_STARS_FILTERS=1
     - STARSAGG_STARS_JOINERS=1
-    - STARSAGG_OUTPUT_BULK_SIZE=1000
+    - STARSAGG_OUTPUT_BULK_SIZE=10000
     image: stars_aggregator:latest
     links:
     - rabbitmq
@@ -410,7 +410,7 @@ services:
     - stars_aggregator0
     entrypoint: /filter
     environment:
-    - STARSFIL_LOG_BULK_RATE=500
+    - STARSFIL_LOG_BULK_RATE=50
     - STARSFIL_INSTANCE=0
     - STARSFIL_RABBITMQ_IP=rabbitmq
     - STARSFIL_RABBITMQ_PORT=5672
@@ -428,7 +428,7 @@ services:
     - stars_filter0
     entrypoint: /mapper
     environment:
-    - STARSMAP_LOG_BULK_RATE=500
+    - STARSMAP_LOG_BULK_RATE=50
     - STARSMAP_INSTANCE=0
     - STARSMAP_RABBITMQ_IP=rabbitmq
     - STARSMAP_RABBITMQ_PORT=5672
@@ -462,7 +462,7 @@ services:
     - sink
     entrypoint: /prettier
     environment:
-    - TOPUSERPRE_LOG_BULK_RATE=500
+    - TOPUSERPRE_LOG_BULK_RATE=50
     - TOPUSERPRE_RABBITMQ_IP=rabbitmq
     - TOPUSERPRE_RABBITMQ_PORT=5672
     - TOPUSERPRE_MIN_REVIEWS=50
@@ -480,7 +480,7 @@ services:
     - user_filter0
     entrypoint: /aggregator
     environment:
-    - USERAGG_LOG_BULK_RATE=500
+    - USERAGG_LOG_BULK_RATE=50
     - USERAGG_INSTANCE=0
     - USERAGG_RABBITMQ_IP=rabbitmq
     - USERAGG_RABBITMQ_PORT=5672
@@ -488,7 +488,7 @@ services:
     - USERAGG_USER_MAPPERS=1
     - USERAGG_USER_FILTERS=1
     - USERAGG_BOTUSER_FILTERS=1
-    - USERAGG_OUTPUT_BULK_SIZE=1000
+    - USERAGG_OUTPUT_BULK_SIZE=10000
     image: user_aggregator:latest
     links:
     - rabbitmq
@@ -502,7 +502,7 @@ services:
     - top_users_prettier
     entrypoint: /filter
     environment:
-    - USERFIL_LOG_BULK_RATE=500
+    - USERFIL_LOG_BULK_RATE=50
     - USERFIL_INSTANCE=0
     - USERFIL_RABBITMQ_IP=rabbitmq
     - USERFIL_RABBITMQ_PORT=5672
@@ -521,7 +521,7 @@ services:
     - user_aggregator0
     entrypoint: /mapper
     environment:
-    - USERMAP_LOG_BULK_RATE=500
+    - USERMAP_LOG_BULK_RATE=50
     - USERMAP_INSTANCE=0
     - USERMAP_RABBITMQ_IP=rabbitmq
     - USERMAP_RABBITMQ_PORT=5672
@@ -539,7 +539,7 @@ services:
     - weekday_histogram_prettier
     entrypoint: /aggregator
     environment:
-    - WEEKDAYAGG_LOG_BULK_RATE=500
+    - WEEKDAYAGG_LOG_BULK_RATE=50
     - WEEKDAYAGG_INSTANCE=0
     - WEEKDAYAGG_RABBITMQ_IP=rabbitmq
     - WEEKDAYAGG_RABBITMQ_PORT=5672
@@ -573,7 +573,7 @@ services:
     - weekday_aggregator0
     entrypoint: /mapper
     environment:
-    - WEEKDAYMAP_LOG_BULK_RATE=500
+    - WEEKDAYMAP_LOG_BULK_RATE=50
     - WEEKDAYMAP_INSTANCE=0
     - WEEKDAYMAP_RABBITMQ_IP=rabbitmq
     - WEEKDAYMAP_RABBITMQ_PORT=5672

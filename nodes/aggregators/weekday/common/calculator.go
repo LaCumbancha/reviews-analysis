@@ -28,9 +28,11 @@ func NewCalculator() *Calculator {
 func (calculator *Calculator) status(bulkNumber int) string {
 	statusResponse := fmt.Sprintf("Status by bulk #%d: ", bulkNumber)
 
+	calculator.mutex.Lock()
 	for weekday, reviews := range calculator.data {
 		statusResponse += strings.ToUpper(fmt.Sprintf("%s (%d) ; ", weekday[0:3], reviews))
 	}
+	calculator.mutex.Unlock()
 
 	return statusResponse[0:len(statusResponse)-3]
 }

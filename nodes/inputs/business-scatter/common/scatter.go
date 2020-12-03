@@ -3,8 +3,9 @@ package common
 import (
 	"os"
 	"fmt"
-	"sync"
+	"time"
 	"bufio"
+	"bytes"
 	"github.com/streadway/amqp"
 	log "github.com/sirupsen/logrus"
 
@@ -61,75 +62,43 @@ func NewScatter(config ScatterConfig) *Scatter {
 }
 
 func (scatter *Scatter) Run() {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go scatter.retrieveBusinesses(&wg)
+	start := time.Now()
 
-	bulkMutex := &sync.Mutex{}
-	bulkNumber := 0
-
-	log.Infof("Initializing scatter with %d workers.", scatter.poolSize)
-	for worker := 1 ; worker <= scatter.poolSize ; worker++ {
-		log.Infof("Initializing worker %d.", worker)
-
-		go func() {
-			for bulk := range scatter.innerChannel {
-				bulkMutex.Lock()
-				bulkNumber++
-				innerBulk := bulkNumber
-				bulkMutex.Unlock()
-
-    			scatter.outputQueue.PublishBulk(innerBulk, bulk)
-    			wg.Done()
-			}
-		}()
-	}
-
-    // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
-    wg.Wait()
-
-    // Publishing end messages.
-    scatter.outputQueue.PublishFinish()
-}
-
-func (scatter *Scatter) retrieveBusinesses(wg *sync.WaitGroup) {
 	log.Infof("Starting to load businesses.")
 
-	file, err := os.Open(scatter.data)
+    file, err := os.Open(scatter.data)
     if err != nil {
         log.Fatalf("Error opening businesses data file. Err: '%s'", err)
     }
     defer file.Close()
 
+    bulkNumber := 0
+    chunkNumber := 0
     scanner := bufio.NewScanner(file)
+    buffer := bytes.NewBufferString("")
+    for scanner.Scan() {
+        buffer.WriteString(scanner.Text())
+        buffer.WriteString("\n")
 
-	wg.Add(1)
-	bulk := ""
-	chunkNumber := 0
-	for scanner.Scan() {
-		bulk = bulk + scanner.Text() + "\n"
-		chunkNumber++
+        chunkNumber++
+        if chunkNumber == scatter.bulkSize {
+            bulkNumber++
+            bulk := buffer.String()
+            scatter.outputQueue.PublishBulk(bulkNumber, bulk[:len(bulk)-1])
 
-		if chunkNumber == scatter.bulkSize {
-			scatter.innerChannel <- bulk[:len(bulk)-1]
-			wg.Add(1)
-
-			bulk = ""
-			chunkNumber = 0
-		}
-	}
-
-	if bulk != "" {
-    	scatter.innerChannel <- bulk[:len(bulk)-1]
-    } else {
-    	wg.Done()
+            buffer = bytes.NewBufferString("")
+            chunkNumber = 0
+        }
     }
 
     if err := scanner.Err(); err != nil {
         log.Fatalf("Error reading businesses data from file %s. Err: '%s'", scatter.data, err)
     }
 
-    wg.Done()
+    // Publishing end messages.
+    scatter.outputQueue.PublishFinish()
+
+    log.Infof("Time: %s.", time.Now().Sub(start).String())
 }
 
 func (scatter *Scatter) Stop() {
