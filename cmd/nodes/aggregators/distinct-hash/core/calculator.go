@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/distinct-hash/rabbitmq"
 
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
@@ -26,7 +26,7 @@ func NewCalculator(bulkSize int) *Calculator {
 }
 
 func (calculator *Calculator) Aggregate(bulkNumber int, rawHashedDataBulk string) {
-	var hashedDataList []rabbitmq.HashedTextData
+	var hashedDataList []comms.HashedTextData
 	json.Unmarshal([]byte(rawHashedDataBulk), &hashedDataList)
 
 	for _, hashedData := range hashedDataList {
@@ -45,19 +45,19 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawHashedDataBulk string
 	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveData() [][]rabbitmq.DistinctHashesData {
-	bulk := make([]rabbitmq.DistinctHashesData, 0)
-	bulkedList := make([][]rabbitmq.DistinctHashesData, 0)
+func (calculator *Calculator) RetrieveData() [][]comms.DishashData {
+	bulk := make([]comms.DishashData, 0)
+	bulkedList := make([][]comms.DishashData, 0)
 
 	actualBulk := 0
 	for userId, distinctHashes := range calculator.data {
 		actualBulk++
-		aggregatedData := rabbitmq.DistinctHashesData { UserId: userId, Distinct: distinctHashes }
+		aggregatedData := comms.DishashData { UserId: userId, Distinct: distinctHashes }
 		bulk = append(bulk, aggregatedData)
 
 		if actualBulk == calculator.bulkSize {
 			bulkedList = append(bulkedList, bulk)
-			bulk = make([]rabbitmq.DistinctHashesData, 0)
+			bulk = make([]comms.DishashData, 0)
 			actualBulk = 0
 		}
 	}

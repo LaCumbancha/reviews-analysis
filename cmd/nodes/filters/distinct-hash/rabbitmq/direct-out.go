@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type RabbitOutputDirect struct {
@@ -52,8 +53,8 @@ func (direct *RabbitOutputDirect) initialize() {
 	log.Tracef("Partition map generated for direct-exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
-func (direct *RabbitOutputDirect) PublishData(bulkNumber int, dishashDataList []DistinctHashesData) {
-	dataListByPartition := make(map[string][]DistinctHashesData)
+func (direct *RabbitOutputDirect) PublishData(bulkNumber int, dishashDataList []comms.DishashData) {
+	dataListByPartition := make(map[string][]comms.DishashData)
 
 	for _, data := range dishashDataList {
 		partition := direct.partitionMap[string(data.UserId[0])]
@@ -64,7 +65,7 @@ func (direct *RabbitOutputDirect) PublishData(bulkNumber int, dishashDataList []
 			if dishashDataListPartitioned != nil {
 				dataListByPartition[partition] = append(dishashDataListPartitioned, data)
 			} else {
-				dataListByPartition[partition] = append(make([]DistinctHashesData, 0), data)
+				dataListByPartition[partition] = append(make([]comms.DishashData, 0), data)
 			}
 
 		} else {
@@ -108,7 +109,7 @@ func (direct *RabbitOutputDirect) PublishFinish() {
   			false,  							// Immediate
   			amqp.Publishing{
   			    ContentType: 	"text/plain",
-  			    Body:        	[]byte(END_MESSAGE + direct.instance),
+  			    Body:        	[]byte(comms.END_MESSAGE + direct.instance),
   			},
   		)
 

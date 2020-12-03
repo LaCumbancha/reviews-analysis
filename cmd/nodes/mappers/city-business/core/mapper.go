@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type MapperConfig struct {
@@ -69,7 +70,7 @@ func (mapper *Mapper) Run() {
 		for message := range mapper.inputQueue.ConsumeBusiness() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -110,15 +111,15 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 }
 
 func (mapper *Mapper) processBusinessesBulk(bulkNumber int, rawBusinessesBulk string) {
-	var business rabbitmq.FullBusiness
-	var citbizDataList []rabbitmq.CityBusinessData
+	var business comms.FullBusiness
+	var citbizDataList []comms.CityBusinessData
 
 	rawBusinesses := strings.Split(rawBusinessesBulk, "\n")
 	for _, rawBusiness := range rawBusinesses {
 		if rawBusiness != "" {
 			json.Unmarshal([]byte(rawBusiness), &business)
 			
-			mappedBusiness := rabbitmq.CityBusinessData {
+			mappedBusiness := comms.CityBusinessData {
 				BusinessId:		business.BusinessId,
 				City:			fmt.Sprintf("%s (%s)", business.City, business.State),
 			}

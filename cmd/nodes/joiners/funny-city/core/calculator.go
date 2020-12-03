@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/joiners/funny-city/rabbitmq"
 
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
@@ -30,7 +30,7 @@ func NewCalculator(bulkSize int) *Calculator {
 }
 
 func (calculator *Calculator) AddFunnyBusiness(bulkNumber int, rawFunbizDataBulk string) {
-	var funbizDataList []rabbitmq.FunnyBusinessData
+	var funbizDataList []comms.FunnyBusinessData
 	json.Unmarshal([]byte(rawFunbizDataBulk), &funbizDataList)
 
 	for _, funbizData := range funbizDataList {
@@ -43,7 +43,7 @@ func (calculator *Calculator) AddFunnyBusiness(bulkNumber int, rawFunbizDataBulk
 }
 
 func (calculator *Calculator) AddCityBusiness(bulkNumber int, rawCitbizDataBulk string) {
-	var citbizDataList []rabbitmq.CityBusinessData
+	var citbizDataList []comms.CityBusinessData
 	json.Unmarshal([]byte(rawCitbizDataBulk), &citbizDataList)
 
 	for _, citbizData := range citbizDataList {
@@ -55,9 +55,9 @@ func (calculator *Calculator) AddCityBusiness(bulkNumber int, rawCitbizDataBulk 
 	logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveMatches() [][]rabbitmq.FunnyCityData {
-	var bulkedList [][]rabbitmq.FunnyCityData
-	var bulk []rabbitmq.FunnyCityData
+func (calculator *Calculator) RetrieveMatches() [][]comms.FunnyCityData {
+	var bulkedList [][]comms.FunnyCityData
+	var bulk []comms.FunnyCityData
 
 	actualBulk := 0
 	calculator.mutex1.Lock()
@@ -67,7 +67,7 @@ func (calculator *Calculator) RetrieveMatches() [][]rabbitmq.FunnyCityData {
 		calculator.mutex2.Lock()
 		if city, found := calculator.data2[businessId]; found {
 			calculator.mutex2.Unlock()
-			joinedData := rabbitmq.FunnyCityData {
+			joinedData := comms.FunnyCityData {
 				City:		city,
 				Funny:		funny,
 			}
@@ -81,7 +81,7 @@ func (calculator *Calculator) RetrieveMatches() [][]rabbitmq.FunnyCityData {
 
 			if actualBulk == calculator.maxBulkSize {
 				bulkedList = append(bulkedList, bulk)
-				bulk = make([]rabbitmq.FunnyCityData, 0)
+				bulk = make([]comms.FunnyCityData, 0)
 				actualBulk = 0
 			}
 

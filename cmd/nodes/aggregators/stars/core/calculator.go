@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/stars/rabbitmq"
 
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
@@ -26,7 +26,7 @@ func NewCalculator(bulkSize int) *Calculator {
 }
 
 func (calculator *Calculator) Aggregate(bulkNumber int, rawStarsDataList string) {
-	var starsDataList []rabbitmq.StarsData
+	var starsDataList []comms.StarsData
 	json.Unmarshal([]byte(rawStarsDataList), &starsDataList)
 
 	for _, starsData := range starsDataList {
@@ -45,19 +45,19 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawStarsDataList string)
 	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d users stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveData() [][]rabbitmq.UserData {
-	bulk := make([]rabbitmq.UserData, 0)
-	bulkedList := make([][]rabbitmq.UserData, 0)
+func (calculator *Calculator) RetrieveData() [][]comms.UserData {
+	bulk := make([]comms.UserData, 0)
+	bulkedList := make([][]comms.UserData, 0)
 
 	actualBulk := 0
 	for userId, reviews := range calculator.data {
 		actualBulk++
-		aggregatedData := rabbitmq.UserData { UserId: userId, Reviews: reviews }
+		aggregatedData := comms.UserData { UserId: userId, Reviews: reviews }
 		bulk = append(bulk, aggregatedData)
 
 		if actualBulk == calculator.bulkSize {
 			bulkedList = append(bulkedList, bulk)
-			bulk = make([]rabbitmq.UserData, 0)
+			bulk = make([]comms.UserData, 0)
 			actualBulk = 0
 		}
 	}

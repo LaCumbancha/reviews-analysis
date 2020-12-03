@@ -3,7 +3,9 @@ package rabbitmq
 import (
 	"encoding/json"
 	"github.com/streadway/amqp"
+
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type RabbitOutputQueue struct {
@@ -40,7 +42,7 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(messageNumber int, botUser UserData) {
+func (queue *RabbitOutputQueue) PublishData(messageNumber int, botUser comms.UserData) {
 	data, err := json.Marshal(botUser)
 	if err != nil {
 		log.Errorf("Error generating Json from (%s). Err: '%s'", botUser, err)
@@ -71,7 +73,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 	  	false,  						// Immediate
 	  	amqp.Publishing{
 			ContentType: 	"text/plain",
-			Body:        	[]byte(END_MESSAGE + queue.instance),
+			Body:        	[]byte(comms.END_MESSAGE + queue.instance),
 	  	},
 	)
 

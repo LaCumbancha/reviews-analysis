@@ -7,6 +7,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/best-users/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type MapperConfig struct {
@@ -67,7 +68,7 @@ func (mapper *Mapper) Run() {
 		for message := range mapper.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				messageCounter++

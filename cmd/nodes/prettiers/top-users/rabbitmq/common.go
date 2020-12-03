@@ -12,7 +12,3 @@ func AckMessage(message *amqp.Delivery, messageId string) {
 		log.Tracef("Sending message %s ACK.", messageId)
 	}
 }
-
-func IsEndMessage(message string) bool {
-	return (len(message) > 10) && (message[0:11] == END_MESSAGE)
-}

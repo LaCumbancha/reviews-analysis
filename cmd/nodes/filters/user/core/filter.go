@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type FilterConfig struct {
@@ -74,7 +75,7 @@ func (filter *Filter) Run() {
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -116,8 +117,8 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 }
 
 func (filter *Filter) filterActiveUsers(bulkNumber int, rawUserDataBulk string) {
-	var userDataList []rabbitmq.UserData
-	var filteredUserDataList []rabbitmq.UserData
+	var userDataList []comms.UserData
+	var filteredUserDataList []comms.UserData
 	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
 	for _, userData := range userDataList {

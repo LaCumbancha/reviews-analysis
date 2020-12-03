@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type FilterConfig struct {
@@ -68,7 +69,7 @@ func (filter *Filter) Run() {
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -109,8 +110,8 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 }
 
 func (filter *Filter) filterLowStars(bulkNumber int, rawStarsDataBulk string) {
-	var starsDataList []rabbitmq.StarsData
-	var filteredStarsDataList []rabbitmq.StarsData
+	var starsDataList []comms.StarsData
+	var filteredStarsDataList []comms.StarsData
 	json.Unmarshal([]byte(rawStarsDataBulk), &starsDataList)
 
 	for _, starsData := range starsDataList {

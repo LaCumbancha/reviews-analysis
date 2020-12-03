@@ -7,6 +7,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/funniest-cities/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type FilterConfig struct {
@@ -67,7 +68,7 @@ func (filter *Filter) Run() {
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				messageCounter++

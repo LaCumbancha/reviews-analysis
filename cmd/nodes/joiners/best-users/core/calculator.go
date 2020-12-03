@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/joiners/best-users/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
@@ -29,7 +29,7 @@ func NewCalculator() *Calculator {
 }
 
 func (calculator *Calculator) AddBestUser(bulkNumber int, rawBestUserDataBulk string) {
-	var bestUserDataList []rabbitmq.UserData
+	var bestUserDataList []comms.UserData
 	json.Unmarshal([]byte(rawBestUserDataBulk), &bestUserDataList)
 
 	for _, bestUserData := range bestUserDataList {
@@ -42,7 +42,7 @@ func (calculator *Calculator) AddBestUser(bulkNumber int, rawBestUserDataBulk st
 }
 
 func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
-	var userDataList []rabbitmq.UserData
+	var userDataList []comms.UserData
 	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
 	for _, userData := range userDataList {
@@ -54,8 +54,8 @@ func (calculator *Calculator) AddUser(bulkNumber int, rawUserDataBulk string) {
 	logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d stored in Joiner", bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
-	var list []rabbitmq.UserData
+func (calculator *Calculator) RetrieveMatches() []comms.UserData {
+	var list []comms.UserData
 
 	calculator.mutex1.Lock()
 	for userId, bestReviews := range calculator.data1 {
@@ -67,7 +67,7 @@ func (calculator *Calculator) RetrieveMatches() []rabbitmq.UserData {
 
 			if bestReviews == totalReviews {
 				log.Infof("All user %s reviews where rated with 5 stars.", userId)
-				joinedData := rabbitmq.UserData {
+				joinedData := comms.UserData {
 					UserId:		userId,
 					Reviews:	totalReviews,
 				}

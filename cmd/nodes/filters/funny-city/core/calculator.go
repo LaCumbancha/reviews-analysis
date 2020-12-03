@@ -5,21 +5,21 @@ import (
 	"sort"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/filters/funny-city/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
-	data 			[]rabbitmq.FunnyCityData
+	data 			[]comms.FunnyCityData
 	mutex 			*sync.Mutex
 	topSize			int
 }
 
 func NewCalculator(topSize int) *Calculator {
 	calculator := &Calculator {
-		data:		[]rabbitmq.FunnyCityData{},
+		data:		[]comms.FunnyCityData{},
 		mutex:		&sync.Mutex{},
 		topSize:	topSize,
 	}
@@ -28,7 +28,7 @@ func NewCalculator(topSize int) *Calculator {
 }
 
 func (calculator *Calculator) Save(bulkNumber int, rawFuncitDataList string) {
-	var funcitDataList []rabbitmq.FunnyCityData
+	var funcitDataList []comms.FunnyCityData
 	json.Unmarshal([]byte(rawFuncitDataList), &funcitDataList)
 
 	for _, funcitData := range funcitDataList {
@@ -40,7 +40,7 @@ func (calculator *Calculator) Save(bulkNumber int, rawFuncitDataList string) {
 	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d funny cities stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveTopTen() []rabbitmq.FunnyCityData {
+func (calculator *Calculator) RetrieveTopTen() []comms.FunnyCityData {
 	sort.SliceStable(calculator.data, func(cityIdx1, cityIdx2 int) bool {
 	    return calculator.data[cityIdx1].Funny > calculator.data[cityIdx2].Funny
 	})

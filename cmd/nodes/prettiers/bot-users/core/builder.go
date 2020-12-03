@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/bot-users/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Builder struct {
@@ -26,7 +26,7 @@ func NewBuilder(minReviews int) *Builder {
 }
 
 func (builder *Builder) Save(rawData string) {
-	var userData rabbitmq.UserData
+	var userData comms.UserData
 	json.Unmarshal([]byte(rawData), &userData)
 
 	builder.mutex.Lock()

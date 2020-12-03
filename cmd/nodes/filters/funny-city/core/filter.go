@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type FilterConfig struct {
@@ -69,7 +70,7 @@ func (filter *Filter) Run() {
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -92,7 +93,7 @@ func (filter *Filter) Run() {
     	messageCounter++
 
     	wg.Add(1)
-    	go func(messageNumber int, topTenCity rabbitmq.FunnyCityData) {
+    	go func(messageNumber int, topTenCity comms.FunnyCityData) {
     		filter.outputQueue.PublishData(messageNumber, topTenCity)
     		wg.Done()
     	}(messageCounter, topTenData)

@@ -10,6 +10,7 @@ import (
 	
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type MapperConfig struct {
@@ -69,7 +70,7 @@ func (mapper *Mapper) Run() {
 		for message := range mapper.inputDirect.ConsumeReviews() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -110,14 +111,14 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 }
 
 func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) {
-	var review rabbitmq.FullReview
-	var starsDataList []rabbitmq.StarsData
+	var review comms.FullReview
+	var starsDataList []comms.StarsData
 
 	rawReviews := strings.Split(rawReviewsBulk, "\n")
 	for _, rawReview := range rawReviews {
 		json.Unmarshal([]byte(rawReview), &review)
 	
-		mappedReview := rabbitmq.StarsData {
+		mappedReview := comms.StarsData {
 			UserId:		review.UserId,
 			Stars:		review.Stars,
 		}

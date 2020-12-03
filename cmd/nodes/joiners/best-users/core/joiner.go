@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 const FLOW1 = "BEST_USERS"
@@ -83,7 +84,7 @@ func (joiner *Joiner) Run() {
 		for message := range joiner.inputDirect1.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
 				bulkCounter1++
@@ -106,7 +107,7 @@ func (joiner *Joiner) Run() {
 		for message := range joiner.inputDirect2.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
 				bulkCounter2++
@@ -146,7 +147,7 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     	messageCounter++
 
     	joinWg.Add(1)
-    	go func(messageNumber int, bestUser rabbitmq.UserData) {
+    	go func(messageNumber int, bestUser comms.UserData) {
     		joiner.outputQueue.PublishData(messageNumber, bestUser)
     		joinWg.Done()
     	}(messageCounter, joinedData)

@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type MapperConfig struct {
@@ -70,7 +71,7 @@ func (mapper *Mapper) Run() {
 		for message := range mapper.inputDirect.ConsumeReviews() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -111,8 +112,8 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 }
 
 func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) {
-	var review rabbitmq.FullReview
-	var weekdayDataList []rabbitmq.WeekdayData
+	var review comms.FullReview
+	var weekdayDataList []comms.WeekdayData
 
 	rawReviews := strings.Split(rawReviewsBulk, "\n")
 	for _, rawReview := range rawReviews {
@@ -125,7 +126,7 @@ func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) 
 				log.Errorf("Error parsing date from review %s (given date: %s). Err: %s", review.ReviewId, review.Date, err)
 			} else {
 				reviewWeekday := reviewDate.Weekday()
-				mappedReview := rabbitmq.WeekdayData {
+				mappedReview := comms.WeekdayData {
 					Weekday:	reviewWeekday.String(),
 				}
 

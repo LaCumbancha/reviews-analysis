@@ -2,7 +2,9 @@ package rabbitmq
 
 import (
 	"github.com/streadway/amqp"
+
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type RabbitOutputQueue struct {
@@ -64,7 +66,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 		false,  						// Immediate
 		amqp.Publishing{
 			ContentType: 	"text/plain",
-			Body:        	[]byte(END_MESSAGE),
+			Body:        	[]byte(comms.END_MESSAGE),
 		},
 	)
 

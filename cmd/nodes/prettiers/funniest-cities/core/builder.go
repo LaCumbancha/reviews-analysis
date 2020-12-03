@@ -5,20 +5,20 @@ import (
 	"sort"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/funniest-cities/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Builder struct {
-	data 			[]rabbitmq.FunnyCityData
+	data 			[]comms.FunnyCityData
 	mutex 			*sync.Mutex
 	topSize			int
 }
 
 func NewBuilder(topSize int) *Builder {
 	builder := &Builder {
-		data:		[]rabbitmq.FunnyCityData{},
+		data:		[]comms.FunnyCityData{},
 		mutex:		&sync.Mutex{},
 		topSize:	topSize,
 	}
@@ -27,7 +27,7 @@ func NewBuilder(topSize int) *Builder {
 }
 
 func (builder *Builder) Save(rawData string) {
-	var funnyCity rabbitmq.FunnyCityData
+	var funnyCity comms.FunnyCityData
 	json.Unmarshal([]byte(rawData), &funnyCity)
 
 	builder.mutex.Lock()
@@ -42,7 +42,7 @@ func (builder *Builder) BuildTopTen() string {
 	    return builder.data[cityIdx1].Funny > builder.data[cityIdx2].Funny
 	})
 
-	var topTenCities []rabbitmq.FunnyCityData
+	var topTenCities []comms.FunnyCityData
 	funnyCities := len(builder.data)
 	if (funnyCities > builder.topSize) {
 		log.Infof("%d cities where discarded due to not being funny enoguh.", funnyCities - builder.topSize)

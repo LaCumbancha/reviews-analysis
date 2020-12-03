@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/funny-city/rabbitmq"
 
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
@@ -26,7 +26,7 @@ func NewCalculator(bulkSize int) *Calculator {
 }
 
 func (calculator *Calculator) Aggregate(bulkNumber int, rawFuncitDataList string) {
-	var funcitDataList []rabbitmq.FunnyCityData
+	var funcitDataList []comms.FunnyCityData
 	json.Unmarshal([]byte(rawFuncitDataList), &funcitDataList)
 
 	for _, funcitData := range funcitDataList {
@@ -45,19 +45,19 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawFuncitDataList string
 	logb.Instance().Infof(fmt.Sprintf("Status by bulk #%d: %d funny cities stored.", bulkNumber, len(calculator.data)), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveData() [][]rabbitmq.FunnyCityData {
-	bulk := make([]rabbitmq.FunnyCityData, 0)
-	bulkedList := make([][]rabbitmq.FunnyCityData, 0)
+func (calculator *Calculator) RetrieveData() [][]comms.FunnyCityData {
+	bulk := make([]comms.FunnyCityData, 0)
+	bulkedList := make([][]comms.FunnyCityData, 0)
 
 	actualBulk := 0
 	for city, funny := range calculator.data {
 		actualBulk++
-		aggregatedData := rabbitmq.FunnyCityData { City: city, Funny: funny }
+		aggregatedData := comms.FunnyCityData { City: city, Funny: funny }
 		bulk = append(bulk, aggregatedData)
 
 		if actualBulk == calculator.bulkSize {
 			bulkedList = append(bulkedList, bulk)
-			bulk = make([]rabbitmq.FunnyCityData, 0)
+			bulk = make([]comms.FunnyCityData, 0)
 			actualBulk = 0
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/outputs/sink/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type SinkConfig struct {
@@ -63,7 +64,8 @@ func (sink *Sink) Run() {
 	go func() {
 		for message := range sink.funniestCitiesQueue.ConsumeData() {
 			messageBody := string(message.Body)
-			if messageBody == rabbitmq.END_MESSAGE {
+
+			if comms.IsEndMessage(messageBody) {
 				log.Infof("End-Message received from the Funniest Cities flow.")
 				wg.Done()
 			} else {
@@ -75,7 +77,8 @@ func (sink *Sink) Run() {
 	go func() {
 		for message := range sink.weekdayHistogramQueue.ConsumeData() {
 			messageBody := string(message.Body)
-			if messageBody == rabbitmq.END_MESSAGE {
+
+			if comms.IsEndMessage(messageBody) {
 				log.Infof("End-Message received from the Weekday Histogram flow.")
 				wg.Done()
 			} else {
@@ -87,7 +90,8 @@ func (sink *Sink) Run() {
 	go func() {
 		for message := range sink.topUsersQueue.ConsumeData() {
 			messageBody := string(message.Body)
-			if messageBody == rabbitmq.END_MESSAGE {
+
+			if comms.IsEndMessage(messageBody) {
 				log.Infof("End-Message received from the Top-Users flow.")
 				wg.Done()
 			} else {
@@ -99,7 +103,8 @@ func (sink *Sink) Run() {
 	go func() {
 		for message := range sink.bestUsersQueue.ConsumeData() {
 			messageBody := string(message.Body)
-			if messageBody == rabbitmq.END_MESSAGE {
+
+			if comms.IsEndMessage(messageBody) {
 				log.Infof("End-Message received from the Best-Users flow.")
 				wg.Done()
 			} else {
@@ -111,7 +116,8 @@ func (sink *Sink) Run() {
 	go func() {
 		for message := range sink.botUsersQueue.ConsumeData() {
 			messageBody := string(message.Body)
-			if messageBody == rabbitmq.END_MESSAGE {
+			
+			if comms.IsEndMessage(messageBody) {
 				log.Infof("End-Message received from the Bot-Users flow.")
 				wg.Done()
 			} else {

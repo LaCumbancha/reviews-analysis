@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/top-users/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Builder struct {
@@ -26,7 +26,7 @@ func NewBuilder(minReviews int) *Builder {
 }
 
 func (builder *Builder) Save(rawUserDataBulk string) {
-	var userDataList []rabbitmq.UserData
+	var userDataList []comms.UserData
 	json.Unmarshal([]byte(rawUserDataBulk), &userDataList)
 
 	for _, userData := range userDataList {

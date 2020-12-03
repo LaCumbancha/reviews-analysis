@@ -5,10 +5,10 @@ import (
 	"sync"
 	"strings"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/weekday/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Calculator struct {
@@ -38,7 +38,7 @@ func (calculator *Calculator) status(bulkNumber int) string {
 }
 
 func (calculator *Calculator) Aggregate(bulkNumber int, rawWeekdayDataBulk string) {
-	var weekdayDataList []rabbitmq.WeekdayData
+	var weekdayDataList []comms.WeekdayData
 	json.Unmarshal([]byte(rawWeekdayDataBulk), &weekdayDataList)
 
 	for _, weekdayData := range weekdayDataList {
@@ -57,12 +57,12 @@ func (calculator *Calculator) Aggregate(bulkNumber int, rawWeekdayDataBulk strin
 	logb.Instance().Infof(calculator.status(bulkNumber), bulkNumber)
 }
 
-func (calculator *Calculator) RetrieveData() []rabbitmq.WeekdayData {
-	var list []rabbitmq.WeekdayData
+func (calculator *Calculator) RetrieveData() []comms.WeekdayData {
+	var list []comms.WeekdayData
 
 	for weekday, reviews := range calculator.data {
 		log.Infof("%s reviews aggregated: %d.", weekday, reviews)
-		aggregatedData := rabbitmq.WeekdayData { Weekday: weekday, Reviews: reviews }
+		aggregatedData := comms.WeekdayData { Weekday: weekday, Reviews: reviews }
 		list = append(list, aggregatedData)
 	}
 

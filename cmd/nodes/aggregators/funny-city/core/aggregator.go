@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type AggregatorConfig struct {
@@ -71,7 +72,7 @@ func (aggregator *Aggregator) Run() {
 		for message := range aggregator.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
-			if rabbitmq.IsEndMessage(messageBody) {
+			if comms.IsEndMessage(messageBody) {
 				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
 			} else {
 				bulkCounter++
@@ -95,7 +96,7 @@ func (aggregator *Aggregator) Run() {
     	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkCounter), outputBulkCounter)
 
 		wg.Add(1)
-		go func(bulkNumber int, aggregatedBulk []rabbitmq.FunnyCityData) {
+		go func(bulkNumber int, aggregatedBulk []comms.FunnyCityData) {
 			aggregator.outputQueue.PublishData(bulkNumber, aggregatedBulk)
 			wg.Done()
 		}(outputBulkCounter, aggregatedData)

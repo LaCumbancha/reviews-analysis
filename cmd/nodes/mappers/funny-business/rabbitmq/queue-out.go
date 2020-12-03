@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type RabbitOutputQueue struct {
@@ -21,7 +22,7 @@ func NewRabbitOutputQueue(name string, instance string, endSignals int, channel 
 		instance:		instance,
 		channel: 		channel,
 		name:			name,
-		endSignals:		RETRIES * endSignals,
+		endSignals:		comms.RETRIES * endSignals,
 	}
 
 	queue.initialize()
@@ -45,7 +46,7 @@ func (queue *RabbitOutputQueue) initialize() {
 	}
 }
 
-func (queue *RabbitOutputQueue) PublishData(bulkNumber int, funbizDataList []FunnyBusinessData) {
+func (queue *RabbitOutputQueue) PublishData(bulkNumber int, funbizDataList []comms.FunnyBusinessData) {
 	data, err := json.Marshal(funbizDataList)
 	if err != nil {
 		log.Errorf("Error generating Json from mapped bulk #%d. Err: '%s'", bulkNumber, err)
@@ -79,7 +80,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 	  		false,  						// Immediate
 	  		amqp.Publishing{
 	  		    ContentType: 	"text/plain",
-	  		    Body:        	[]byte(END_MESSAGE + queue.instance),
+	  		    Body:        	[]byte(comms.END_MESSAGE + queue.instance),
 	  		},
 	  	)
 

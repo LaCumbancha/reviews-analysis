@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 	"encoding/json"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/weekday-histogram/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type Builder struct {
@@ -24,7 +24,7 @@ func NewBuilder() *Builder {
 }
 
 func (builder *Builder) Save(rawData string) {
-	var weekdayData rabbitmq.WeekdayData
+	var weekdayData comms.WeekdayData
 	json.Unmarshal([]byte(rawData), &weekdayData)
 
 	builder.mutex.Lock()

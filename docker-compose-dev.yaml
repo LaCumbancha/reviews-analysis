@@ -298,7 +298,7 @@ services:
     - HASHAGG_RABBITMQ_IP=rabbitmq
     - HASHAGG_RABBITMQ_PORT=5672
     - HASHAGG_INPUT_TOPIC=0
-    - HASHAGG_HASH_MAPPERS=1
+    - HASHAGG_HASH_MAPPERS=3
     - HASHAGG_DISHASH_AGGREGATORS=1
     - HASHAGG_OUTPUT_BULK_SIZE=10000
     image: hash_aggregator:latest
@@ -315,6 +315,42 @@ services:
     environment:
     - HASHMAP_LOG_BULK_RATE=50
     - HASHMAP_INSTANCE=0
+    - HASHMAP_RABBITMQ_IP=rabbitmq
+    - HASHMAP_RABBITMQ_PORT=5672
+    - HASHMAP_REVIEWS_INPUTS=1
+    - HASHMAP_HASH_AGGREGATORS=1
+    image: hash_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  hash_mapper1:
+    container_name: hash_mapper1
+    depends_on:
+    - hash_aggregator0
+    entrypoint: /mapper
+    environment:
+    - HASHMAP_LOG_BULK_RATE=50
+    - HASHMAP_INSTANCE=1
+    - HASHMAP_RABBITMQ_IP=rabbitmq
+    - HASHMAP_RABBITMQ_PORT=5672
+    - HASHMAP_REVIEWS_INPUTS=1
+    - HASHMAP_HASH_AGGREGATORS=1
+    image: hash_mapper:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  hash_mapper2:
+    container_name: hash_mapper2
+    depends_on:
+    - hash_aggregator0
+    entrypoint: /mapper
+    environment:
+    - HASHMAP_LOG_BULK_RATE=50
+    - HASHMAP_INSTANCE=2
     - HASHMAP_RABBITMQ_IP=rabbitmq
     - HASHMAP_RABBITMQ_PORT=5672
     - HASHMAP_REVIEWS_INPUTS=1
@@ -347,6 +383,8 @@ services:
     - weekday_mapper0
     - stars_mapper0
     - hash_mapper0
+    - hash_mapper1
+    - hash_mapper2
     - user_mapper0
     entrypoint: /scatter
     environment:
@@ -359,7 +397,7 @@ services:
     - RVWSCA_WORKERS_POOL=16
     - RVWSCA_FUNBIZ_MAPPERS=1
     - RVWSCA_WEEKDAYS_MAPPERS=1
-    - RVWSCA_HASHES_MAPPERS=1
+    - RVWSCA_HASHES_MAPPERS=3
     - RVWSCA_USERS_MAPPERS=1
     - RVWSCA_STARS_MAPPERS=1
     image: rvw_scatter:latest
