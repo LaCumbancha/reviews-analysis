@@ -10,6 +10,7 @@ import (
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 const FLOW1 = "FUNBIZ"
@@ -30,8 +31,8 @@ type Joiner struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	calculator		*Calculator
-	inputDirect1 	*rabbitmq.RabbitInputDirect
-	inputDirect2 	*rabbitmq.RabbitInputDirect
+	inputDirect1 	*rabbit.RabbitInputDirect
+	inputDirect2 	*rabbit.RabbitInputDirect
 	outputDirect 	*rabbitmq.RabbitOutputDirect
 	endSignals1		int
 	endSignals2		int
@@ -52,8 +53,8 @@ func NewJoiner(config JoinerConfig) *Joiner {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect1 := rabbitmq.NewRabbitInputDirect(props.FunbizAggregatorOutput, config.InputTopic, ch)
-	inputDirect2 := rabbitmq.NewRabbitInputDirect(props.CitbizMapperOutput, config.InputTopic, ch)
+	inputDirect1 := rabbit.NewRabbitInputDirect(ch, props.FunbizAggregatorOutput, config.InputTopic, "")
+	inputDirect2 := rabbit.NewRabbitInputDirect(ch, props.CitbizMapperOutput, config.InputTopic, "")
 	outputDirect := rabbitmq.NewRabbitOutputDirect(props.FuncitJoinerOutput, config.Instance, config.FuncitAggregators, ch)
 	joiner := &Joiner {
 		connection:		conn,
@@ -82,22 +83,27 @@ func (joiner *Joiner) Run() {
 	// Receiving messages from the funny-business flow.
 	inputWg.Add(1)
 	go func() {
-		bulkCounter1 := 0
 		log.Infof("Starting to listen for funny-business data.")
-		for message := range joiner.inputDirect1.ConsumeData() {
+		inputDirectChannel, err := joiner.inputDirect1.ConsumeData()
+		if err != nil {
+			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", joiner.inputDirect1.Exchange, err)
+		}
+
+		bulkCounter := 0
+		for message := range inputDirectChannel {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
 			} else {
-				bulkCounter1++
-				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter1), bulkCounter1)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter), bulkCounter)
 
 				inputWg.Add(1)
 				go func(bulkNumber int, bulk string) {
 					joiner.calculator.AddFunnyBusiness(bulkNumber, bulk)
 					inputWg.Done()
-				}(bulkCounter1, messageBody)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -105,22 +111,27 @@ func (joiner *Joiner) Run() {
 	// Receiving messages from the city-business flow.
 	inputWg.Add(1)
 	go func() {
-		bulkCounter2 := 0
 		log.Infof("Starting to listen for city-business data.")
-		for message := range joiner.inputDirect2.ConsumeData() {
+		inputDirectChannel, err := joiner.inputDirect2.ConsumeData()
+		if err != nil {
+			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", joiner.inputDirect2.Exchange, err)
+		}
+
+		bulkCounter := 0
+		for message := range inputDirectChannel {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
 				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
 			} else {
-				bulkCounter2++
-				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", bulkCounter2), bulkCounter2 * 5)
+				bulkCounter++
+				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", bulkCounter), bulkCounter * 5)
 
 				inputWg.Add(1)
 				go func(bulkNumber int, bulk string) {
 					joiner.calculator.AddCityBusiness(bulkNumber, bulk)
 					inputWg.Done()
-				}(bulkCounter2, messageBody)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()

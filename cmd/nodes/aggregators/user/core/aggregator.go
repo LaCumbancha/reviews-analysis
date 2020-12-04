@@ -10,6 +10,7 @@ import (
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 type AggregatorConfig struct {
@@ -27,7 +28,7 @@ type Aggregator struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	calculator		*Calculator
-	inputDirect 	*rabbitmq.RabbitInputDirect
+	inputDirect 	*rabbit.RabbitInputDirect
 	outputQueue1 	*rabbitmq.RabbitOutputQueue
 	outputQueue2	*rabbitmq.RabbitOutputQueue
 	endSignals		int
@@ -48,7 +49,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect := rabbitmq.NewRabbitInputDirect(props.UserMapperOutput, config.InputTopic, ch)
+	inputDirect := rabbit.NewRabbitInputDirect(ch, props.UserMapperOutput, config.InputTopic, "")
 	outputQueue1 := rabbitmq.NewRabbitOutputQueue(props.UserAggregatorOutput, config.Instance, config.UserFilters, ch)
 	outputQueue2 := rabbitmq.NewRabbitOutputQueue(props.BotUsersAggregatorOutput, config.Instance, config.BotUserFilters, ch)
 	aggregator := &Aggregator {
@@ -73,8 +74,13 @@ func (aggregator *Aggregator) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		inputDirectChannel, err := aggregator.inputDirect.ConsumeData()
+		if err != nil {
+			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", aggregator.inputDirect.Exchange, err)
+		}
+
 		bulkCounter := 0
-		for message := range aggregator.inputDirect.ConsumeData() {
+		for message := range inputDirectChannel {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {

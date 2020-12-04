@@ -1,4 +1,4 @@
-package rabbitmq
+package middleware
 
 import (
 	"github.com/streadway/amqp"
@@ -6,15 +6,16 @@ import (
 )
 
 type RabbitInputDirect struct {
+	Exchange 			string
 	channel 			*amqp.Channel
-	exchange 			string
 	queue 				string
 }
 
-func NewRabbitInputDirect(name string, inputTopic string, channel *amqp.Channel) *RabbitInputDirect {
+func NewRabbitInputDirect(channel *amqp.Channel, name string, inputTopic string, queue string) *RabbitInputDirect {
 	direct := &RabbitInputDirect {
+		Exchange:	name,
 		channel: 	channel,
-		exchange:	name,
+		queue:		queue,
 	}
 
 	direct.initialize(inputTopic)
@@ -23,7 +24,7 @@ func NewRabbitInputDirect(name string, inputTopic string, channel *amqp.Channel)
 
 func (direct *RabbitInputDirect) initialize(inputTopic string) {
 	err := direct.channel.ExchangeDeclare(
-		direct.exchange, 		// Name
+		direct.Exchange, 		// Name
 		"direct",				// Type
 		false,   				// Durable
 		false,   				// Auto-Deleted
@@ -33,13 +34,13 @@ func (direct *RabbitInputDirect) initialize(inputTopic string) {
 	)
 
 	if err != nil {
-		log.Fatalf("Error creating direct-exchange %s. Err: '%s'", direct.exchange, err)
+		log.Fatalf("Error creating direct-exchange %s. Err: '%s'", direct.Exchange, err)
 	} else {
-		log.Debugf("Direct-Exchange %s created.", direct.exchange)
+		log.Infof("Direct-Exchange %s created.", direct.Exchange)
 	}
 
 	queue, err := direct.channel.QueueDeclare(
-        "",  					// Name
+        direct.queue,  			// Name
         false, 					// Durable
         false, 					// Auto-Deleted
         false,  				// Exclusive
@@ -48,29 +49,29 @@ func (direct *RabbitInputDirect) initialize(inputTopic string) {
     )
 
     if err != nil {
-		log.Fatalf("Error creating queue for direct-exchange %s. Err: '%s'", direct.exchange, err)
+		log.Fatalf("Error creating queue for direct-exchange %s. Err: '%s'", direct.Exchange, err)
 	} else {
-		log.Debugf("Queue %s for direct-exchange %s created.", queue.Name, direct.exchange)
+		log.Infof("Queue %s for direct-exchange %s created.", queue.Name, direct.Exchange)
 	}
 
 	err = direct.channel.QueueBind(
         queue.Name, 			// Queue
         inputTopic,  	 		// Routing-Key
-        direct.exchange, 		// Exchange
+        direct.Exchange, 		// Exchange
         false,
         nil,
     )
 
     if err != nil {
-		log.Fatalf("Error binding queue %s to direct-exchange %s. Err: '%s'", queue.Name, direct.exchange, err)
+		log.Fatalf("Error binding queue %s to direct-exchange %s. Err: '%s'", queue.Name, direct.Exchange, err)
 	} else {
-		log.Debugf("Queue %s binded to direct-exchange %s.", queue.Name, direct.exchange)
+		log.Infof("Queue %s binded to direct-exchange %s.", queue.Name, direct.Exchange)
 	}
 
 	direct.queue = queue.Name
 }
 
-func (direct *RabbitInputDirect) ConsumeData() <-chan amqp.Delivery {
+func (direct *RabbitInputDirect) ConsumeData() (<-chan amqp.Delivery, error) {
 	data, err := direct.channel.Consume(
 		direct.queue, 			// Name
 		"",     				// Consumer
@@ -81,9 +82,5 @@ func (direct *RabbitInputDirect) ConsumeData() <-chan amqp.Delivery {
 		nil,    				// Args
 	)
 
-	if err != nil {
-		log.Errorf("Error receiving data from direct-exchange %s (through queue %s). Err: '%s'", direct.exchange, direct.queue, err)
-	}
-
-	return data
+	return data, err
 }

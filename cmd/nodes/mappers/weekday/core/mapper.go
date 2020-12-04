@@ -13,6 +13,7 @@ import (
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 type MapperConfig struct {
@@ -26,7 +27,7 @@ type MapperConfig struct {
 type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
-	inputDirect 	*rabbitmq.RabbitInputDirect
+	inputDirect 	*rabbit.RabbitInputDirect
 	outputDirect 	*rabbitmq.RabbitOutputDirect
 	endSignals		int
 }
@@ -46,7 +47,7 @@ func NewMapper(config MapperConfig) *Mapper {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect := rabbitmq.NewRabbitInputDirect(props.ReviewsScatterOutput, ch)
+	inputDirect := rabbit.NewRabbitInputDirect(ch, props.ReviewsScatterOutput, props.WeekdayMapperTopic, props.WeekdayMapperInput)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(props.WeekdayMapperOutput, config.Instance, config.WeekdayAggregators, ch)
 	mapper := &Mapper {
 		connection:		conn,
@@ -68,8 +69,13 @@ func (mapper *Mapper) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		inputDirectChannel, err := mapper.inputDirect.ConsumeData()
+		if err != nil {
+			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", mapper.inputDirect.Exchange, err)
+		}
+
 		bulkCounter := 0
-		for message := range mapper.inputDirect.ConsumeReviews() {
+		for message := range inputDirectChannel {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
