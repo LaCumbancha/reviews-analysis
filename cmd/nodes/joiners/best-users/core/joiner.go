@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -49,9 +50,9 @@ func NewJoiner(config JoinerConfig) *Joiner {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect1 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE1_NAME, config.InputTopic, ch)
-	inputDirect2 := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE2_NAME, config.InputTopic, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
+	inputDirect1 := rabbitmq.NewRabbitInputDirect(props.StarsAggregatorOutput, config.InputTopic, ch)
+	inputDirect2 := rabbitmq.NewRabbitInputDirect(props.BestUsersFilterOutput, config.InputTopic, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(props.BestUsersJoinerOutput, config.Instance, ch)
 	joiner := &Joiner {
 		connection:		conn,
 		channel:		ch,

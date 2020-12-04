@@ -1,8 +1,5 @@
 package rabbitmq
 
-// Queues
-const OUTPUT_EXCHANGE_NAME = "ReviewsScatter"
-
 // Topics
 const FUNBIZ = "Funbiz-Mapper"
 const WEEKDAYS = "Weekday-Mapper"

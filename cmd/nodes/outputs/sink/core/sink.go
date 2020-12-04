@@ -7,6 +7,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/outputs/sink/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -36,11 +37,11 @@ func NewSink(config SinkConfig) *Sink {
 		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
 	}
 
-	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.FUNNIES_CITIES_QUEUE_NAME, ch)
-	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.WEEKDAY_HISTOGRAM_QUEUE_NAME, ch)
-	topUsersQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.TOP_USERS_QUEUE_NAME, ch)
-	bestUsersQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.BEST_USERS_QUEUE_NAME, ch)
-	botUsersQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.BOT_USERS_QUEUE_NAME, ch)
+	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(props.FunniestCitiesPrettierOutput, ch)
+	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(props.WeekdayHistogramPrettierOutput, ch)
+	topUsersQueue := rabbitmq.NewRabbitInputQueue(props.TopUsersPrettierOutput, ch)
+	bestUsersQueue := rabbitmq.NewRabbitInputQueue(props.BestUsersPrettierOutput, ch)
+	botUsersQueue := rabbitmq.NewRabbitInputQueue(props.BotUsersPrettierOutput, ch)
 	sink := &Sink {
 		connection:				conn,
 		channel:				ch,

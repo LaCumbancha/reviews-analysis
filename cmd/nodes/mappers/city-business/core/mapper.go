@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -44,8 +45,8 @@ func NewMapper(config MapperConfig) *Mapper {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.FuncitJoiners, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(props.BusinessesScatterOutput, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(props.CitbizMapperOutput, config.Instance, config.FuncitJoiners, ch)
 	mapper := &Mapper {
 		connection:		conn,
 		channel:		ch,

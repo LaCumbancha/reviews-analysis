@@ -7,6 +7,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/funniest-cities/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -41,8 +42,8 @@ func NewFilter(config FilterConfig) *Filter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(props.FuncitFilterOutput, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(props.FunniestCitiesPrettierOutput, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,

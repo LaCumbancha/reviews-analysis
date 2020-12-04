@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -46,9 +47,9 @@ func NewFilter(config FilterConfig) *Filter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.StarsJoiners, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(props.UserAggregatorOutput, ch)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(props.UserFilterOutput, config.Instance, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(props.BestUsersFilterOutput, config.Instance, config.StarsJoiners, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,

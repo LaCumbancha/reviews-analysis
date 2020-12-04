@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -45,8 +46,8 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputDirect := rabbitmq.NewRabbitInputDirect(rabbitmq.INPUT_EXCHANGE_NAME, config.InputTopic, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_QUEUE_NAME, config.Instance, config.DishashAggregators, ch)
+	inputDirect := rabbitmq.NewRabbitInputDirect(props.HashMapperOutput, config.InputTopic, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(props.HashAggregatorOutput, config.Instance, config.DishashAggregators, ch)
 	aggregator := &Aggregator {
 		connection:		conn,
 		channel:		ch,

@@ -7,9 +7,10 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/streadway/amqp"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/inputs/business-scatter/rabbitmq"
+
+	log "github.com/sirupsen/logrus"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 )
 
 type ScatterConfig struct {
@@ -46,7 +47,7 @@ func NewScatter(config ScatterConfig) *Scatter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	scatterDirect := rabbitmq.NewRabbitOutputQueue(rabbitmq.OUTPUT_QUEUE_NAME, config.CitbizMappers, ch)
+	scatterDirect := rabbitmq.NewRabbitOutputQueue(props.BusinessesScatterOutput, config.CitbizMappers, ch)
 	
 	scatter := &Scatter {
 		data: 				config.Data,
@@ -102,7 +103,7 @@ func (scatter *Scatter) Run() {
 }
 
 func (scatter *Scatter) Stop() {
-	log.Infof("Closing Business-Scatter connections.")
+	log.Infof("Closing Businesses-Scatter connections.")
 	scatter.connection.Close()
 	scatter.channel.Close()
 }

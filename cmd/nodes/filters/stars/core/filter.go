@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
@@ -43,8 +44,8 @@ func NewFilter(config FilterConfig) *Filter {
 		log.Infof("RabbitMQ channel opened.")
 	}
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(rabbitmq.INPUT_QUEUE_NAME, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(rabbitmq.OUTPUT_EXCHANGE_NAME, config.Instance, config.StarsAggregators, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(props.StarsMapperOutput, ch)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(props.StarsFilterOutput, config.Instance, config.StarsAggregators, ch)
 	filter := &Filter {
 		connection:		conn,
 		channel:		ch,
@@ -115,11 +116,11 @@ func (filter *Filter) filterLowStars(bulkNumber int, rawStarsDataBulk string) {
 	json.Unmarshal([]byte(rawStarsDataBulk), &starsDataList)
 
 	for _, starsData := range starsDataList {
-		if (starsData.Stars == 5) {
+		if (starsData.Stars == 5.0) {
 			filteredStarsDataList = append(filteredStarsDataList, starsData)	
 		}
 	}
-
+	
 	filter.outputDirect.PublishData(bulkNumber, filteredStarsDataList)
 }
 

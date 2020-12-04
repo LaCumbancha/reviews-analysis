@@ -10,6 +10,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/inputs/reviews-scatter/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 )
 
 type ScatterConfig struct {
@@ -52,7 +53,7 @@ func NewScatter(config ScatterConfig) *Scatter {
 	}
 
 	scatterDirect := rabbitmq.NewRabbitOutputDirect(
-		rabbitmq.OUTPUT_EXCHANGE_NAME,
+		props.ReviewsScatterOutput,
 		config.Instance,
 		config.FunbizMappers, 
 		config.WeekdaysMappers, 

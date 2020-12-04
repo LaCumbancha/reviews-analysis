@@ -2,7 +2,9 @@ package rabbitmq
 
 import (
 	"github.com/streadway/amqp"
+
 	log "github.com/sirupsen/logrus"
+	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 )
 
 type RabbitInputDirect struct {
@@ -23,13 +25,13 @@ func NewRabbitInputDirect(name string, channel *amqp.Channel) *RabbitInputDirect
 
 func (direct *RabbitInputDirect) initialize() {
 	err := direct.channel.ExchangeDeclare(
-		direct.exchange, 		// Name
-		"direct",				// Type
-		false,   				// Durable
-		false,   				// Auto-Deleted
-		false,   				// Internal
-		false,   				// No-Wait
-		nil,     				// Args
+		direct.exchange, 			// Name
+		"direct",					// Type
+		false,						// Durable
+		false,						// Auto-Deleted
+		false,						// Internal
+		false,						// No-Wait
+		nil,						// Args
 	)
 
 	if err != nil {
@@ -39,12 +41,12 @@ func (direct *RabbitInputDirect) initialize() {
 	}
 
 	queue, err := direct.channel.QueueDeclare(
-        COMMON_QUEUE_NAME,  	// Name
-        false, 					// Durable
-        false, 					// Auto-Deleted
-        false,  				// Exclusive
-        false, 					// No-Wait
-        nil,   					// Args
+        props.HashMapperInput,  	// Name
+        false, 						// Durable
+        false, 						// Auto-Deleted
+        false,  					// Exclusive
+        false, 						// No-Wait
+        nil,   						// Args
     )
 
     if err != nil {
@@ -54,9 +56,9 @@ func (direct *RabbitInputDirect) initialize() {
 	}
 
 	err = direct.channel.QueueBind(
-        queue.Name, 			// Queue
-        INPUT_EXCHANGE_TOPIC,   // Routing-Key
-        direct.exchange, 		// Exchange
+        queue.Name, 				// Queue
+        props.HashMapperTopic,		// Routing-Key
+        direct.exchange, 			// Exchange
         false,
         nil,
     )
@@ -72,13 +74,13 @@ func (direct *RabbitInputDirect) initialize() {
 
 func (direct *RabbitInputDirect) ConsumeReviews() <-chan amqp.Delivery {
 	reviews, err := direct.channel.Consume(
-		direct.queue, 			// Name
-		"",     				// Consumer
-		true,   				// Auto-ACK
-		false,  				// Exclusive
-		false,  				// No-Local
-		false,  				// No-Wait
-		nil,    				// Args
+		direct.queue, 				// Name
+		"",     					// Consumer
+		true,   					// Auto-ACK
+		false,  					// Exclusive
+		false,  					// No-Local
+		false,  					// No-Wait
+		nil,    					// Args
 	)
 
 	if err != nil {
