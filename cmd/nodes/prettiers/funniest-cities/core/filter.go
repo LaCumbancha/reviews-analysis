@@ -22,7 +22,7 @@ type Filter struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	builder			*Builder
-	inputQueue 		*rabbitmq.RabbitInputQueue
+	inputQueue 		*rabbit.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals		int
 }
@@ -30,7 +30,7 @@ type Filter struct {
 func NewFilter(config FilterConfig) *Filter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(props.FuncitFilterOutput, channel)
+	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FuncitFilterOutput)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(props.FunniestCitiesPrettierOutput, channel)
 
 	filter := &Filter {

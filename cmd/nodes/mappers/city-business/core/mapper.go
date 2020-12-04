@@ -26,7 +26,7 @@ type MapperConfig struct {
 type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
-	inputQueue 		*rabbitmq.RabbitInputQueue
+	inputQueue 		*rabbit.RabbitInputQueue
 	outputDirect 	*rabbitmq.RabbitOutputDirect
 	endSignals		int
 }
@@ -34,7 +34,7 @@ type Mapper struct {
 func NewMapper(config MapperConfig) *Mapper {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(props.BusinessesScatterOutput, channel)
+	inputQueue := rabbit.NewRabbitInputQueue(channel, props.BusinessesScatterOutput)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(props.CitbizMapperOutput, config.Instance, config.FuncitJoiners, channel)
 
 	mapper := &Mapper {
@@ -58,7 +58,7 @@ func (mapper *Mapper) Run() {
 	wg.Add(1)
 	go func() {
 		bulkCounter := 0
-		for message := range mapper.inputQueue.ConsumeBusiness() {
+		for message := range mapper.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {

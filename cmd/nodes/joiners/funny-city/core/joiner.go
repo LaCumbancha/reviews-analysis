@@ -73,13 +73,9 @@ func (joiner *Joiner) Run() {
 	inputWg.Add(1)
 	go func() {
 		log.Infof("Starting to listen for funny-business data.")
-		inputDirectChannel, err := joiner.inputDirect1.ConsumeData()
-		if err != nil {
-			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", joiner.inputDirect1.Exchange, err)
-		}
 
 		bulkCounter := 0
-		for message := range inputDirectChannel {
+		for message := range joiner.inputDirect1.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
@@ -101,13 +97,9 @@ func (joiner *Joiner) Run() {
 	inputWg.Add(1)
 	go func() {
 		log.Infof("Starting to listen for city-business data.")
-		inputDirectChannel, err := joiner.inputDirect2.ConsumeData()
-		if err != nil {
-			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", joiner.inputDirect2.Exchange, err)
-		}
 
 		bulkCounter := 0
-		for message := range inputDirectChannel {
+		for message := range joiner.inputDirect2.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {

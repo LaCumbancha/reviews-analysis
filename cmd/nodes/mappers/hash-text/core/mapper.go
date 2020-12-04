@@ -58,13 +58,8 @@ func (mapper *Mapper) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		inputDirectChannel, err := mapper.inputDirect.ConsumeData()
-		if err != nil {
-			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", mapper.inputDirect.Exchange, err)
-		}
-
 		bulkCounter := 0
-		for message := range inputDirectChannel {
+		for message := range mapper.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {

@@ -3,7 +3,6 @@ package core
 import (
 	"sync"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/outputs/sink/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
@@ -19,21 +18,21 @@ type SinkConfig struct {
 type Sink struct {
 	connection 					*amqp.Connection
 	channel 					*amqp.Channel
-	funniestCitiesQueue 		*rabbitmq.RabbitInputQueue
-	weekdayHistogramQueue 		*rabbitmq.RabbitInputQueue
-	topUsersQueue 				*rabbitmq.RabbitInputQueue
-	bestUsersQueue 				*rabbitmq.RabbitInputQueue
-	botUsersQueue 				*rabbitmq.RabbitInputQueue
+	funniestCitiesQueue 		*rabbit.RabbitInputQueue
+	weekdayHistogramQueue 		*rabbit.RabbitInputQueue
+	topUsersQueue 				*rabbit.RabbitInputQueue
+	bestUsersQueue 				*rabbit.RabbitInputQueue
+	botUsersQueue 				*rabbit.RabbitInputQueue
 }
 
 func NewSink(config SinkConfig) *Sink {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(props.FunniestCitiesPrettierOutput, channel)
-	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(props.WeekdayHistogramPrettierOutput, channel)
-	topUsersQueue := rabbitmq.NewRabbitInputQueue(props.TopUsersPrettierOutput, channel)
-	bestUsersQueue := rabbitmq.NewRabbitInputQueue(props.BestUsersPrettierOutput, channel)
-	botUsersQueue := rabbitmq.NewRabbitInputQueue(props.BotUsersPrettierOutput, channel)
+	funniestCitiesQueue := rabbit.NewRabbitInputQueue(channel, props.FunniestCitiesPrettierOutput)
+	weekdayHistogramQueue := rabbit.NewRabbitInputQueue(channel, props.WeekdayHistogramPrettierOutput)
+	topUsersQueue := rabbit.NewRabbitInputQueue(channel, props.TopUsersPrettierOutput)
+	bestUsersQueue := rabbit.NewRabbitInputQueue(channel, props.BestUsersPrettierOutput)
+	botUsersQueue := rabbit.NewRabbitInputQueue(channel, props.BotUsersPrettierOutput)
 
 	sink := &Sink {
 		connection:				connection,

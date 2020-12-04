@@ -1,4 +1,4 @@
-package rabbitmq
+package middleware
 
 import (
 	"github.com/streadway/amqp"
@@ -10,7 +10,7 @@ type RabbitInputQueue struct {
 	name 				string
 }
 
-func NewRabbitInputQueue(name string, channel *amqp.Channel) *RabbitInputQueue {
+func NewRabbitInputQueue(channel *amqp.Channel, name string) *RabbitInputQueue {
 	queue := &RabbitInputQueue {
 		channel: 	channel,
 		name:		name,
@@ -33,7 +33,7 @@ func (queue *RabbitInputQueue) initialize() {
 	if err != nil {
 		log.Fatalf("Error creating queue %s. Err: '%s'", queue.name, err)
 	} else {
-		log.Debugf("Queue %s created.", queue.name)
+		log.Infof("Queue %s created.", queue.name)
 	}
 }
 

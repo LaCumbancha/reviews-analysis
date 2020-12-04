@@ -37,7 +37,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 
 	inputDirect := rabbit.NewRabbitInputDirect(channel, props.HashAggregatorOutput, config.InputTopic, "")
 	outputQueue := rabbitmq.NewRabbitOutputQueue(props.DishashAggregatorOutput, config.Instance, config.DishashFilters, channel)
-	
+
 	aggregator := &Aggregator {
 		connection:		connection,
 		channel:		channel,
@@ -59,13 +59,8 @@ func (aggregator *Aggregator) Run() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		inputDirectChannel, err := aggregator.inputDirect.ConsumeData()
-		if err != nil {
-			log.Fatalf("Error receiving data from direct-exchange %s. Err: '%s'", aggregator.inputDirect.Exchange, err)
-		}
-
 		bulkCounter := 0
-		for message := range inputDirectChannel {
+		for message := range aggregator.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {

@@ -22,7 +22,7 @@ type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	builder			*Builder
-	inputQueue 		*rabbitmq.RabbitInputQueue
+	inputQueue 		*rabbit.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	endSignals 		int
 }
@@ -30,7 +30,7 @@ type Mapper struct {
 func NewMapper(config MapperConfig) *Mapper {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(props.BotUsersJoinerOutput, channel)
+	inputQueue := rabbit.NewRabbitInputQueue(channel, props.BotUsersJoinerOutput)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(props.BotUsersPrettierOutput, channel)
 
 	mapper := &Mapper {

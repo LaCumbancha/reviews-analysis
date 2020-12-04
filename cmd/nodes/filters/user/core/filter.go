@@ -27,7 +27,7 @@ type Filter struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	minReviews 		int
-	inputQueue 		*rabbitmq.RabbitInputQueue
+	inputQueue 		*rabbit.RabbitInputQueue
 	outputQueue 	*rabbitmq.RabbitOutputQueue
 	outputDirect	*rabbitmq.RabbitOutputDirect
 	endSignals		int
@@ -36,10 +36,10 @@ type Filter struct {
 func NewFilter(config FilterConfig) *Filter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(props.UserAggregatorOutput, channel)
+	inputQueue := rabbit.NewRabbitInputQueue(channel, props.UserAggregatorOutput)
 	outputQueue := rabbitmq.NewRabbitOutputQueue(props.UserFilterOutput, config.Instance, channel)
 	outputDirect := rabbitmq.NewRabbitOutputDirect(props.BestUsersFilterOutput, config.Instance, config.StarsJoiners, channel)
-	
+
 	filter := &Filter {
 		connection:		connection,
 		channel:		channel,
