@@ -2,8 +2,8 @@ package core
 
 import (
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/best-users/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
@@ -23,7 +23,7 @@ type Mapper struct {
 	channel 		*amqp.Channel
 	builder			*Builder
 	inputQueue 		*rabbit.RabbitInputQueue
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue 	*rabbit.RabbitOutputQueue
 	endSignals 		int
 }
 
@@ -31,7 +31,7 @@ func NewMapper(config MapperConfig) *Mapper {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.BestUsersJoinerOutput)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.BestUsersPrettierOutput, channel)
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.BestUsersPrettierOutput, comms.EndMessage(""), comms.EndSignals(1))
 
 	mapper := &Mapper {
 		connection:		connection,
@@ -77,7 +77,7 @@ func (mapper *Mapper) Run() {
     wg.Wait()
 
     // Sending results
-    mapper.outputQueue.PublishData(mapper.builder.BuildData())
+    mapper.sendResults()
 
     // Publishing end messages.
     mapper.outputQueue.PublishFinish()
@@ -98,6 +98,21 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	if (signalsReceived == mapper.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
 		wg.Done()
+	}
+}
+
+func (mapper *Mapper) sendResults() {
+	data, err := json.Marshal(mapper.builder.BuildData())
+	if err != nil {
+		log.Errorf("Error generating Json from best users results. Err: '%s'", err)
+	} else {
+		err := mapper.outputQueue.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending best users results to output queue %s. Err: '%s'", mapper.outputQueue.Name, err)
+		} else {
+			log.Infof("Best user results sent to output queue %s.", mapper.outputQueue.Name)
+		}
 	}
 }
 

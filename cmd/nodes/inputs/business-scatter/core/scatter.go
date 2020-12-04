@@ -2,14 +2,16 @@ package core
 
 import (
 	"os"
+	"fmt"
 	"time"
 	"bufio"
 	"bytes"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/inputs/business-scatter/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
@@ -29,13 +31,14 @@ type Scatter struct {
 	bulkSize 			int
 	poolSize			int
 	innerChannel		chan string
-	outputQueue 		*rabbitmq.RabbitOutputQueue
+	outputQueue 		*rabbit.RabbitOutputQueue
 }
 
 func NewScatter(config ScatterConfig) *Scatter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	scatterDirect := rabbitmq.NewRabbitOutputQueue(props.BusinessesScatterOutput, config.CitbizMappers, channel)
+	scatterQueue := rabbit.NewRabbitOutputQueue(channel, props.BusinessesScatterOutput, comms.EndMessage(""), comms.EndSignals(config.CitbizMappers))
+
 	scatter := &Scatter {
 		data: 				config.Data,
 		connection:			connection,
@@ -43,7 +46,7 @@ func NewScatter(config ScatterConfig) *Scatter {
 		bulkSize:			config.BulkSize,
 		poolSize:			config.WorkersPool,
 		innerChannel:		make(chan string),
-		outputQueue:		scatterDirect,
+		outputQueue:		scatterQueue,
 	}
 
 	return scatter
@@ -72,10 +75,10 @@ func (scatter *Scatter) Run() {
         if chunkNumber == scatter.bulkSize {
             bulkNumber++
             bulk := buffer.String()
-            scatter.outputQueue.PublishBulk(bulkNumber, bulk[:len(bulk)-1])
+            scatter.sendData(bulkNumber, bulk[:len(bulk)-1])
 
-            buffer = bytes.NewBufferString("")
             chunkNumber = 0
+            buffer = bytes.NewBufferString("")
         }
     }
 
@@ -87,6 +90,16 @@ func (scatter *Scatter) Run() {
     scatter.outputQueue.PublishFinish()
 
     log.Infof("Time: %s.", time.Now().Sub(start).String())
+}
+
+func (scatter *Scatter) sendData(bulkNumber int, bulk string) {
+	err := scatter.outputQueue.PublishData([]byte(bulk))
+
+	if err != nil {
+		log.Errorf("Error sending businesses bulk #%d to output queue %s. Err: '%s'", bulkNumber, scatter.outputQueue.Name, err)
+	} else {
+		logb.Instance().Infof(fmt.Sprintf("Businesses bulk #%d sent to output queue %s.", bulkNumber, scatter.outputQueue.Name), bulkNumber)
+	}
 }
 
 func (scatter *Scatter) Stop() {

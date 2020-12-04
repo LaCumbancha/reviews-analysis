@@ -3,8 +3,8 @@ package core
 import (
 	"fmt"
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/filters/funny-city/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -26,7 +26,7 @@ type Filter struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputQueue 		*rabbit.RabbitInputQueue
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue 	*rabbit.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -34,7 +34,7 @@ func NewFilter(config FilterConfig) *Filter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FuncitAggregatorOutput)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.FuncitFilterOutput, config.Instance, channel)
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.FuncitFilterOutput, comms.EndMessage(config.Instance), comms.EndSignals(1))
 
 	filter := &Filter {
 		connection:		connection,
@@ -79,15 +79,12 @@ func (filter *Filter) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
-    messageCounter := 0
-    for _, topTenData := range filter.calculator.RetrieveTopTen() {
-    	messageCounter++
+    cityCounter := 0
+    for _, cityData := range filter.calculator.RetrieveTopTen() {
+    	cityCounter++
 
     	wg.Add(1)
-    	go func(messageNumber int, topTenCity comms.FunnyCityData) {
-    		filter.outputQueue.PublishData(messageNumber, topTenCity)
-    		wg.Done()
-    	}(messageCounter, topTenData)
+    	go filter.sendTopTenData(cityCounter, cityData, &wg)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -95,6 +92,23 @@ func (filter *Filter) Run() {
 
     // Sending End-Message to consumers.
     filter.outputQueue.PublishFinish()
+}
+
+func (filter *Filter) sendTopTenData(cityNumber int, topTenCity comms.FunnyCityData, wg *sync.WaitGroup) {
+	data, err := json.Marshal(topTenCity)
+	if err != nil {
+		log.Errorf("Error generating Json from funniest city #%d data. Err: '%s'", cityNumber, err)
+	} else {
+		err := filter.outputQueue.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending funniest city #%d data to output queue %s. Err: '%s'", cityNumber, filter.outputQueue.Name, err)
+		} else {
+			log.Infof("Funniest city #%d data sent to output queue %s.", cityNumber, filter.outputQueue.Name)
+		}
+	}
+
+	wg.Done()
 }
 
 func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

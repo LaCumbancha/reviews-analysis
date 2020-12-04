@@ -3,8 +3,8 @@ package core
 import (
 	"fmt"
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/user/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -29,8 +29,8 @@ type Aggregator struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputDirect 	*rabbit.RabbitInputDirect
-	outputQueue1 	*rabbitmq.RabbitOutputQueue
-	outputQueue2	*rabbitmq.RabbitOutputQueue
+	outputQueue1 	*rabbit.RabbitOutputQueue
+	outputQueue2	*rabbit.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -38,8 +38,8 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputDirect := rabbit.NewRabbitInputDirect(channel, props.UserMapperOutput, config.InputTopic, "")
-	outputQueue1 := rabbitmq.NewRabbitOutputQueue(props.UserAggregatorOutput, config.Instance, config.UserFilters, channel)
-	outputQueue2 := rabbitmq.NewRabbitOutputQueue(props.BotUsersAggregatorOutput, config.Instance, config.BotUserFilters, channel)
+	outputQueue1 := rabbit.NewRabbitOutputQueue(channel, props.UserAggregatorOutput, comms.EndMessage(config.Instance), comms.EndSignals(config.UserFilters))
+	outputQueue2 := rabbit.NewRabbitOutputQueue(channel, props.BotUsersAggregatorOutput, comms.EndMessage(config.Instance), comms.EndSignals(config.BotUserFilters))
 
 	aggregator := &Aggregator {
 		connection:		connection,
@@ -85,17 +85,13 @@ func (aggregator *Aggregator) Run() {
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
 
-    outputBulkNumber := 0
+    outputBulkCounter := 0
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
-		outputBulkNumber++
-    	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
+		outputBulkCounter++
+    	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkCounter), outputBulkCounter)
 
 		wg.Add(1)
-		go func(bulkNumber int, aggregatedBulk []comms.UserData) {
-			aggregator.outputQueue1.PublishData(bulkNumber, aggregatedBulk)
-			aggregator.outputQueue2.PublishData(bulkNumber, aggregatedBulk)
-			wg.Done()
-		}(outputBulkNumber, aggregatedData)
+		go aggregator.sendAggregatedData(outputBulkCounter, aggregatedData, &wg)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -104,6 +100,31 @@ func (aggregator *Aggregator) Run() {
     // Sending End-Message to consumers.
     aggregator.outputQueue1.PublishFinish()
     aggregator.outputQueue2.PublishFinish()
+}
+
+func (aggregator *Aggregator) sendAggregatedData(bulkNumber int, aggregatedBulk []comms.UserData, wg *sync.WaitGroup) {
+	data, err := json.Marshal(aggregatedBulk)
+	if err != nil {
+		log.Errorf("Error generating Json from aggregated bulk #%d. Err: '%s'", bulkNumber, err)
+	} else {
+		err := aggregator.outputQueue1.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending aggregated bulk #%d to output queue %s. Err: '%s'", bulkNumber, aggregator.outputQueue1.Name, err)
+		} else {
+			logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d sent to output queue %s.", bulkNumber, aggregator.outputQueue1.Name), bulkNumber)
+		}
+
+		err = aggregator.outputQueue2.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending aggregated bulk #%d to output queue %s. Err: '%s'", bulkNumber, aggregator.outputQueue2.Name, err)
+		} else {
+			logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d sent to output queue %s.", bulkNumber, aggregator.outputQueue2.Name), bulkNumber)
+		}
+	}
+
+	wg.Done()
 }
 
 func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

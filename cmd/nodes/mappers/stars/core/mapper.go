@@ -6,7 +6,6 @@ import (
 	"strings"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/mappers/stars/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -27,7 +26,7 @@ type Mapper struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	inputDirect 	*rabbit.RabbitInputDirect
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue 	*rabbit.RabbitOutputQueue
 	endSignals 		int
 }
 
@@ -35,7 +34,7 @@ func NewMapper(config MapperConfig) *Mapper {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputDirect := rabbit.NewRabbitInputDirect(channel, props.ReviewsScatterOutput, props.StarsMapperTopic, props.StarsMapperInput)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.StarsMapperOutput, config.Instance, config.StarsFilters, channel)
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.StarsMapperOutput, comms.EndMessage(config.Instance), comms.EndSignals(config.StarsFilters))
 
 	mapper := &Mapper {
 		connection:		connection,
@@ -68,9 +67,9 @@ func (mapper *Mapper) Run() {
 				logb.Instance().Infof(fmt.Sprintf("Review bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkCounter int, bulk string) {
-					mapper.processReviewsBulk(bulkCounter, bulk)
-					wg.Done()
+				go func(bulkNumber int, bulk string) {
+					mappedBulk := mapper.mapData(bulkNumber, bulk)
+					mapper.sendMappedData(bulkNumber, mappedBulk, &wg)
 				}(bulkCounter, messageBody)
 			}
 		}
@@ -101,7 +100,7 @@ func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]
 	}
 }
 
-func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) {
+func (mapper *Mapper) mapData(bulkNumber int, rawReviewsBulk string) []comms.StarsData {
 	var review comms.FullReview
 	var starsDataList []comms.StarsData
 
@@ -117,7 +116,24 @@ func (mapper *Mapper) processReviewsBulk(bulkNumber int, rawReviewsBulk string) 
 		starsDataList = append(starsDataList, mappedReview)
 	}
 
-	mapper.outputQueue.PublishData(bulkNumber, starsDataList)
+	return starsDataList
+}
+
+func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.StarsData, wg *sync.WaitGroup) {
+	data, err := json.Marshal(mappedBulk)
+	if err != nil {
+		log.Errorf("Error generating Json from mapped bulk #%d. Err: '%s'", bulkNumber, err)
+	} else {
+		err := mapper.outputQueue.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending mapped bulk #%d to output queue %s. Err: '%s'", bulkNumber, mapper.outputQueue.Name, err)
+		} else {
+			logb.Instance().Infof(fmt.Sprintf("Mapped bulk #%d sent to output queue %s.", bulkNumber, mapper.outputQueue.Name), bulkNumber)
+		}
+	}
+
+	wg.Done()
 }
 
 func (mapper *Mapper) Stop() {

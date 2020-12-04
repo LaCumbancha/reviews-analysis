@@ -3,8 +3,9 @@ package common
 import (
 	"fmt"
 	"sync"
+	"strings"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/weekday/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -26,7 +27,7 @@ type Aggregator struct {
 	channel 		*amqp.Channel
 	calculator		*Calculator
 	inputDirect 	*rabbit.RabbitInputDirect
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue 	*rabbit.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -34,7 +35,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputDirect := rabbit.NewRabbitInputDirect(channel, props.WeekdayMapperOutput, config.InputTopic, "")
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.WeekdayAggregatorOutput, config.Instance, channel)
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.WeekdayAggregatorOutput, comms.EndMessage(config.Instance), comms.EndSignals(1))
 
 	aggregator := &Aggregator {
 		connection:		connection,
@@ -82,11 +83,7 @@ func (aggregator *Aggregator) Run() {
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
 
 		wg.Add(1)
-		go func(message comms.WeekdayData) {
-			aggregator.outputQueue.PublishData(message)
-			wg.Done()
-		}(aggregatedData)
-
+		go aggregator.sendAggregatedData(aggregatedData, &wg)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
@@ -94,6 +91,25 @@ func (aggregator *Aggregator) Run() {
 
     // Sending End-Message to consumers.
     aggregator.outputQueue.PublishFinish()
+}
+
+func (aggregator *Aggregator) sendAggregatedData(aggregatedData comms.WeekdayData, wg *sync.WaitGroup) {
+	weekday := strings.ToUpper(aggregatedData.Weekday[0:3])
+
+	data, err := json.Marshal(aggregatedData)
+	if err != nil {
+		log.Errorf("Error generating Json from %s aggregated data. Err: '%s'", weekday, err)
+	} else {
+		err := aggregator.outputQueue.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending %s aggregated data to output queue %s. Err: '%s'", weekday, aggregator.outputQueue.Name, err)
+		} else {
+			log.Infof("%s aggregated data sent to output queue %s.", weekday, aggregator.outputQueue.Name)
+		}
+	}
+
+	wg.Done()
 }
 
 func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

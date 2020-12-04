@@ -2,8 +2,8 @@ package core
 
 import (
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/funniest-cities/rabbitmq"
 	
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
@@ -23,7 +23,7 @@ type Filter struct {
 	channel 		*amqp.Channel
 	builder			*Builder
 	inputQueue 		*rabbit.RabbitInputQueue
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue 	*rabbit.RabbitOutputQueue
 	endSignals		int
 }
 
@@ -31,7 +31,7 @@ func NewFilter(config FilterConfig) *Filter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FuncitFilterOutput)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.FunniestCitiesPrettierOutput, channel)
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.FunniestCitiesPrettierOutput, comms.EndMessage(""), comms.EndSignals(1))
 
 	filter := &Filter {
 		connection:		connection,
@@ -77,7 +77,7 @@ func (filter *Filter) Run() {
     wg.Wait()
 
     // Sending results
-    filter.outputQueue.PublishData(filter.builder.BuildTopTen())
+    filter.sendResults()
 
     // Sending End-Message to consumers.
     filter.outputQueue.PublishFinish()
@@ -98,6 +98,21 @@ func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]
 	if (signalsReceived == filter.endSignals) && newSignal {
 		log.Infof("All End-Messages were received.")
 		wg.Done()
+	}
+}
+
+func (filter *Filter) sendResults() {
+	data, err := json.Marshal(filter.builder.BuildTopTen())
+	if err != nil {
+		log.Errorf("Error generating Json from best users results. Err: '%s'", err)
+	} else {
+		err := filter.outputQueue.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending best users results to output queue %s. Err: '%s'", filter.outputQueue.Name, err)
+		} else {
+			log.Infof("Best user results sent to output queue %s.", filter.outputQueue.Name)
+		}
 	}
 }
 

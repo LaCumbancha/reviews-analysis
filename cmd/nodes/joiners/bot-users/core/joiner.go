@@ -3,8 +3,8 @@ package core
 import (
 	"fmt"
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/joiners/bot-users/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -31,7 +31,7 @@ type Joiner struct {
 	calculator		*Calculator
 	inputDirect1 	*rabbit.RabbitInputDirect
 	inputDirect2 	*rabbit.RabbitInputDirect
-	outputQueue 	*rabbitmq.RabbitOutputQueue
+	outputQueue 	*rabbit.RabbitOutputQueue
 	endSignals1		int
 	endSignals2		int
 }
@@ -41,7 +41,7 @@ func NewJoiner(config JoinerConfig) *Joiner {
 
 	inputDirect1 := rabbit.NewRabbitInputDirect(channel, props.DishashFilterOutput, config.InputTopic, "")
 	inputDirect2 := rabbit.NewRabbitInputDirect(channel, props.BotUsersFilterOutput, config.InputTopic, "")
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.BotUsersJoinerOutput, config.Instance, channel)
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.BotUsersJoinerOutput, comms.EndMessage(config.Instance), comms.EndSignals(1))
 
 	joiner := &Joiner {
 		connection:		connection,
@@ -140,11 +140,25 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     	messageCounter++
 
     	joinWg.Add(1)
-    	go func(messageNumber int, botUser comms.UserData) {
-    		joiner.outputQueue.PublishData(messageNumber, botUser)
-    		joinWg.Done()
-    	}(messageCounter, joinedData)
+    	go joiner.sendJoinedData(messageCounter, joinedData, joinWg)
 	}
+}
+
+func (joiner *Joiner) sendJoinedData(messageNumber int, joinedData comms.UserData, wg *sync.WaitGroup) {
+	data, err := json.Marshal(joinedData)
+	if err != nil {
+		log.Errorf("Error generating Json from joined bot user #%d. Err: '%s'", messageNumber, err)
+	} else {
+		err := joiner.outputQueue.PublishData(data)
+
+		if err != nil {
+			log.Errorf("Error sending joined bot user #%d to output queue %s. Err: '%s'", messageNumber, joiner.outputQueue.Name, err)
+		} else {
+			log.Infof("Joined bot user #%d sent to output queue %s.", messageNumber, joiner.outputQueue.Name)
+		}
+	}
+
+	wg.Done()
 }
 
 func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {

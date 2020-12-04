@@ -2,11 +2,11 @@
 
 SIZE=$1
 
-REVIEWS="datasets/reviews/reviews.json"
-BUSINESSES="datasets/business/business.json"
+REVIEWS="data/reviews/reviews.json"
+BUSINESSES="data/business/business.json"
 
-TEST_REVIEWS="datasets/reviews/test-reviews.json"
-TEST_BUSINESSES="datasets/business/test-business.json"
+TEST_REVIEWS="data/reviews/test-reviews.json"
+TEST_BUSINESSES="data/business/test-business.json"
 
 if [[ -f "$TEST_REVIEWS" ]]; then
 	rm "$TEST_REVIEWS"
