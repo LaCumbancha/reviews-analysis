@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type RabbitOutputDirect struct {
@@ -77,7 +78,7 @@ func (direct *RabbitOutputDirect) PublishFinish() {
 	  			false,  								// Immediate
 	  			amqp.Publishing{
 	  			    ContentType: 	"text/plain",
-	  			    Body:        	[]byte(END_MESSAGE + direct.instance),
+	  			    Body:        	[]byte(comms.EndMessage + direct.instance),
 	  			},
 	  		)
 

@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 )
 
 type RabbitOutputQueue struct {
@@ -18,7 +19,7 @@ func NewRabbitOutputQueue(name string, endSignals int, channel *amqp.Channel) *R
 	queue := &RabbitOutputQueue {
 		channel: 		channel,
 		name:			name,
-		endSignals:		RETRIES * endSignals,
+		endSignals:		comms.Retries * endSignals,
 	}
 
 	queue.initialize()
@@ -70,7 +71,7 @@ func (queue *RabbitOutputQueue) PublishFinish() {
 	  		false,  						// Immediate
 	  		amqp.Publishing{
 	  		    ContentType: 	"text/plain",
-	  		    Body:        	[]byte(END_MESSAGE),
+	  		    Body:        	[]byte(comms.EndMessage),
 	  		},
 	  	)
 

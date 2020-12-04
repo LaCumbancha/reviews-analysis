@@ -1,4 +1,4 @@
-package rabbitmq
+package rabbit
 
 import (
 	"github.com/streadway/amqp"
@@ -11,8 +11,4 @@ func AckMessage(message *amqp.Delivery, messageId string) {
 	} else {
 		log.Tracef("Sending message %s ACK.", messageId)
 	}
-}
-
-func IsEndMessage(message string) bool {
-	return (len(message) > 10) && (message[0:11] == END_MESSAGE)
 }
