@@ -11,6 +11,7 @@ import (
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 type FilterConfig struct {
@@ -30,25 +31,14 @@ type Filter struct {
 }
 
 func NewFilter(config FilterConfig) *Filter {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
-	} else {
-		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	} else {
-		log.Infof("RabbitMQ channel opened.")
-	}
-
-	inputQueue := rabbitmq.NewRabbitInputQueue(props.StarsMapperOutput, ch)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(props.StarsFilterOutput, config.Instance, config.StarsAggregators, ch)
+	inputQueue := rabbitmq.NewRabbitInputQueue(props.StarsMapperOutput, channel)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(props.StarsFilterOutput, config.Instance, config.StarsAggregators, channel)
+	
 	filter := &Filter {
-		connection:		conn,
-		channel:		ch,
+		connection:		connection,
+		channel:		channel,
 		inputQueue:		inputQueue,
 		outputDirect:	outputDirect,
 		endSignals:		config.StarsMappers,

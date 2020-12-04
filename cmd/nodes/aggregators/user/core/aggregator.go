@@ -35,26 +35,15 @@ type Aggregator struct {
 }
 
 func NewAggregator(config AggregatorConfig) *Aggregator {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
-	} else {
-		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	} else {
-		log.Infof("RabbitMQ channel opened.")
-	}
+	inputDirect := rabbit.NewRabbitInputDirect(channel, props.UserMapperOutput, config.InputTopic, "")
+	outputQueue1 := rabbitmq.NewRabbitOutputQueue(props.UserAggregatorOutput, config.Instance, config.UserFilters, channel)
+	outputQueue2 := rabbitmq.NewRabbitOutputQueue(props.BotUsersAggregatorOutput, config.Instance, config.BotUserFilters, channel)
 
-	inputDirect := rabbit.NewRabbitInputDirect(ch, props.UserMapperOutput, config.InputTopic, "")
-	outputQueue1 := rabbitmq.NewRabbitOutputQueue(props.UserAggregatorOutput, config.Instance, config.UserFilters, ch)
-	outputQueue2 := rabbitmq.NewRabbitOutputQueue(props.BotUsersAggregatorOutput, config.Instance, config.BotUserFilters, ch)
 	aggregator := &Aggregator {
-		connection:		conn,
-		channel:		ch,
+		connection:		connection,
+		channel:		channel,
 		calculator:		NewCalculator(config.OutputBulkSize),
 		inputDirect:	inputDirect,
 		outputQueue1:	outputQueue1,

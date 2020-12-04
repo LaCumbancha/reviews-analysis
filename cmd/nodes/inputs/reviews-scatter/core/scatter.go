@@ -2,7 +2,6 @@ package core
 
 import (
 	"os"
-	"fmt"
 	"time"
 	"bufio"
 	"bytes"
@@ -11,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 type ScatterConfig struct {
@@ -38,19 +38,7 @@ type Scatter struct {
 }
 
 func NewScatter(config ScatterConfig) *Scatter {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
-	} else {
-		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
-	}
-
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	} else {
-		log.Infof("RabbitMQ channel opened.")
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	scatterDirect := rabbitmq.NewRabbitOutputDirect(
 		props.ReviewsScatterOutput,
@@ -60,13 +48,13 @@ func NewScatter(config ScatterConfig) *Scatter {
 		config.HashesMappers, 
 		config.UsersMappers, 
 		config.StarsMappers, 
-		ch,
+		channel,
 	)
 	
 	scatter := &Scatter {
 		data: 				config.Data,
-		connection:			conn,
-		channel:			ch,
+		connection:			connection,
+		channel:			channel,
 		bulkSize:			config.BulkSize,
 		poolSize:			config.WorkersPool,
 		innerChannel:		make(chan string),

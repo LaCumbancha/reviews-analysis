@@ -33,25 +33,14 @@ type Mapper struct {
 }
 
 func NewMapper(config MapperConfig) *Mapper {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
-	} else {
-		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	} else {
-		log.Infof("RabbitMQ channel opened.")
-	}
+	inputDirect := rabbit.NewRabbitInputDirect(channel, props.ReviewsScatterOutput, props.HashMapperTopic, props.HashMapperInput)
+	outputDirect := rabbitmq.NewRabbitOutputDirect(props.HashMapperOutput, config.Instance, config.HashAggregators, channel)
 
-	inputDirect := rabbit.NewRabbitInputDirect(ch, props.ReviewsScatterOutput, props.HashMapperTopic, props.HashMapperInput)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(props.HashMapperOutput, config.Instance, config.HashAggregators, ch)
 	mapper := &Mapper {
-		connection:		conn,
-		channel:		ch,
+		connection:		connection,
+		channel:		channel,
 		inputDirect:	inputDirect,
 		outputDirect:	outputDirect,
 		endSignals:		config.ReviewsInputs,

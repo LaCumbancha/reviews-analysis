@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"sync"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/funniest-cities/rabbitmq"
@@ -9,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 type FilterConfig struct {
@@ -28,25 +28,14 @@ type Filter struct {
 }
 
 func NewFilter(config FilterConfig) *Filter {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
-	} else {
-		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	} else {
-		log.Infof("RabbitMQ channel opened.")
-	}
+	inputQueue := rabbitmq.NewRabbitInputQueue(props.FuncitFilterOutput, channel)
+	outputQueue := rabbitmq.NewRabbitOutputQueue(props.FunniestCitiesPrettierOutput, channel)
 
-	inputQueue := rabbitmq.NewRabbitInputQueue(props.FuncitFilterOutput, ch)
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.FunniestCitiesPrettierOutput, ch)
 	filter := &Filter {
-		connection:		conn,
-		channel:		ch,
+		connection:		connection,
+		channel:		channel,
 		builder:		NewBuilder(config.TopSize),
 		inputQueue:		inputQueue,
 		outputQueue:	outputQueue,

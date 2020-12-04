@@ -37,26 +37,15 @@ type Joiner struct {
 }
 
 func NewJoiner(config JoinerConfig) *Joiner {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort, err)
-	} else {
-		log.Infof("Connected to RabbitMQ at (%s, %s).", config.RabbitIp, config.RabbitPort)
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	} else {
-		log.Infof("RabbitMQ channel opened.")
-	}
+	inputDirect1 := rabbit.NewRabbitInputDirect(channel, props.StarsAggregatorOutput, config.InputTopic, "")
+	inputDirect2 := rabbit.NewRabbitInputDirect(channel, props.BestUsersFilterOutput, config.InputTopic, "")
+	outputQueue := rabbitmq.NewRabbitOutputQueue(props.BestUsersJoinerOutput, config.Instance, channel)
 
-	inputDirect1 := rabbit.NewRabbitInputDirect(ch, props.StarsAggregatorOutput, config.InputTopic, "")
-	inputDirect2 := rabbit.NewRabbitInputDirect(ch, props.BestUsersFilterOutput, config.InputTopic, "")
-	outputQueue := rabbitmq.NewRabbitOutputQueue(props.BestUsersJoinerOutput, config.Instance, ch)
 	joiner := &Joiner {
-		connection:		conn,
-		channel:		ch,
+		connection:		connection,
+		channel:		channel,
 		calculator:		NewCalculator(),
 		inputDirect1:	inputDirect1,
 		inputDirect2:	inputDirect2,

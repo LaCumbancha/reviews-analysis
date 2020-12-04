@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"sync"
 	"github.com/streadway/amqp"
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/outputs/sink/rabbitmq"
@@ -9,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
 type SinkConfig struct {
@@ -27,24 +27,17 @@ type Sink struct {
 }
 
 func NewSink(config SinkConfig) *Sink {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", config.RabbitIp, config.RabbitPort))
-	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ at (%s, %s). Err: '%s'", config.RabbitIp, config.RabbitPort , err)
-	}
+	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("Failed to open a RabbitMQ channel. Err: '%s'", err)
-	}
+	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(props.FunniestCitiesPrettierOutput, channel)
+	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(props.WeekdayHistogramPrettierOutput, channel)
+	topUsersQueue := rabbitmq.NewRabbitInputQueue(props.TopUsersPrettierOutput, channel)
+	bestUsersQueue := rabbitmq.NewRabbitInputQueue(props.BestUsersPrettierOutput, channel)
+	botUsersQueue := rabbitmq.NewRabbitInputQueue(props.BotUsersPrettierOutput, channel)
 
-	funniestCitiesQueue := rabbitmq.NewRabbitInputQueue(props.FunniestCitiesPrettierOutput, ch)
-	weekdayHistogramQueue := rabbitmq.NewRabbitInputQueue(props.WeekdayHistogramPrettierOutput, ch)
-	topUsersQueue := rabbitmq.NewRabbitInputQueue(props.TopUsersPrettierOutput, ch)
-	bestUsersQueue := rabbitmq.NewRabbitInputQueue(props.BestUsersPrettierOutput, ch)
-	botUsersQueue := rabbitmq.NewRabbitInputQueue(props.BotUsersPrettierOutput, ch)
 	sink := &Sink {
-		connection:				conn,
-		channel:				ch,
+		connection:				connection,
+		channel:				channel,
 		funniestCitiesQueue:	funniestCitiesQueue,
 		weekdayHistogramQueue:  weekdayHistogramQueue,
 		topUsersQueue:			topUsersQueue,
