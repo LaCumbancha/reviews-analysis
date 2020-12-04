@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"encoding/json"
 	"github.com/streadway/amqp"
+	"github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
 	
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -49,7 +50,7 @@ func (direct *RabbitOutputDirect) initialize() {
 	}
 
 	// Generate PartitionsMap to send each message to the correct aggregator.
-	direct.partitionMap = GeneratePartitionMap(direct.partitions)
+	direct.partitionMap = utils.GeneratePartitionMap(direct.partitions, PARTITIONER_VALUES)
 	log.Tracef("Partition map generated for direct-exchange %s: %s.", direct.exchange, direct.partitionMap)
 }
 
