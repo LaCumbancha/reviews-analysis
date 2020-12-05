@@ -13,9 +13,6 @@ import (
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
-const FLOW1 = "BEST_USERS"
-const FLOW2 = "TOTAL_REVIEWS"
-
 type JoinerConfig struct {
 	Instance			string
 	RabbitIp			string
@@ -58,11 +55,8 @@ func NewJoiner(config JoinerConfig) *Joiner {
 }
 
 func (joiner *Joiner) Run() {
-	var endSignals1Mutex = &sync.Mutex{}
-	var endSignals2Mutex = &sync.Mutex{}
-
-	var endSignals1 = make(map[string]int)
-	var endSignals2 = make(map[string]int)
+	var distinctEndSignals1 = make(map[string]int)
+	var distinctEndSignals2 = make(map[string]int)
 
 	var joinWg sync.WaitGroup
 	var inputWg sync.WaitGroup
@@ -77,7 +71,17 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				joiner.processEndSignal(FLOW1, messageBody, joiner.endSignals1, endSignals1, endSignals1Mutex, &inputWg)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals1, joiner.endSignals1)
+
+				if newFinishReceived {
+					log.Infof("End-Message #%d received.", len(distinctEndSignals1))
+				}
+
+				if allFinishReceived {
+					log.Infof("All End-Messages were received.")
+					inputWg.Done()
+				}
+
 			} else {
 				bulkCounter++
 				logb.Instance().Infof(fmt.Sprintf("Best users data bulk #%d received.", bulkCounter), bulkCounter)
@@ -101,7 +105,17 @@ func (joiner *Joiner) Run() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				joiner.processEndSignal(FLOW2, messageBody, joiner.endSignals2, endSignals2, endSignals2Mutex, &inputWg)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals2, joiner.endSignals2)
+
+				if newFinishReceived {
+					log.Infof("End-Message #%d received.", len(distinctEndSignals2))
+				}
+
+				if allFinishReceived {
+					log.Infof("All End-Messages were received.")
+					inputWg.Done()
+				}
+
 			} else {
 				bulkCounter++
 				logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d received.", bulkCounter), bulkCounter)
@@ -159,24 +173,6 @@ func (joiner *Joiner) sendJoinedData(messageNumber int, joinedData comms.UserDat
 	}
 
 	wg.Done()
-}
-
-func (joiner *Joiner) processEndSignal(flow string, newMessage string, expectedEndSignals int, receivedEndSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
-	mutex.Lock()
-	receivedEndSignals[newMessage] = receivedEndSignals[newMessage] + 1
-	newSignal := receivedEndSignals[newMessage] == 1
-	signalsReceived := len(receivedEndSignals)
-	mutex.Unlock()
-
-	if newSignal {
-		log.Infof("End-Message #%d from the %s flow received.", signalsReceived, flow)
-	}
-
-	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == expectedEndSignals) && newSignal {
-		log.Infof("All End-Messages from the %s flow were received.", flow)
-		wg.Done()
-	}
 }
 
 func (joiner *Joiner) Stop() {

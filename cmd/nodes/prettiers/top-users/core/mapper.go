@@ -50,18 +50,27 @@ func NewMapper(config MapperConfig) *Mapper {
 func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for users with +50 reviews data.")
 
-	var endSignalsMutex = &sync.Mutex{}
-	var endSignals = make(map[string]int)
-
+	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
+
 	go func() {
 		bulkCounter := 0
 		for message := range mapper.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				mapper.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, mapper.endSignals)
+
+				if newFinishReceived {
+					log.Infof("End-Message #%d received.", len(distinctEndSignals))
+				}
+
+				if allFinishReceived {
+					log.Infof("All End-Messages were received.")
+					wg.Done()
+				}
+
 			} else {
 				bulkCounter++
 				logb.Instance().Infof(fmt.Sprintf("Top user #%d received.", bulkCounter), bulkCounter)
@@ -83,24 +92,6 @@ func (mapper *Mapper) Run() {
 
     // Publishing end messages.
     mapper.outputQueue.PublishFinish()
-}
-
-func (mapper *Mapper) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
-	mutex.Lock()
-	endSignals[newMessage] = endSignals[newMessage] + 1
-	newSignal := endSignals[newMessage] == 1
-	signalsReceived := len(endSignals)
-	mutex.Unlock()
-
-	if newSignal {
-		log.Infof("End-Message #%d received.", signalsReceived)
-	}
-
-	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == mapper.endSignals) && newSignal {
-		log.Infof("All End-Messages were received.")
-		wg.Done()
-	}
 }
 
 func (mapper *Mapper) sendResults() {

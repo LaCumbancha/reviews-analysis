@@ -20,3 +20,12 @@ func EndMessage(instance string) string {
 func IsEndMessage(message string) bool {
 	return (len(message) > 10) && (message[0:11] == endMessage)
 }
+
+// Detect if all end signals were received
+func LastEndMessage(message string, receivedSignals map[string]int, expectedSignals int) (bool, bool) {
+	receivedSignals[message] = receivedSignals[message] + 1
+	newSignal := receivedSignals[message] == 1
+	distinctSignals := len(receivedSignals)
+
+	return newSignal, (distinctSignals == expectedSignals) && newSignal
+}

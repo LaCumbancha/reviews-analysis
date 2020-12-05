@@ -52,27 +52,36 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 func (aggregator *Aggregator) Run() {
 	log.Infof("Starting to listen for weekday data.")
 
-	var endSignalsMutex = &sync.Mutex{}
-	var endSignals = make(map[string]int)
-
+	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
+
 	go func() {
 		bulkCounter := 0
 		for message := range aggregator.inputDirect.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				aggregator.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, aggregator.endSignals)
+
+				if newFinishReceived {
+					log.Infof("End-Message #%d received.", len(distinctEndSignals))
+				}
+
+				if allFinishReceived {
+					log.Infof("All End-Messages were received.")
+					wg.Done()
+				}
+
 			} else {
 				bulkCounter++
 				logb.Instance().Infof(fmt.Sprintf("Weekday data bulk #%d received.", bulkCounter), bulkCounter)
 
 				wg.Add(1)
-				go func(bulkNumber int) {
-					aggregator.calculator.Aggregate(bulkNumber, messageBody)
+				go func(bulkNumber int, bulk string) {
+					aggregator.calculator.Aggregate(bulkNumber, bulk)
 					wg.Done()
-				}(bulkCounter)
+				}(bulkCounter, messageBody)
 			}
 		}
 	}()
@@ -110,24 +119,6 @@ func (aggregator *Aggregator) sendAggregatedData(aggregatedData comms.WeekdayDat
 	}
 
 	wg.Done()
-}
-
-func (aggregator *Aggregator) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
-	mutex.Lock()
-	endSignals[newMessage] = endSignals[newMessage] + 1
-	newSignal := endSignals[newMessage] == 1
-	signalsReceived := len(endSignals)
-	mutex.Unlock()
-
-	if newSignal {
-		log.Infof("End-Message #%d received.", signalsReceived)
-	}
-
-	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == aggregator.endSignals) && newSignal {
-		log.Infof("All End-Messages were received.")
-		wg.Done()
-	}
 }
 
 func (aggregator *Aggregator) Stop() {

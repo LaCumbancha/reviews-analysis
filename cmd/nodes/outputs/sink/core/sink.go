@@ -55,16 +55,17 @@ func (sink *Sink) Run() {
 
 	// TODO: Use this same logic for this and the other queues.
 	go func() {
-		endSignalReceived := false
+		distinctEndSignals := make(map[string]int)
 		for message := range sink.funniestCitiesQueue.ConsumeData() {
 			messageBody := string(message.Body)
-
 			if comms.IsEndMessage(messageBody) {
-				if !endSignalReceived {
+				_, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, 1)
+
+				if allFinishReceived {
 					log.Infof("End-Message received from the Funniest Cities flow.")
-					endSignalReceived = true
 					wg.Done()
 				}
+
 			} else {
 				log.Infof(messageBody)
 			}
@@ -72,16 +73,17 @@ func (sink *Sink) Run() {
 	}()
 
 	go func() {
-		endSignalReceived := false
+		distinctEndSignals := make(map[string]int)
 		for message := range sink.weekdayHistogramQueue.ConsumeData() {
 			messageBody := string(message.Body)
-
 			if comms.IsEndMessage(messageBody) {
-				if !endSignalReceived {
+				_, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, 1)
+
+				if allFinishReceived {
 					log.Infof("End-Message received from the Weekday Histogram flow.")
-					endSignalReceived = true
 					wg.Done()
 				}
+
 			} else {
 				log.Infof(messageBody)
 			}
@@ -89,16 +91,17 @@ func (sink *Sink) Run() {
 	}()
 
 	go func() {
-		endSignalReceived := false
+		distinctEndSignals := make(map[string]int)
 		for message := range sink.topUsersQueue.ConsumeData() {
 			messageBody := string(message.Body)
-
 			if comms.IsEndMessage(messageBody) {
-				if !endSignalReceived {
+				_, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, 1)
+
+				if allFinishReceived {
 					log.Infof("End-Message received from the Top-Users flow.")
-					endSignalReceived = true
 					wg.Done()
 				}
+
 			} else {
 				log.Infof(messageBody)
 			}
@@ -106,16 +109,17 @@ func (sink *Sink) Run() {
 	}()
 
 	go func() {
-		endSignalReceived := false
+		distinctEndSignals := make(map[string]int)
 		for message := range sink.bestUsersQueue.ConsumeData() {
 			messageBody := string(message.Body)
-
 			if comms.IsEndMessage(messageBody) {
-				if !endSignalReceived {
+				_, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, 1)
+
+				if allFinishReceived {
 					log.Infof("End-Message received from the Best-Users flow.")
-					endSignalReceived = true
 					wg.Done()
 				}
+
 			} else {
 				log.Infof(messageBody)
 			}
@@ -123,16 +127,17 @@ func (sink *Sink) Run() {
 	}()
 
 	go func() {
-		endSignalReceived := false
+		distinctEndSignals := make(map[string]int)
 		for message := range sink.botUsersQueue.ConsumeData() {
 			messageBody := string(message.Body)
-			
 			if comms.IsEndMessage(messageBody) {
-				if !endSignalReceived {
+				_, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, 1)
+
+				if allFinishReceived {
 					log.Infof("End-Message received from the Bot-Users flow.")
-					endSignalReceived = true
 					wg.Done()
 				}
+
 			} else {
 				log.Infof(messageBody)
 			}

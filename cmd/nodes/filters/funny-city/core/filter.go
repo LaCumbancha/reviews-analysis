@@ -51,18 +51,27 @@ func NewFilter(config FilterConfig) *Filter {
 func (filter *Filter) Run() {
 	log.Infof("Starting to listen for funny-city data.")
 
-	var endSignalsMutex = &sync.Mutex{}
-	var endSignals = make(map[string]int)
-
+	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
+
 	go func() {
 		bulkCounter := 0
 		for message := range filter.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				filter.processEndSignal(messageBody, endSignals, endSignalsMutex, &wg)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, filter.endSignals)
+
+				if newFinishReceived {
+					log.Infof("End-Message #%d received.", len(distinctEndSignals))
+				}
+
+				if allFinishReceived {
+					log.Infof("All End-Messages were received.")
+					wg.Done()
+				}
+
 			} else {
 				bulkCounter++
 				logb.Instance().Infof(fmt.Sprintf("Funcit data bulk #%d received.", bulkCounter), bulkCounter)
@@ -109,24 +118,6 @@ func (filter *Filter) sendTopTenData(cityNumber int, topTenCity comms.FunnyCityD
 	}
 
 	wg.Done()
-}
-
-func (filter *Filter) processEndSignal(newMessage string, endSignals map[string]int, mutex *sync.Mutex, wg *sync.WaitGroup) {
-	mutex.Lock()
-	endSignals[newMessage] = endSignals[newMessage] + 1
-	newSignal := endSignals[newMessage] == 1
-	signalsReceived := len(endSignals)
-	mutex.Unlock()
-
-	if newSignal {
-		log.Infof("End-Message #%d received.", signalsReceived)
-	}
-
-	// Waiting for the total needed End-Signals to send the own End-Message.
-	if (signalsReceived == filter.endSignals) && newSignal {
-		log.Infof("All End-Messages were received.")
-		wg.Done()
-	}
 }
 
 func (filter *Filter) Stop() {
