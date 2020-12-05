@@ -55,14 +55,14 @@ func main() {
 	funcitFilters := utils.GetConfigInt(configEnv, configFile, "funcit_filters")
 	topSize := utils.GetConfigInt(configEnv, configFile, "top_size")
 
-	filterConfig := core.FilterConfig {
+	prettierConfig := core.PrettierConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		FuncitFilters:		funcitFilters,
 		TopSize:			topSize,
 	}
 
-	filter := core.NewFilter(filterConfig)
-	filter.Run()
-	filter.Stop()
+	prettier := core.NewPrettier(prettierConfig)
+	prettier.Run()
+	prettier.Stop()
 }

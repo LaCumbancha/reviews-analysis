@@ -11,14 +11,14 @@ import (
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
-type MapperConfig struct {
+type PrettierConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	MinReviews			int
 	BotUserJoiners 		int
 }
 
-type Mapper struct {
+type Prettier struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	builder			*Builder
@@ -27,13 +27,13 @@ type Mapper struct {
 	endSignals 		int
 }
 
-func NewMapper(config MapperConfig) *Mapper {
+func NewPrettier(config PrettierConfig) *Prettier {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.BotUsersJoinerOutput)
 	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.BotUsersPrettierOutput, comms.EndMessage(""), comms.EndSignals(1))
 
-	mapper := &Mapper {
+	prettier := &Prettier {
 		connection:		connection,
 		channel:		channel,
 		builder:		NewBuilder(config.MinReviews),
@@ -42,10 +42,10 @@ func NewMapper(config MapperConfig) *Mapper {
 		endSignals:		config.BotUserJoiners,
 	}
 
-	return mapper
+	return prettier
 }
 
-func (mapper *Mapper) Run() {
+func (prettier *Prettier) Run() {
 	log.Infof("Starting to listen for users with +5 reviews, all with the same text.")
 
 	var distinctEndSignals = make(map[string]int)
@@ -54,11 +54,11 @@ func (mapper *Mapper) Run() {
 
 	go func() {
 		messageCounter := 0
-		for message := range mapper.inputQueue.ConsumeData() {
+		for message := range prettier.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, mapper.endSignals)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, prettier.endSignals)
 
 				if newFinishReceived {
 					log.Infof("End-Message #%d received.", len(distinctEndSignals))
@@ -75,7 +75,7 @@ func (mapper *Mapper) Run() {
 
 				wg.Add(1)
 				go func(message string) {
-					mapper.builder.Save(message)
+					prettier.builder.Save(message)
 					wg.Done()
 				}(messageBody)
 			}
@@ -86,29 +86,29 @@ func (mapper *Mapper) Run() {
     wg.Wait()
 
     // Sending results
-    mapper.sendResults()
+    prettier.sendResults()
 
     // Publishing end messages.
-    mapper.outputQueue.PublishFinish()
+    prettier.outputQueue.PublishFinish()
 }
 
-func (mapper *Mapper) sendResults() {
-	data, err := json.Marshal(mapper.builder.BuildData())
+func (prettier *Prettier) sendResults() {
+	data, err := json.Marshal(prettier.builder.BuildData())
 	if err != nil {
 		log.Errorf("Error generating Json from best users results. Err: '%s'", err)
 	} else {
-		err := mapper.outputQueue.PublishData(data)
+		err := prettier.outputQueue.PublishData(data)
 
 		if err != nil {
-			log.Errorf("Error sending best users results to output queue %s. Err: '%s'", mapper.outputQueue.Name, err)
+			log.Errorf("Error sending best users results to output queue %s. Err: '%s'", prettier.outputQueue.Name, err)
 		} else {
-			log.Infof("Best user results sent to output queue %s.", mapper.outputQueue.Name)
+			log.Infof("Best user results sent to output queue %s.", prettier.outputQueue.Name)
 		}
 	}
 }
 
-func (mapper *Mapper) Stop() {
+func (prettier *Prettier) Stop() {
 	log.Infof("Closing Bot-Users Prettier connections.")
-	mapper.connection.Close()
-	mapper.channel.Close()
+	prettier.connection.Close()
+	prettier.channel.Close()
 }

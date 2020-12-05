@@ -55,14 +55,14 @@ func main() {
 	minReviews := utils.GetConfigInt(configEnv, configFile, "min_reviews")
 	bestUserJoiners := utils.GetConfigInt(configEnv, configFile, "bestuser_joiners")
 
-	mapperConfig := core.MapperConfig {
+	prettierConfig := core.PrettierConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		MinReviews:			minReviews,
 		BestUserJoiners:	bestUserJoiners,
 	}
 
-	mapper := core.NewMapper(mapperConfig)
-	mapper.Run()
-	mapper.Stop()
+	prettier := core.NewPrettier(prettierConfig)
+	prettier.Run()
+	prettier.Stop()
 }

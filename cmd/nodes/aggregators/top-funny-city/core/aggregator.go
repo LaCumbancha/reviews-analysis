@@ -13,7 +13,7 @@ import (
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
-type FilterConfig struct {
+type AggregatorConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
@@ -21,7 +21,7 @@ type FilterConfig struct {
 	TopSize				int
 }
 
-type Filter struct {
+type Aggregator struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	calculator		*Calculator
@@ -30,13 +30,13 @@ type Filter struct {
 	endSignals		int
 }
 
-func NewFilter(config FilterConfig) *Filter {
+func NewAggregator(config AggregatorConfig) *Aggregator {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FuncitAggregatorOutput)
-	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.FuncitFilterOutput, comms.EndMessage(config.Instance), comms.EndSignals(1))
+	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.FuncitTopOutput, comms.EndMessage(config.Instance), comms.EndSignals(1))
 
-	filter := &Filter {
+	aggregator := &Aggregator {
 		connection:		connection,
 		channel:		channel,
 		calculator:		NewCalculator(config.TopSize),
@@ -45,10 +45,10 @@ func NewFilter(config FilterConfig) *Filter {
 		endSignals:		config.FuncitAggregators,
 	}
 
-	return filter
+	return aggregator
 }
 
-func (filter *Filter) Run() {
+func (aggregator *Aggregator) Run() {
 	log.Infof("Starting to listen for funny-city data.")
 
 	var distinctEndSignals = make(map[string]int)
@@ -57,11 +57,11 @@ func (filter *Filter) Run() {
 
 	go func() {
 		bulkCounter := 0
-		for message := range filter.inputQueue.ConsumeData() {
+		for message := range aggregator.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, filter.endSignals)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, aggregator.endSignals)
 
 				if newFinishReceived {
 					log.Infof("End-Message #%d received.", len(distinctEndSignals))
@@ -78,7 +78,7 @@ func (filter *Filter) Run() {
 
 				wg.Add(1)
 				go func(bulkNumber int, bulk string) {
-					filter.calculator.Save(bulkNumber, bulk)
+					aggregator.calculator.Save(bulkNumber, bulk)
 					wg.Done()
 				}(bulkCounter, messageBody)
 			}
@@ -89,39 +89,39 @@ func (filter *Filter) Run() {
     wg.Wait()
 
     cityCounter := 0
-    for _, cityData := range filter.calculator.RetrieveTopTen() {
+    for _, cityData := range aggregator.calculator.RetrieveTopTen() {
     	cityCounter++
 
     	wg.Add(1)
-    	go filter.sendTopTenData(cityCounter, cityData, &wg)
+    	go aggregator.sendTopTenData(cityCounter, cityData, &wg)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
     // Sending End-Message to consumers.
-    filter.outputQueue.PublishFinish()
+    aggregator.outputQueue.PublishFinish()
 }
 
-func (filter *Filter) sendTopTenData(cityNumber int, topTenCity comms.FunnyCityData, wg *sync.WaitGroup) {
+func (aggregator *Aggregator) sendTopTenData(cityNumber int, topTenCity comms.FunnyCityData, wg *sync.WaitGroup) {
 	data, err := json.Marshal(topTenCity)
 	if err != nil {
 		log.Errorf("Error generating Json from funniest city #%d data. Err: '%s'", cityNumber, err)
 	} else {
-		err := filter.outputQueue.PublishData(data)
+		err := aggregator.outputQueue.PublishData(data)
 
 		if err != nil {
-			log.Errorf("Error sending funniest city #%d data to output queue %s. Err: '%s'", cityNumber, filter.outputQueue.Name, err)
+			log.Errorf("Error sending funniest city #%d data to output queue %s. Err: '%s'", cityNumber, aggregator.outputQueue.Name, err)
 		} else {
-			log.Infof("Funniest city #%d data sent to output queue %s.", cityNumber, filter.outputQueue.Name)
+			log.Infof("Funniest city #%d data sent to output queue %s.", cityNumber, aggregator.outputQueue.Name)
 		}
 	}
 
 	wg.Done()
 }
 
-func (filter *Filter) Stop() {
-	log.Infof("Closing Funny-City Filter connections.")
-	filter.connection.Close()
-	filter.channel.Close()
+func (aggregator *Aggregator) Stop() {
+	log.Infof("Closing Funny-City Aggregator connections.")
+	aggregator.connection.Close()
+	aggregator.channel.Close()
 }

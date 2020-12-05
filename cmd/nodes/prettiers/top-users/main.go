@@ -57,7 +57,7 @@ func main() {
 	minReviews := utils.GetConfigInt(configEnv, configFile, "min_reviews")
 	userFilters := utils.GetConfigInt(configEnv, configFile, "user_filters")
 
-	mapperConfig := core.MapperConfig {
+	prettierConfig := core.PrettierConfig {
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
 		MinReviews:			minReviews,
@@ -69,7 +69,7 @@ func main() {
 	logb.Instance().SetBulkRate(logBulkRate)
 
 	// Initializing prettier.
-	mapper := core.NewMapper(mapperConfig)
-	mapper.Run()
-	mapper.Stop()
+	prettier := core.NewPrettier(prettierConfig)
+	prettier.Run()
+	prettier.Stop()
 }

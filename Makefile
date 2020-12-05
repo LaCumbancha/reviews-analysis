@@ -28,7 +28,6 @@ build: deps
 
 	# Filters
 	GOOS=linux go build -o bin/funbiz-filter $(GIT_REMOTE)/cmd/nodes/filters/funbiz-filter
-	GOOS=linux go build -o bin/funcit-filter $(GIT_REMOTE)/cmd/nodes/filters/funcit-filter
 	GOOS=linux go build -o bin/user-filter $(GIT_REMOTE)/cmd/nodes/filters/user
 	GOOS=linux go build -o bin/stars-filter $(GIT_REMOTE)/cmd/nodes/filters/stars
 	GOOS=linux go build -o bin/dishash-filter $(GIT_REMOTE)/cmd/nodes/filters/distinct-hash
@@ -37,6 +36,7 @@ build: deps
 	# Aggregators
 	GOOS=linux go build -o bin/funbiz-aggregator $(GIT_REMOTE)/cmd/nodes/aggregators/funbiz-aggregator
 	GOOS=linux go build -o bin/funcit-aggregator $(GIT_REMOTE)/cmd/nodes/aggregators/funcit-aggregator
+	GOOS=linux go build -o bin/funcit-top $(GIT_REMOTE)/cmd/nodes/aggregators/funcit-top
 	GOOS=linux go build -o bin/weekday-aggregator $(GIT_REMOTE)/cmd/nodes/aggregators/weekday
 	GOOS=linux go build -o bin/user-aggregator $(GIT_REMOTE)/cmd/nodes/aggregators/user
 	GOOS=linux go build -o bin/stars-aggregator $(GIT_REMOTE)/cmd/nodes/aggregators/stars
@@ -76,7 +76,6 @@ docker-image:
 
 	# Filters
 	docker build -f ./cmd/nodes/filters/funny-business/Dockerfile -t "funbiz_filter:latest" .
-	docker build -f ./cmd/nodes/filters/funny-city/Dockerfile -t "funcit_filter:latest" .
 	docker build -f ./cmd/nodes/filters/user/Dockerfile -t "user_filter:latest" .
 	docker build -f ./cmd/nodes/filters/stars/Dockerfile -t "stars_filter:latest" .
 	docker build -f ./cmd/nodes/filters/distinct-hash/Dockerfile -t "dishash_filter:latest" .
@@ -90,6 +89,7 @@ docker-image:
 	docker build -f ./cmd/nodes/aggregators/stars/Dockerfile -t "stars_aggregator:latest" .
 	docker build -f ./cmd/nodes/aggregators/hash-text/Dockerfile -t "hash_aggregator:latest" .
 	docker build -f ./cmd/nodes/aggregators/distinct-hash/Dockerfile -t "dishash_aggregator:latest" .
+	docker build -f ./cmd/nodes/aggregators/top-funny-city/Dockerfile -t "funcit_top:latest" .
 
 	# Joiners
 	docker build -f ./cmd/nodes/joiners/funny-city/Dockerfile -t "funcit_joiner:latest" .

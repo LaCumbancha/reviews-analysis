@@ -38,7 +38,7 @@ funbiz_filters: 1
 funbiz_aggregators: 1
 funcit_joiners: 1
 funcit_aggregators: 1
-funcit_filters: 1
+funcit_tops: 1
 
 # Weekday histogram flow.
 weekday_mappers: 1

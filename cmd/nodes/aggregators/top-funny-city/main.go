@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/filters/funny-city/core"
+	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/top-funny-city/core"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
@@ -16,7 +16,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 
 	// Configure viper to read env variables with the FUNCITFIL prefix
 	configEnv.AutomaticEnv()
-	configEnv.SetEnvPrefix("funcitfil")
+	configEnv.SetEnvPrefix("funcittop")
 
 	// Add env variables supported
 	configEnv.BindEnv("instance")
@@ -59,7 +59,7 @@ func main() {
 	funcitAggregators := utils.GetConfigInt(configEnv, configFile, "funcit_aggregators")
 	topSize := utils.GetConfigInt(configEnv, configFile, "top_size")
 
-	filterConfig := core.FilterConfig {
+	aggregatorConfig := core.AggregatorConfig {
 		Instance:			instance,
 		RabbitIp:			rabbitIp,
 		RabbitPort:			rabbitPort,
@@ -71,8 +71,8 @@ func main() {
 	logBulkRate := utils.GetConfigInt(configEnv, configFile, "log_bulk_rate")
 	logb.Instance().SetBulkRate(logBulkRate)
 
-	// Initializing filter.
-	filter := core.NewFilter(filterConfig)
-	filter.Run()
-	filter.Stop()
+	// Initializing aggregator.
+	aggregator := core.NewAggregator(aggregatorConfig)
+	aggregator.Run()
+	aggregator.Stop()
 }

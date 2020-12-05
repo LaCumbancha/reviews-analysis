@@ -11,14 +11,14 @@ import (
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
-type FilterConfig struct {
+type PrettierConfig struct {
 	RabbitIp		string
 	RabbitPort		string
 	FuncitFilters	int
 	TopSize			int
 }
 
-type Filter struct {
+type Prettier struct {
 	connection 		*amqp.Connection
 	channel 		*amqp.Channel
 	builder			*Builder
@@ -27,13 +27,13 @@ type Filter struct {
 	endSignals		int
 }
 
-func NewFilter(config FilterConfig) *Filter {
+func NewPrettier(config PrettierConfig) *Prettier {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FuncitFilterOutput)
+	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FuncitTopOutput)
 	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.FunniestCitiesPrettierOutput, comms.EndMessage(""), comms.EndSignals(1))
 
-	filter := &Filter {
+	prettier := &Prettier {
 		connection:		connection,
 		channel:		channel,
 		builder:		NewBuilder(config.TopSize),
@@ -42,10 +42,10 @@ func NewFilter(config FilterConfig) *Filter {
 		endSignals:		config.FuncitFilters,
 	}
 
-	return filter
+	return prettier
 }
 
-func (filter *Filter) Run() {
+func (prettier *Prettier) Run() {
 	log.Infof("Starting to listen for top funniest-cities data.")
 
 	var distinctEndSignals = make(map[string]int)
@@ -54,11 +54,11 @@ func (filter *Filter) Run() {
 
 	go func() {
 		messageCounter := 0
-		for message := range filter.inputQueue.ConsumeData() {
+		for message := range prettier.inputQueue.ConsumeData() {
 			messageBody := string(message.Body)
 
 			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, filter.endSignals)
+				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, prettier.endSignals)
 
 				if newFinishReceived {
 					log.Infof("End-Message #%d received.", len(distinctEndSignals))
@@ -75,7 +75,7 @@ func (filter *Filter) Run() {
 
 				wg.Add(1)
 				go func(message string) {
-					filter.builder.Save(message)
+					prettier.builder.Save(message)
 					wg.Done()
 				}(messageBody)
 			}
@@ -86,29 +86,29 @@ func (filter *Filter) Run() {
     wg.Wait()
 
     // Sending results
-    filter.sendResults()
+    prettier.sendResults()
 
     // Sending End-Message to consumers.
-    filter.outputQueue.PublishFinish()
+    prettier.outputQueue.PublishFinish()
 }
 
-func (filter *Filter) sendResults() {
-	data, err := json.Marshal(filter.builder.BuildTopTen())
+func (prettier *Prettier) sendResults() {
+	data, err := json.Marshal(prettier.builder.BuildTopTen())
 	if err != nil {
 		log.Errorf("Error generating Json from best users results. Err: '%s'", err)
 	} else {
-		err := filter.outputQueue.PublishData(data)
+		err := prettier.outputQueue.PublishData(data)
 
 		if err != nil {
-			log.Errorf("Error sending best users results to output queue %s. Err: '%s'", filter.outputQueue.Name, err)
+			log.Errorf("Error sending best users results to output queue %s. Err: '%s'", prettier.outputQueue.Name, err)
 		} else {
-			log.Infof("Best user results sent to output queue %s.", filter.outputQueue.Name)
+			log.Infof("Best user results sent to output queue %s.", prettier.outputQueue.Name)
 		}
 	}
 }
 
-func (filter *Filter) Stop() {
+func (prettier *Prettier) Stop() {
 	log.Infof("Closing Funniest-Cities Prettier connections.")
-	filter.connection.Close()
-	filter.channel.Close()
+	prettier.connection.Close()
+	prettier.channel.Close()
 }

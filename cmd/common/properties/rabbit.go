@@ -10,7 +10,7 @@ const FunbizFilterOutput = "FunnyBusinessFilter"
 const FunbizAggregatorOutput = "FunnyBusinessAggregator"
 const FuncitJoinerOutput = "FunnyCityJoiner"
 const FuncitAggregatorOutput = "FunnyCityAggregator"
-const FuncitFilterOutput = "FunnyCityFilter"
+const FuncitTopOutput = "FunnyCityTop10"
 const FunniestCitiesPrettierOutput = "FunniestCitiesResults"
 
 // Weekday Histogram flow.

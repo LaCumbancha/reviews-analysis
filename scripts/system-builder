@@ -49,7 +49,7 @@ WEEKDAYAGG_DEPS = []
 FUNCITAGG_DEPS = []
 STARSAGG_DEPS = []
 FUNBIZFIL_DEPS = []
-FUNCITFIL_DEPS = []
+FUNCITTOP_DEPS = []
 USERFIL_DEPS = []
 STARSFIL_DEPS = []
 DISHASHFIL_DEPS = []
@@ -91,30 +91,30 @@ file['services']['sink'] = {
 }
 
 ## Funniest Cities flow
-FUNCITFIL_DEPS += ['top_funniest_cities_prettier']
+FUNCITTOP_DEPS += ['top_funniest_cities_prettier']
 file['services']['top_funniest_cities_prettier'] = {
 	'container_name': 'top_funniest_cities_prettier',
 	'image': 'top_funniest_cities_prettier:latest',
 	'entrypoint': '/prettier',
 	'restart': 'on-failure',
-	'environment': ['FUNCITPRE_RABBITMQ_IP=rabbitmq', 'FUNCITPRE_RABBITMQ_PORT=5672', f'FUNCITPRE_TOP_SIZE={input_yaml["funniest_cities_top_size"]}', f'FUNCITPRE_FUNCIT_FILTERS={input_yaml["funcit_filters"]}'],
+	'environment': ['FUNCITPRE_RABBITMQ_IP=rabbitmq', 'FUNCITPRE_RABBITMQ_PORT=5672', f'FUNCITPRE_TOP_SIZE={input_yaml["funniest_cities_top_size"]}', f'FUNCITPRE_FUNCIT_FILTERS={input_yaml["funcit_tops"]}'],
 	'links': ['rabbitmq'],
 	'depends_on': list(FUNCITPRE_DEPS),
 	'networks': ['testing_net'],
 }
 config_logs('funniest_cities_logging', service=file['services']['top_funniest_cities_prettier'])
 
-for idx in range(0, input_yaml['funcit_filters']):
-	container_name = f'funcit_filter{idx}'
+for idx in range(0, input_yaml['funcit_tops']):
+	container_name = f'funcit_top{idx}'
 	FUNCITAGG_DEPS += [container_name]
 	file['services'][container_name] = {
 		'container_name': container_name,
-		'image': 'funcit_filter:latest',
-		'entrypoint': '/filter',
+		'image': 'funcit_top:latest',
+		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': [f'FUNCITFIL_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITFIL_INSTANCE={idx}', 'FUNCITFIL_RABBITMQ_IP=rabbitmq', 'FUNCITFIL_RABBITMQ_PORT=5672', f'FUNCITFIL_TOP_SIZE={input_yaml["funniest_cities_top_size"]}', f'FUNCITFIL_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
+		'environment': [f'FUNCITTOP_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITTOP_INSTANCE={idx}', 'FUNCITTOP_RABBITMQ_IP=rabbitmq', 'FUNCITTOP_RABBITMQ_PORT=5672', f'FUNCITTOP_TOP_SIZE={input_yaml["funniest_cities_top_size"]}', f'FUNCITTOP_FUNCIT_AGGREGATORS={input_yaml["funcit_aggregators"]}'],
 		'links': ['rabbitmq'],
-		'depends_on': list(FUNCITFIL_DEPS),
+		'depends_on': list(FUNCITTOP_DEPS),
 		'networks': ['testing_net'],
 	}
 	config_logs('funniest_cities_logging', service=file['services'][container_name])
@@ -127,7 +127,7 @@ for idx in range(0, input_yaml['funcit_aggregators']):
 		'image': 'funcit_aggregator:latest',
 		'entrypoint': '/aggregator',
 		'restart': 'on-failure',
-		'environment': [f'FUNCITAGG_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITAGG_INSTANCE={idx}', 'FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_filters"]}', f'FUNCITAGG_INPUT_TOPIC={idx}', f'FUNCITAGG_OUTPUT_BULK_SIZE={input_yaml["funcitagg_bulk_size"]}'],
+		'environment': [f'FUNCITAGG_LOG_BULK_RATE={input_yaml["log_bulk_rate"]}', f'FUNCITAGG_INSTANCE={idx}', 'FUNCITAGG_RABBITMQ_IP=rabbitmq', 'FUNCITAGG_RABBITMQ_PORT=5672', f'FUNCITAGG_FUNCIT_JOINERS={input_yaml["funcit_joiners"]}', f'FUNCITAGG_FUNCIT_FILTERS={input_yaml["funcit_tops"]}', f'FUNCITAGG_INPUT_TOPIC={idx}', f'FUNCITAGG_OUTPUT_BULK_SIZE={input_yaml["funcitagg_bulk_size"]}'],
 		'links': ['rabbitmq'],
 		'depends_on': list(FUNCITAGG_DEPS),
 		'networks': ['testing_net'],

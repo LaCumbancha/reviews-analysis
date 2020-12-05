@@ -231,7 +231,7 @@ services:
   funcit_aggregator0:
     container_name: funcit_aggregator0
     depends_on:
-    - funcit_filter0
+    - funcit_top0
     entrypoint: /aggregator
     environment:
     - FUNCITAGG_LOG_BULK_RATE=50
@@ -243,24 +243,6 @@ services:
     - FUNCITAGG_INPUT_TOPIC=0
     - FUNCITAGG_OUTPUT_BULK_SIZE=10000
     image: funcit_aggregator:latest
-    links:
-    - rabbitmq
-    networks:
-    - testing_net
-    restart: on-failure
-  funcit_filter0:
-    container_name: funcit_filter0
-    depends_on:
-    - top_funniest_cities_prettier
-    entrypoint: /filter
-    environment:
-    - FUNCITFIL_LOG_BULK_RATE=50
-    - FUNCITFIL_INSTANCE=0
-    - FUNCITFIL_RABBITMQ_IP=rabbitmq
-    - FUNCITFIL_RABBITMQ_PORT=5672
-    - FUNCITFIL_TOP_SIZE=10
-    - FUNCITFIL_FUNCIT_AGGREGATORS=1
-    image: funcit_filter:latest
     links:
     - rabbitmq
     networks:
@@ -282,6 +264,24 @@ services:
     - FUNCITJOIN_INPUT_TOPIC=0
     - FUNCITJOIN_OUTPUT_BULK_SIZE=10000
     image: funcit_joiner:latest
+    links:
+    - rabbitmq
+    networks:
+    - testing_net
+    restart: on-failure
+  funcit_top0:
+    container_name: funcit_top0
+    depends_on:
+    - top_funniest_cities_prettier
+    entrypoint: /aggregator
+    environment:
+    - FUNCITTOP_LOG_BULK_RATE=50
+    - FUNCITTOP_INSTANCE=0
+    - FUNCITTOP_RABBITMQ_IP=rabbitmq
+    - FUNCITTOP_RABBITMQ_PORT=5672
+    - FUNCITTOP_TOP_SIZE=10
+    - FUNCITTOP_FUNCIT_AGGREGATORS=1
+    image: funcit_top:latest
     links:
     - rabbitmq
     networks:

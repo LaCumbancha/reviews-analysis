@@ -53,13 +53,13 @@ func main() {
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
 	weekdayAggregators := utils.GetConfigInt(configEnv, configFile, "weekday_aggregators")
 
-	mapperConfig := core.MapperConfig {
+	prettierConfig := core.PrettierConfig {
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,
 		WeekdayAggregators:		weekdayAggregators,
 	}
 
-	mapper := core.NewMapper(mapperConfig)
-	mapper.Run()
-	mapper.Stop()
+	prettier := core.NewPrettier(prettierConfig)
+	prettier.Run()
+	prettier.Stop()
 }
