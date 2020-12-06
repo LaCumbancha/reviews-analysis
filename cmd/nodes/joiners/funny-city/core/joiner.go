@@ -3,11 +3,12 @@ package core
 import (
 	"fmt"
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/joiners/funny-city/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -25,14 +26,15 @@ type JoinerConfig struct {
 }
 
 type Joiner struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	calculator		*Calculator
-	inputDirect1 	*rabbit.RabbitInputDirect
-	inputDirect2 	*rabbit.RabbitInputDirect
-	outputDirect 	*rabbitmq.RabbitOutputDirect
-	endSignals1		int
-	endSignals2		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	calculator			*Calculator
+	inputDirect1 		*rabbit.RabbitInputDirect
+	inputDirect2 		*rabbit.RabbitInputDirect
+	outputDirect 		*rabbit.RabbitOutputDirect
+	outputPartitions	map[string]string
+	endSignals1			int
+	endSignals2			int
 }
 
 func NewJoiner(config JoinerConfig) *Joiner {
@@ -40,17 +42,18 @@ func NewJoiner(config JoinerConfig) *Joiner {
 
 	inputDirect1 := rabbit.NewRabbitInputDirect(channel, props.FunbizAggregatorOutput, config.InputTopic, "")
 	inputDirect2 := rabbit.NewRabbitInputDirect(channel, props.CitbizMapperOutput, config.InputTopic, "")
-	outputDirect := rabbitmq.NewRabbitOutputDirect(props.FuncitJoinerOutput, config.Instance, config.FuncitAggregators, channel)
+	outputDirect := rabbit.NewRabbitOutputDirect(channel, props.FuncitJoinerOutput, comms.EndMessage(config.Instance))
 
 	joiner := &Joiner {
-		connection:		connection,
-		channel:		channel,
-		calculator:		NewCalculator(config.OutputBulkSize),
-		inputDirect1:	inputDirect1,
-		inputDirect2:	inputDirect2,
-		outputDirect:	outputDirect,
-		endSignals1:	config.FunbizAggregators,
-		endSignals2:	config.CitbizMappers,
+		connection:			connection,
+		channel:			channel,
+		calculator:			NewCalculator(config.OutputBulkSize),
+		inputDirect1:		inputDirect1,
+		inputDirect2:		inputDirect2,
+		outputDirect:		outputDirect,
+		outputPartitions:	utils.GeneratePartitionMap(config.FuncitAggregators, PartitionableValues),
+		endSignals1:		config.FunbizAggregators,
+		endSignals2:		config.CitbizMappers,
 	}
 
 	return joiner
@@ -141,11 +144,13 @@ func (joiner *Joiner) Run() {
     joinWg.Wait()
 
     // Sending End-Message to consumers.
-    joiner.outputDirect.PublishFinish()
+    for _, partition := range utils.GetMapDistinctValues(joiner.outputPartitions) {
+    	joiner.outputDirect.PublishFinish(partition)
+    }
 }
 
 func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
-	outputBulks := 0
+	messageCounter := 0
 	joinMatches := joiner.calculator.RetrieveMatches()
 
 	if len(joinMatches) == 0 {
@@ -153,14 +158,51 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     }
 
     for _, joinedData := range joinMatches {
-    	outputBulks++
+    	messageCounter++
 
     	joinWg.Add(1)
-    	go func(bulkNumber int, bulk []comms.FunnyCityData) {
-    		joiner.outputDirect.PublishData(bulkNumber, bulk)
-    		joinWg.Done()
-    	}(outputBulks, joinedData)
+    	go joiner.sendJoinedData(messageCounter, joinedData, joinWg)
 	}
+}
+
+func (joiner *Joiner) sendJoinedData(bulkNumber int, joinedBulk []comms.FunnyCityData, wg *sync.WaitGroup) {
+	dataListByPartition := make(map[string][]comms.FunnyCityData)
+
+	for _, data := range joinedBulk {
+		partition := joiner.outputPartitions[string(data.City[0])]
+
+		if partition != "" {
+			funcitDataListPartitioned := dataListByPartition[partition]
+
+			if funcitDataListPartitioned != nil {
+				dataListByPartition[partition] = append(funcitDataListPartitioned, data)
+			} else {
+				dataListByPartition[partition] = append(make([]comms.FunnyCityData, 0), data)
+			}
+
+		} else {
+			log.Errorf("Couldn't calculate partition for city '%s'.", data.City)
+		}
+	}
+
+	for partition, userDataListPartitioned := range dataListByPartition {
+		outputData, err := json.Marshal(userDataListPartitioned)
+
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", userDataListPartitioned, err)
+		} else {
+
+			err := joiner.outputDirect.PublishData(outputData, partition)
+
+			if err != nil {
+				log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, joiner.outputDirect.Exchange, partition, err)
+			} else {
+				logb.Instance().Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, joiner.outputDirect.Exchange, partition), bulkNumber)
+			}	
+		}
+	}
+
+	wg.Done()
 }
 
 func (joiner *Joiner) Stop() {

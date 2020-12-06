@@ -5,10 +5,10 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/filters/funny-business/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -23,25 +23,27 @@ type FilterConfig struct {
 }
 
 type Filter struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	inputQueue 		*rabbit.RabbitInputQueue
-	outputDirect 	*rabbitmq.RabbitOutputDirect
-	endSignals		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	inputQueue 			*rabbit.RabbitInputQueue
+	outputDirect 		*rabbit.RabbitOutputDirect
+	outputPartitions	map[string]string
+	endSignals			int
 }
 
 func NewFilter(config FilterConfig) *Filter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.FunbizMapperOutput)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(props.FunbizFilterOutput, config.Instance, config.FunbizAggregators, channel)
+	outputDirect := rabbit.NewRabbitOutputDirect(channel, props.FunbizFilterOutput, comms.EndMessage(config.Instance))
 
 	filter := &Filter {
-		connection:		connection,
-		channel:		channel,
-		inputQueue:		inputQueue,
-		outputDirect:	outputDirect,
-		endSignals:		config.FunbizMappers,
+		connection:			connection,
+		channel:			channel,
+		inputQueue:			inputQueue,
+		outputDirect:		outputDirect,
+		outputPartitions:	utils.GeneratePartitionMap(config.FunbizAggregators, PartitionableValues),
+		endSignals:			config.FunbizMappers,
 	}
 
 	return filter
@@ -77,8 +79,8 @@ func (filter *Filter) Run() {
 
 				wg.Add(1)
 				go func(bulkNumber int, bulk string) {
-					filter.filterData(bulkNumber, bulk)
-					wg.Done()
+					filteredData := filter.filterData(bulkNumber, bulk)
+					filter.sendFilteredData(bulkNumber, filteredData, &wg)
 				}(bulkCounter, messageBody)
 			}
 		}
@@ -88,10 +90,12 @@ func (filter *Filter) Run() {
     wg.Wait()
 
     // Publishing end messages.
-    filter.outputDirect.PublishFinish()
+    for _, partition := range utils.GetMapDistinctValues(filter.outputPartitions) {
+    	filter.outputDirect.PublishFinish(partition)
+    }
 }
 
-func (filter *Filter) filterData(bulkNumber int, rawFunbizDataBulk string) {
+func (filter *Filter) filterData(bulkNumber int, rawFunbizDataBulk string) []comms.FunnyBusinessData {
 	var funbizDataList []comms.FunnyBusinessData
 	var filteredFunbizDataList []comms.FunnyBusinessData
 	json.Unmarshal([]byte(rawFunbizDataBulk), &funbizDataList)
@@ -102,7 +106,47 @@ func (filter *Filter) filterData(bulkNumber int, rawFunbizDataBulk string) {
 		}
 	}
 
-	filter.outputDirect.PublishData(bulkNumber, filteredFunbizDataList)
+	return filteredFunbizDataList
+}
+
+func (filter *Filter) sendFilteredData(bulkNumber int, filteredBulk []comms.FunnyBusinessData, wg *sync.WaitGroup) {
+	dataListByPartition := make(map[string][]comms.FunnyBusinessData)
+
+	for _, data := range filteredBulk {
+		partition := filter.outputPartitions[string(data.BusinessId[0])]
+
+		if partition != "" {
+			funbizDataListPartitioned := dataListByPartition[partition]
+
+			if funbizDataListPartitioned != nil {
+				dataListByPartition[partition] = append(funbizDataListPartitioned, data)
+			} else {
+				dataListByPartition[partition] = append(make([]comms.FunnyBusinessData, 0), data)
+			}
+
+		} else {
+			log.Errorf("Couldn't calculate partition for business '%s'.", data.BusinessId)
+		}
+	}
+
+	for partition, userDataListPartitioned := range dataListByPartition {
+		outputData, err := json.Marshal(userDataListPartitioned)
+
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", userDataListPartitioned, err)
+		} else {
+
+			err := filter.outputDirect.PublishData(outputData, partition)
+
+			if err != nil {
+				log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, filter.outputDirect.Exchange, partition, err)
+			} else {
+				logb.Instance().Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, filter.outputDirect.Exchange, partition), bulkNumber)
+			}	
+		}
+	}
+
+	wg.Done()
 }
 
 func (filter *Filter) Stop() {

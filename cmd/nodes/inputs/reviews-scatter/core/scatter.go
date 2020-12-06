@@ -6,10 +6,10 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/inputs/reviews-scatter/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
+	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
@@ -19,7 +19,6 @@ type ScatterConfig struct {
 	RabbitIp			string
 	RabbitPort			string
 	BulkSize			int
-	WorkersPool 		int
 	FunbizMappers		int
 	WeekdaysMappers		int
 	HashesMappers		int
@@ -32,33 +31,22 @@ type Scatter struct {
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
 	bulkSize			int
-	poolSize			int
-	innerChannel		chan string
-	outputDirect 		*rabbitmq.RabbitOutputDirect
+	outputDirect 		*rabbit.RabbitOutputDirect
+	outputSignals		map[string]int
 }
 
 func NewScatter(config ScatterConfig) *Scatter {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
-	scatterDirect := rabbitmq.NewRabbitOutputDirect(
-		props.ReviewsScatterOutput,
-		config.Instance,
-		config.FunbizMappers, 
-		config.WeekdaysMappers, 
-		config.HashesMappers, 
-		config.UsersMappers, 
-		config.StarsMappers, 
-		channel,
-	)
+	outputDirect := rabbit.NewRabbitOutputDirect(channel, props.ReviewsScatterOutput, comms.EndMessage(config.Instance))
 	
 	scatter := &Scatter {
 		data: 				config.Data,
 		connection:			connection,
 		channel:			channel,
 		bulkSize:			config.BulkSize,
-		poolSize:			config.WorkersPool,
-		innerChannel:		make(chan string),
-		outputDirect:		scatterDirect,
+		outputDirect:		outputDirect,
+		outputSignals:		GenerateSignalsMap(config.FunbizMappers, config.WeekdaysMappers, config.HashesMappers, config.UsersMappers, config.StarsMappers),
 	}
 
 	return scatter
@@ -87,7 +75,11 @@ func (scatter *Scatter) Run() {
         if chunkNumber == scatter.bulkSize {
             bulkNumber++
             bulk := buffer.String()
-            scatter.outputDirect.PublishBulk(bulkNumber, bulk[:len(bulk)-1])
+            trimmedBulk := bulk[:len(bulk)-1]
+
+            for _, partition := range PartitionableValues {
+            	scatter.outputDirect.PublishData([]byte(trimmedBulk), partition)
+            }
 
             buffer = bytes.NewBufferString("")
             chunkNumber = 0
@@ -99,7 +91,11 @@ func (scatter *Scatter) Run() {
     }
 
     // Publishing end messages.
-    scatter.outputDirect.PublishFinish()
+    for _, partition := range PartitionableValues {
+    	for idx := 0 ; idx < scatter.outputSignals[partition]; idx++ {
+    		scatter.outputDirect.PublishFinish(partition)
+    	}
+    }
 
     log.Infof("Time: %s.", time.Now().Sub(start).String())
 }

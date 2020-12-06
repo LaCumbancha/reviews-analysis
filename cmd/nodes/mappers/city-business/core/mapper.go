@@ -6,10 +6,10 @@ import (
 	"strings"
 	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/mappers/city-business/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -24,25 +24,27 @@ type MapperConfig struct {
 }
 
 type Mapper struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	inputQueue 		*rabbit.RabbitInputQueue
-	outputDirect 	*rabbitmq.RabbitOutputDirect
-	endSignals		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	inputQueue 			*rabbit.RabbitInputQueue
+	outputDirect 		*rabbit.RabbitOutputDirect
+	outputPartitions	map[string]string
+	endSignals			int
 }
 
 func NewMapper(config MapperConfig) *Mapper {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputQueue := rabbit.NewRabbitInputQueue(channel, props.BusinessesScatterOutput)
-	outputDirect := rabbitmq.NewRabbitOutputDirect(props.CitbizMapperOutput, config.Instance, config.FuncitJoiners, channel)
+	outputDirect := rabbit.NewRabbitOutputDirect(channel, props.CitbizMapperOutput, comms.EndMessage(config.Instance))
 
 	mapper := &Mapper {
-		connection:		connection,
-		channel:		channel,
-		inputQueue:		inputQueue,
-		outputDirect:	outputDirect,
-		endSignals:		config.BusinessesInputs,
+		connection:			connection,
+		channel:			channel,
+		inputQueue:			inputQueue,
+		outputDirect:		outputDirect,
+		outputPartitions:	utils.GeneratePartitionMap(config.FuncitJoiners, PartitionableValues),
+		endSignals:			config.BusinessesInputs,
 	}
 
 	return mapper
@@ -78,8 +80,8 @@ func (mapper *Mapper) Run() {
 
 				wg.Add(1)
 				go func(bulkNumber int, bulk string) {
-					mapper.mapData(bulkCounter, bulk)
-					wg.Done()
+					mappedData := mapper.mapData(bulkNumber, bulk)
+					mapper.sendMappedData(bulkNumber, mappedData, &wg)
 				}(bulkCounter, messageBody)
 			}
 		}
@@ -89,10 +91,12 @@ func (mapper *Mapper) Run() {
     wg.Wait()
 
     // Publishing end messages.
-    mapper.outputDirect.PublishFinish()
+    for _, partition := range utils.GetMapDistinctValues(mapper.outputPartitions) {
+    	mapper.outputDirect.PublishFinish(partition)
+    }
 }
 
-func (mapper *Mapper) mapData(bulkNumber int, rawBusinessesBulk string) {
+func (mapper *Mapper) mapData(bulkNumber int, rawBusinessesBulk string) []comms.CityBusinessData {
 	var business comms.FullBusiness
 	var citbizDataList []comms.CityBusinessData
 
@@ -112,7 +116,47 @@ func (mapper *Mapper) mapData(bulkNumber int, rawBusinessesBulk string) {
 		}
 	}
 
-	mapper.outputDirect.PublishData(bulkNumber, citbizDataList)
+	return citbizDataList
+}
+
+func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.CityBusinessData, wg *sync.WaitGroup) {
+	dataListByPartition := make(map[string][]comms.CityBusinessData)
+
+	for _, data := range mappedBulk {
+		partition := mapper.outputPartitions[string(data.BusinessId[0])]
+
+		if partition != "" {
+			citbizDataListPartitioned := dataListByPartition[partition]
+
+			if citbizDataListPartitioned != nil {
+				dataListByPartition[partition] = append(citbizDataListPartitioned, data)
+			} else {
+				dataListByPartition[partition] = append(make([]comms.CityBusinessData, 0), data)
+			}
+
+		} else {
+			log.Errorf("Couldn't calculate partition for business '%s'.", data.BusinessId)
+		}
+	}
+
+	for partition, userDataListPartitioned := range dataListByPartition {
+		outputData, err := json.Marshal(userDataListPartitioned)
+
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", userDataListPartitioned, err)
+		} else {
+
+			err := mapper.outputDirect.PublishData(outputData, partition)
+
+			if err != nil {
+				log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, mapper.outputDirect.Exchange, partition, err)
+			} else {
+				logb.Instance().Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, mapper.outputDirect.Exchange, partition), bulkNumber)
+			}	
+		}
+	}
+
+	wg.Done()
 }
 
 func (mapper *Mapper) Stop() {

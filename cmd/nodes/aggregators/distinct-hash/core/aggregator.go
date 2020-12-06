@@ -24,12 +24,12 @@ type AggregatorConfig struct {
 }
 
 type Aggregator struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	calculator		*Calculator
-	inputDirect 	*rabbit.RabbitInputDirect
-	outputQueue 	*rabbit.RabbitOutputQueue
-	endSignals		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	calculator			*Calculator
+	inputDirect 		*rabbit.RabbitInputDirect
+	outputQueue 		*rabbit.RabbitOutputQueue
+	endSignals			int
 }
 
 func NewAggregator(config AggregatorConfig) *Aggregator {
@@ -39,12 +39,12 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.DishashAggregatorOutput, comms.EndMessage(config.Instance), comms.EndSignals(config.DishashFilters))
 
 	aggregator := &Aggregator {
-		connection:		connection,
-		channel:		channel,
-		calculator:		NewCalculator(config.OutputBulkSize),
-		inputDirect:	inputDirect,
-		outputQueue:	outputQueue,
-		endSignals:		config.HashAggregators,
+		connection:			connection,
+		channel:			channel,
+		calculator:			NewCalculator(config.OutputBulkSize),
+		inputDirect:		inputDirect,
+		outputQueue:		outputQueue,
+		endSignals:			config.HashAggregators,
 	}
 
 	return aggregator

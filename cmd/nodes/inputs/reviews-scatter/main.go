@@ -65,7 +65,6 @@ func main() {
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
 	bulkSize := utils.GetConfigInt(configEnv, configFile, "bulk_size")
-	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	funbizMappers := utils.GetConfigInt(configEnv, configFile, "funbiz_mappers")
 	weekdaysMappers := utils.GetConfigInt(configEnv, configFile, "weekdays_mappers")
 	hashesMappers := utils.GetConfigInt(configEnv, configFile, "hashes_mappers")
@@ -78,7 +77,6 @@ func main() {
 		RabbitIp:				rabbitIp,
 		RabbitPort:				rabbitPort,
 		BulkSize:				bulkSize,
-		WorkersPool:			workersPool,
 		FunbizMappers:			funbizMappers,
 		WeekdaysMappers:		weekdaysMappers,
 		HashesMappers:			hashesMappers,

@@ -3,11 +3,12 @@ package core
 import (
 	"fmt"
 	"sync"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/aggregators/stars/rabbitmq"
 
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -24,27 +25,29 @@ type AggregatorConfig struct {
 }
 
 type Aggregator struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	calculator		*Calculator
-	inputDirect 	*rabbit.RabbitInputDirect
-	outputDirect 	*rabbitmq.RabbitOutputDirect
-	endSignals		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	calculator			*Calculator
+	inputDirect 		*rabbit.RabbitInputDirect
+	outputDirect 		*rabbit.RabbitOutputDirect
+	outputPartitions	map[string]string
+	endSignals			int
 }
 
 func NewAggregator(config AggregatorConfig) *Aggregator {
 	connection, channel := rabbit.EstablishConnection(config.RabbitIp, config.RabbitPort)
 
 	inputDirect := rabbit.NewRabbitInputDirect(channel, props.StarsFilterOutput, config.InputTopic, "")
-	outputDirect := rabbitmq.NewRabbitOutputDirect(props.StarsAggregatorOutput, config.Instance, config.StarsJoiners, channel)
+	outputDirect := rabbit.NewRabbitOutputDirect(channel, props.StarsAggregatorOutput, comms.EndMessage(config.Instance))
 
 	aggregator := &Aggregator {
-		connection:		connection,
-		channel:		channel,
-		calculator:		NewCalculator(config.OutputBulkSize),
-		inputDirect:	inputDirect,
-		outputDirect:	outputDirect,
-		endSignals:		config.StarsFilters,
+		connection:			connection,
+		channel:			channel,
+		calculator:			NewCalculator(config.OutputBulkSize),
+		inputDirect:		inputDirect,
+		outputDirect:		outputDirect,
+		outputPartitions:	utils.GeneratePartitionMap(config.StarsJoiners, PartitionableValues),
+		endSignals:			config.StarsFilters,
 	}
 
 	return aggregator
@@ -96,17 +99,56 @@ func (aggregator *Aggregator) Run() {
     	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkNumber), outputBulkNumber)
 
 		wg.Add(1)
-		go func(bulkNumber int, aggregatedBulk []comms.UserData) {
-			aggregator.outputDirect.PublishData(bulkNumber, aggregatedBulk)
-			wg.Done()
-		}(outputBulkNumber, aggregatedData)
+		go aggregator.sendAggregatedData(outputBulkNumber, aggregatedData, &wg)
 	}
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
     // Sending End-Message to consumers.
-    aggregator.outputDirect.PublishFinish()
+    for _, partition := range utils.GetMapDistinctValues(aggregator.outputPartitions) {
+    	aggregator.outputDirect.PublishFinish(partition)
+    }
+}
+
+func (aggregator *Aggregator) sendAggregatedData(bulkNumber int, aggregatedBulk []comms.UserData, wg *sync.WaitGroup) {
+	dataListByPartition := make(map[string][]comms.UserData)
+
+	for _, data := range aggregatedBulk {
+		partition := aggregator.outputPartitions[string(data.UserId[0])]
+
+		if partition != "" {
+			bestUsersDataListPartitioned := dataListByPartition[partition]
+
+			if bestUsersDataListPartitioned != nil {
+				dataListByPartition[partition] = append(bestUsersDataListPartitioned, data)
+			} else {
+				dataListByPartition[partition] = append(make([]comms.UserData, 0), data)
+			}
+
+		} else {
+			log.Errorf("Couldn't calculate partition for user '%s'.", data.UserId)
+		}
+	}
+
+	for partition, funbizDataListPartitioned := range dataListByPartition {
+		outputData, err := json.Marshal(funbizDataListPartitioned)
+
+		if err != nil {
+			log.Errorf("Error generating Json from (%s). Err: '%s'", funbizDataListPartitioned, err)
+		} else {
+
+			err := aggregator.outputDirect.PublishData(outputData, partition)
+
+			if err != nil {
+				log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, aggregator.outputDirect.Exchange, partition, err)
+			} else {
+				logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, aggregator.outputDirect.Exchange, partition), bulkNumber)
+			}	
+		}
+	}
+
+	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {
