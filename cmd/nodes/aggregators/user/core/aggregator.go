@@ -8,6 +8,7 @@ import (
 	
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	proc "github.com/LaCumbancha/reviews-analysis/cmd/common/processing"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -28,6 +29,7 @@ type AggregatorConfig struct {
 type Aggregator struct {
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
+	workersPool 		int
 	calculator			*Calculator
 	inputDirect 		*rabbit.RabbitInputDirect
 	outputQueue1 		*rabbit.RabbitOutputQueue
@@ -45,6 +47,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 	aggregator := &Aggregator {
 		connection:			connection,
 		channel:			channel,
+		workersPool:		config.WorkersPool,
 		calculator:			NewCalculator(config.OutputBulkSize),
 		inputDirect:		inputDirect,
 		outputQueue1:		outputQueue1,
@@ -57,40 +60,13 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 
 func (aggregator *Aggregator) Run() {
 	log.Infof("Starting to listen for user reviews data.")
+	innerChannel := make(chan string)
 
-	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go func() {
-		bulkCounter := 0
-		for message := range aggregator.inputDirect.ConsumeData() {
-			messageBody := string(message.Body)
-
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, aggregator.endSignals)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("User data bulk #%d received.", bulkCounter), bulkCounter)
-
-				wg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					aggregator.calculator.Aggregate(bulkNumber, bulk)
-					wg.Done()
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
+	go proc.InitializeProcessingWorkers(aggregator.workersPool, innerChannel, aggregator.aggregateCallback, &wg)
+	go proc.ProcessInputs(aggregator.inputDirect.ConsumeData(), innerChannel, aggregator.endSignals, &wg)
 	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
     wg.Wait()
@@ -99,20 +75,19 @@ func (aggregator *Aggregator) Run() {
     for _, aggregatedData := range aggregator.calculator.RetrieveData() {
 		outputBulkCounter++
     	logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d generated.", outputBulkCounter), outputBulkCounter)
-
-		wg.Add(1)
-		go aggregator.sendAggregatedData(outputBulkCounter, aggregatedData, &wg)
+		aggregator.sendAggregatedData(outputBulkCounter, aggregatedData)
 	}
-
-    // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
-    wg.Wait()
 
     // Sending End-Message to consumers.
     aggregator.outputQueue1.PublishFinish()
     aggregator.outputQueue2.PublishFinish()
 }
 
-func (aggregator *Aggregator) sendAggregatedData(bulkNumber int, aggregatedBulk []comms.UserData, wg *sync.WaitGroup) {
+func (aggregator *Aggregator) aggregateCallback(bulkNumber int, bulk string) {
+	aggregator.calculator.Aggregate(bulkNumber, bulk)
+}
+
+func (aggregator *Aggregator) sendAggregatedData(bulkNumber int, aggregatedBulk []comms.UserData) {
 	data, err := json.Marshal(aggregatedBulk)
 	if err != nil {
 		log.Errorf("Error generating Json from aggregated bulk #%d. Err: '%s'", bulkNumber, err)
@@ -133,8 +108,6 @@ func (aggregator *Aggregator) sendAggregatedData(bulkNumber int, aggregatedBulk 
 			logb.Instance().Infof(fmt.Sprintf("Aggregated bulk #%d sent to output queue %s.", bulkNumber, aggregator.outputQueue2.Name), bulkNumber)
 		}
 	}
-
-	wg.Done()
 }
 
 func (aggregator *Aggregator) Stop() {
