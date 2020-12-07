@@ -7,6 +7,7 @@ import (
 	"github.com/streadway/amqp"
 
 	log "github.com/sirupsen/logrus"
+	proc "github.com/LaCumbancha/reviews-analysis/cmd/common/processing"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
@@ -29,6 +30,7 @@ type JoinerConfig struct {
 type Joiner struct {
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
+	workersPool 		int
 	calculator			*Calculator
 	inputDirect1 		*rabbit.RabbitInputDirect
 	inputDirect2 		*rabbit.RabbitInputDirect
@@ -48,6 +50,7 @@ func NewJoiner(config JoinerConfig) *Joiner {
 	joiner := &Joiner {
 		connection:			connection,
 		channel:			channel,
+		workersPool:		config.WorkersPool,
 		calculator:			NewCalculator(config.OutputBulkSize),
 		inputDirect1:		inputDirect1,
 		inputDirect2:		inputDirect2,
@@ -61,88 +64,29 @@ func NewJoiner(config JoinerConfig) *Joiner {
 }
 
 func (joiner *Joiner) Run() {
-	var distinctEndSignals1 = make(map[string]int)
-	var distinctEndSignals2 = make(map[string]int)
+	var wg sync.WaitGroup
 
-	var inputWg sync.WaitGroup
-	var joinWg sync.WaitGroup
+	log.Infof("Starting to listen for funny-business data.")
+	innerChannel1 := make(chan string)
+	wg.Add(1)
 
-	// Receiving messages from the funny-business flow.
-	inputWg.Add(1)
-	go func() {
-		log.Infof("Starting to listen for funny-business data.")
+	// Receiving and processing messages from the best-users flow.
+	go proc.InitializeProcessingWorkers(int(joiner.workersPool/2), innerChannel1, joiner.storeCallback1, &wg)
+	go proc.ProcessInputs(joiner.inputDirect1.ConsumeData(), innerChannel1, joiner.endSignals1, &wg)
 
-		bulkCounter := 0
-		for message := range joiner.inputDirect1.ConsumeData() {
-			messageBody := string(message.Body)
+	log.Infof("Starting to listen for city-business data.")
+	innerChannel2 := make(chan string)
+	wg.Add(1)
 
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals1, joiner.endSignals1)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals1))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					inputWg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter), bulkCounter)
-
-				inputWg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					joiner.calculator.AddFunnyBusiness(bulkNumber, bulk)
-					inputWg.Done()
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
-
-	// Receiving messages from the city-business flow.
-	inputWg.Add(1)
-	go func() {
-		log.Infof("Starting to listen for city-business data.")
-
-		bulkCounter := 0
-		for message := range joiner.inputDirect2.ConsumeData() {
-			messageBody := string(message.Body)
-
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals2, joiner.endSignals2)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals2))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					inputWg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Citbiz data bulk #%d received.", bulkCounter), bulkCounter * 5)
-
-				inputWg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					joiner.calculator.AddCityBusiness(bulkNumber, bulk)
-					inputWg.Done()
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
+	// Receiving and processing messages from the common-users flow.
+	go proc.InitializeProcessingWorkers(int(joiner.workersPool/2), innerChannel2, joiner.storeCallback2, &wg)
+	go proc.ProcessInputs(joiner.inputDirect2.ConsumeData(), innerChannel2, joiner.endSignals2, &wg)
 
 	// Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
-    inputWg.Wait()
+    wg.Wait()
 
     // Processing last join matches.
-    joiner.fetchJoinMatches(&joinWg)
-
-    // Using WaitGroups to avoid closing the RabbitMQ connection before all joins are processed and sent.
-    joinWg.Wait()
+    joiner.fetchJoinMatches()
 
     // Sending End-Message to consumers.
     for _, partition := range utils.GetMapDistinctValues(joiner.outputPartitions) {
@@ -150,7 +94,15 @@ func (joiner *Joiner) Run() {
     }
 }
 
-func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
+func (joiner *Joiner) storeCallback1(bulkNumber int, bulk string) {
+	joiner.calculator.AddFunnyBusiness(bulkNumber, bulk)
+}
+
+func (joiner *Joiner) storeCallback2(bulkNumber int, bulk string) {
+	joiner.calculator.AddCityBusiness(bulkNumber, bulk)
+}
+
+func (joiner *Joiner) fetchJoinMatches() {
 	messageCounter := 0
 	joinMatches := joiner.calculator.RetrieveMatches()
 
@@ -160,13 +112,11 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
 
     for _, joinedData := range joinMatches {
     	messageCounter++
-
-    	joinWg.Add(1)
-    	go joiner.sendJoinedData(messageCounter, joinedData, joinWg)
+    	joiner.sendJoinedData(messageCounter, joinedData)
 	}
 }
 
-func (joiner *Joiner) sendJoinedData(bulkNumber int, joinedBulk []comms.FunnyCityData, wg *sync.WaitGroup) {
+func (joiner *Joiner) sendJoinedData(bulkNumber int, joinedBulk []comms.FunnyCityData) {
 	dataListByPartition := make(map[string][]comms.FunnyCityData)
 
 	for _, data := range joinedBulk {
@@ -202,8 +152,6 @@ func (joiner *Joiner) sendJoinedData(bulkNumber int, joinedBulk []comms.FunnyCit
 			}	
 		}
 	}
-
-	wg.Done()
 }
 
 func (joiner *Joiner) Stop() {

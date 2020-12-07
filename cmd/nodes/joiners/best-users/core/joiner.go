@@ -1,13 +1,12 @@
 package core
 
 import (
-	"fmt"
 	"sync"
 	"encoding/json"
 	"github.com/streadway/amqp"
 
 	log "github.com/sirupsen/logrus"
-	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	proc "github.com/LaCumbancha/reviews-analysis/cmd/common/processing"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -24,14 +23,15 @@ type JoinerConfig struct {
 }
 
 type Joiner struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	calculator		*Calculator
-	inputDirect1 	*rabbit.RabbitInputDirect
-	inputDirect2 	*rabbit.RabbitInputDirect
-	outputQueue 	*rabbit.RabbitOutputQueue
-	endSignals1		int
-	endSignals2		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	workersPool 		int
+	calculator			*Calculator
+	inputDirect1 		*rabbit.RabbitInputDirect
+	inputDirect2 		*rabbit.RabbitInputDirect
+	outputQueue 		*rabbit.RabbitOutputQueue
+	endSignals1			int
+	endSignals2			int
 }
 
 func NewJoiner(config JoinerConfig) *Joiner {
@@ -42,108 +42,58 @@ func NewJoiner(config JoinerConfig) *Joiner {
 	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.BestUsersJoinerOutput, comms.EndMessage(config.Instance), comms.EndSignals(1))
 
 	joiner := &Joiner {
-		connection:		connection,
-		channel:		channel,
-		calculator:		NewCalculator(),
-		inputDirect1:	inputDirect1,
-		inputDirect2:	inputDirect2,
-		outputQueue:	outputQueue,
-		endSignals1:	config.StarsAggregators,
-		endSignals2:	config.UserFilters,
+		connection:			connection,
+		channel:			channel,
+		workersPool:		config.WorkersPool,
+		calculator:			NewCalculator(),
+		inputDirect1:		inputDirect1,
+		inputDirect2:		inputDirect2,
+		outputQueue:		outputQueue,
+		endSignals1:		config.StarsAggregators,
+		endSignals2:		config.UserFilters,
 	}
 
 	return joiner
 }
 
 func (joiner *Joiner) Run() {
-	var distinctEndSignals1 = make(map[string]int)
-	var distinctEndSignals2 = make(map[string]int)
+	var wg sync.WaitGroup
 
-	var joinWg sync.WaitGroup
-	var inputWg sync.WaitGroup
+	log.Infof("Starting to listen for users 5-stars reviews data.")
+	innerChannel1 := make(chan string)
+	wg.Add(1)
 
-	// Receiving messages from the funny-business flow.
-	inputWg.Add(1)
-	go func() {
-		log.Infof("Starting to listen for users 5-stars reviews data.")
-		
-		bulkCounter := 0
-		for message := range joiner.inputDirect1.ConsumeData() {
-			messageBody := string(message.Body)
+	// Receiving and processing messages from the best-users flow.
+	go proc.InitializeProcessingWorkers(int(joiner.workersPool/2), innerChannel1, joiner.storeCallback1, &wg)
+	go proc.ProcessInputs(joiner.inputDirect1.ConsumeData(), innerChannel1, joiner.endSignals1, &wg)
 
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals1, joiner.endSignals1)
+	log.Infof("Starting to listen for users reviews data.")
+	innerChannel2 := make(chan string)
+	wg.Add(1)
 
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals1))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					inputWg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Best users data bulk #%d received.", bulkCounter), bulkCounter)
-
-				inputWg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					joiner.calculator.AddBestUser(bulkNumber, bulk)
-					inputWg.Done()
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
-
-	// Receiving messages from the city-business flow.
-	inputWg.Add(1)
-	go func() {
-		log.Infof("Starting to listen for users reviews data.")
-
-		bulkCounter := 0
-		for message := range joiner.inputDirect2.ConsumeData() {
-			messageBody := string(message.Body)
-
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals2, joiner.endSignals2)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals2))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					inputWg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Common users data bulk #%d received.", bulkCounter), bulkCounter)
-
-				inputWg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					joiner.calculator.AddUser(bulkNumber, bulk)
-					inputWg.Done()
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()    
+	// Receiving and processing messages from the common-users flow.
+	go proc.InitializeProcessingWorkers(int(joiner.workersPool/2), innerChannel2, joiner.storeCallback2, &wg)
+	go proc.ProcessInputs(joiner.inputDirect2.ConsumeData(), innerChannel2, joiner.endSignals2, &wg) 
 
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are received.
-    inputWg.Wait()
+    wg.Wait()
 
     // Processing last join matches.
-    joiner.fetchJoinMatches(&joinWg)
-
-    // Using WaitGroups to avoid closing the RabbitMQ connection before all joins are processed and sent.
-    joinWg.Wait()
+    joiner.fetchJoinMatches()
 
     // Sending End-Message to consumers.
     joiner.outputQueue.PublishFinish()
 }
 
-func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
+func (joiner *Joiner) storeCallback1(bulkNumber int, bulk string) {
+	joiner.calculator.AddBestUser(bulkNumber, bulk)
+}
+
+func (joiner *Joiner) storeCallback2(bulkNumber int, bulk string) {
+	joiner.calculator.AddUser(bulkNumber, bulk)
+}
+
+func (joiner *Joiner) fetchJoinMatches() {
 	joinMatches := joiner.calculator.RetrieveMatches()
 
 	if len(joinMatches) == 0 {
@@ -153,13 +103,11 @@ func (joiner *Joiner) fetchJoinMatches(joinWg *sync.WaitGroup) {
     messageCounter := 0
     for _, joinedData := range joinMatches {
     	messageCounter++
-
-    	joinWg.Add(1)
-    	go joiner.sendJoinedData(messageCounter, joinedData, joinWg)
+    	joiner.sendJoinedData(messageCounter, joinedData)
 	}
 }
 
-func (joiner *Joiner) sendJoinedData(messageNumber int, joinedData comms.UserData, wg *sync.WaitGroup) {
+func (joiner *Joiner) sendJoinedData(messageNumber int, joinedData comms.UserData) {
 	data, err := json.Marshal(joinedData)
 	if err != nil {
 		log.Errorf("Error generating Json from joined best user #%d. Err: '%s'", messageNumber, err)
@@ -172,8 +120,6 @@ func (joiner *Joiner) sendJoinedData(messageNumber int, joinedData comms.UserDat
 			log.Infof("Joined best user #%d sent to output queue %s.", messageNumber, joiner.outputQueue.Name)
 		}
 	}
-
-	wg.Done()
 }
 
 func (joiner *Joiner) Stop() {
