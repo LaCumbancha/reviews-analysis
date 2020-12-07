@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
+	proc "github.com/LaCumbancha/reviews-analysis/cmd/common/processing"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -18,6 +19,7 @@ type FilterConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	MinReviews			int
 	DishashAggregators	int
 	DishashJoiners		int
@@ -26,6 +28,7 @@ type FilterConfig struct {
 type Filter struct {
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
+	workersPool 		int
 	minReviews 			int
 	inputQueue 			*rabbit.RabbitInputQueue
 	outputDirect 		*rabbit.RabbitOutputDirect
@@ -42,6 +45,7 @@ func NewFilter(config FilterConfig) *Filter {
 	filter := &Filter {
 		connection:			connection,
 		channel:			channel,
+		workersPool:		config.WorkersPool,
 		minReviews:			config.MinReviews,
 		inputQueue:			inputQueue,
 		outputDirect:		outputDirect,
@@ -54,40 +58,13 @@ func NewFilter(config FilterConfig) *Filter {
 
 func (filter *Filter) Run() {
 	log.Infof("Starting to listen for users distinct text-hashes.")
+	innerChannel := make(chan string)
 
-	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go func() {
-		bulkCounter := 0
-		for message := range filter.inputQueue.ConsumeData() {
-			messageBody := string(message.Body)
-
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, filter.endSignals)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Funbiz data bulk #%d received.", bulkCounter), bulkCounter)
-
-				wg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					filteredData := filter.filterData(bulkNumber, bulk)
-					filter.sendFilteredData(bulkNumber, filteredData, &wg)
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
+	go proc.InitializeProcessingWorkers(filter.workersPool, innerChannel, filter.callback, &wg)
+	go proc.ProcessInputs(filter.inputQueue.ConsumeData(), innerChannel, filter.endSignals, &wg)
 	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
@@ -96,6 +73,11 @@ func (filter *Filter) Run() {
     for _, partition := range utils.GetMapDistinctValues(filter.outputPartitions) {
     	filter.outputDirect.PublishFinish(partition)
     }
+}
+
+func (filter *Filter) callback(bulkNumber int, bulk string) {
+	filteredData := filter.filterData(bulkNumber, bulk)
+	filter.sendFilteredData(bulkNumber, filteredData)
 }
 
 func (filter *Filter) filterData(bulkNumber int, rawDishashDataBulk string) []comms.DishashData {
@@ -112,7 +94,7 @@ func (filter *Filter) filterData(bulkNumber int, rawDishashDataBulk string) []co
 	return filteredDishashesDataList
 }
 
-func (filter *Filter) sendFilteredData(bulkNumber int, filteredBulk []comms.DishashData, wg *sync.WaitGroup) {
+func (filter *Filter) sendFilteredData(bulkNumber int, filteredBulk []comms.DishashData) {
 	dataListByPartition := make(map[string][]comms.DishashData)
 
 	for _, data := range filteredBulk {
@@ -148,8 +130,6 @@ func (filter *Filter) sendFilteredData(bulkNumber int, filteredBulk []comms.Dish
 			}	
 		}
 	}
-
-	wg.Done()
 }
 
 func (filter *Filter) Stop() {

@@ -21,6 +21,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("min", "reviews")
 	configEnv.BindEnv("user", "filters")
 	configEnv.BindEnv("log", "bulk", "rate")
@@ -54,14 +55,16 @@ func main() {
 
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	minReviews := utils.GetConfigInt(configEnv, configFile, "min_reviews")
 	userFilters := utils.GetConfigInt(configEnv, configFile, "user_filters")
 
 	prettierConfig := core.PrettierConfig {
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		MinReviews:			minReviews,
-		UserFilters:		userFilters,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		MinReviews:				minReviews,
+		UserFilters:			userFilters,
 	}
 	
 	// Initializing custom logger.

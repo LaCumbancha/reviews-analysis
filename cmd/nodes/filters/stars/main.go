@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("stars", "mappers")
 	configEnv.BindEnv("stars", "aggregators")
 	configEnv.BindEnv("log", "bulk", "rate")
@@ -56,15 +57,17 @@ func main() {
 	instance := utils.GetConfigString(configEnv, configFile, "instance")
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	starsMappers := utils.GetConfigInt(configEnv, configFile, "stars_mappers")
 	starsAggregators := utils.GetConfigInt(configEnv, configFile, "stars_aggregators")
 
 	filterConfig := core.FilterConfig {
-		Instance:			instance,
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		StarsMappers:		starsMappers,
-		StarsAggregators:	starsAggregators,
+		Instance:				instance,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		StarsMappers:			starsMappers,
+		StarsAggregators:		starsAggregators,
 	}
 
 	// Initializing custom logger.

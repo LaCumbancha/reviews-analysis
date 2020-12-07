@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	utils "github.com/LaCumbancha/reviews-analysis/cmd/common/utils"
+	proc "github.com/LaCumbancha/reviews-analysis/cmd/common/processing"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -19,6 +20,7 @@ type MapperConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	ReviewsInputs		int
 	UserAggregators		int
 }
@@ -26,6 +28,7 @@ type MapperConfig struct {
 type Mapper struct {
 	connection 			*amqp.Connection
 	channel 			*amqp.Channel
+	workersPool 		int
 	inputDirect 		*rabbit.RabbitInputDirect
 	outputDirect 		*rabbit.RabbitOutputDirect
 	outputPartitions	map[string]string
@@ -41,6 +44,7 @@ func NewMapper(config MapperConfig) *Mapper {
 	mapper := &Mapper {
 		connection:			connection,
 		channel:			channel,
+		workersPool:		config.WorkersPool,
 		inputDirect:		inputDirect,
 		outputDirect:		outputDirect,
 		outputPartitions:	utils.GeneratePartitionMap(config.UserAggregators, PartitionableValues),
@@ -52,40 +56,13 @@ func NewMapper(config MapperConfig) *Mapper {
 
 func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for reviews.")
+	innerChannel := make(chan string)
 
-	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go func() {
-		bulkCounter := 0
-		for message := range mapper.inputDirect.ConsumeData() {
-			messageBody := string(message.Body)
-
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, mapper.endSignals)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Review bulk #%d received.", bulkCounter), bulkCounter)
-
-				wg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					mappedData := mapper.mapData(bulkNumber, bulk)
-					mapper.sendMappedData(bulkNumber, mappedData, &wg)
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
+	go proc.InitializeProcessingWorkers(mapper.workersPool, innerChannel, mapper.callback, &wg)
+	go proc.ProcessInputs(mapper.inputDirect.ConsumeData(), innerChannel, mapper.endSignals, &wg)
 	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
@@ -94,6 +71,11 @@ func (mapper *Mapper) Run() {
     for _, partition := range utils.GetMapDistinctValues(mapper.outputPartitions) {
     	mapper.outputDirect.PublishFinish(partition)
     }
+}
+
+func (mapper *Mapper) callback(bulkNumber int, bulk string) {
+	mappedData := mapper.mapData(bulkNumber, bulk)
+	mapper.sendMappedData(bulkNumber, mappedData)
 }
 
 func (mapper *Mapper) mapData(bulkNumber int, rawReviewsBulk string) []comms.UserData {
@@ -118,7 +100,7 @@ func (mapper *Mapper) mapData(bulkNumber int, rawReviewsBulk string) []comms.Use
 	return userDataList
 }
 
-func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.UserData, wg *sync.WaitGroup) {
+func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.UserData) {
 	dataListByPartition := make(map[string][]comms.UserData)
 
 	for _, data := range mappedBulk {
@@ -154,8 +136,6 @@ func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.UserData
 			}	
 		}
 	}
-
-	wg.Done()
 }
 
 func (mapper *Mapper) Stop() {

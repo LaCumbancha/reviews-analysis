@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("hash", "aggregators")
 	configEnv.BindEnv("dishash", "filters")
@@ -58,18 +59,20 @@ func main() {
 	instance := utils.GetConfigString(configEnv, configFile, "instance")
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
 	hashAggregators := utils.GetConfigInt(configEnv, configFile, "hash_aggregators")
 	dishashFilters := utils.GetConfigInt(configEnv, configFile, "dishash_filters")
 	outputBulkSize := utils.GetConfigInt(configEnv, configFile, "output_bulk_size")
 
 	aggregatorConfig := core.AggregatorConfig {
-		Instance:			instance,
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		InputTopic: 		inputTopic,
-		HashAggregators:	hashAggregators,
-		DishashFilters:		dishashFilters,
+		Instance:				instance,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		InputTopic: 			inputTopic,
+		HashAggregators:		hashAggregators,
+		DishashFilters:			dishashFilters,
 		OutputBulkSize:			outputBulkSize,
 	}
 

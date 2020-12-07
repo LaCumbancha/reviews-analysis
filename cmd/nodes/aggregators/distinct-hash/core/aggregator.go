@@ -17,6 +17,7 @@ type AggregatorConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	InputTopic			string
 	HashAggregators		int
 	DishashFilters		int

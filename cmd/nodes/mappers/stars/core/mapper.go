@@ -9,6 +9,7 @@ import (
 	
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
+	proc "github.com/LaCumbancha/reviews-analysis/cmd/common/processing"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -18,16 +19,18 @@ type MapperConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	ReviewsInputs		int
 	StarsFilters		int
 }
 
 type Mapper struct {
-	connection 		*amqp.Connection
-	channel 		*amqp.Channel
-	inputDirect 	*rabbit.RabbitInputDirect
-	outputQueue 	*rabbit.RabbitOutputQueue
-	endSignals 		int
+	connection 			*amqp.Connection
+	channel 			*amqp.Channel
+	workersPool 		int
+	inputDirect 		*rabbit.RabbitInputDirect
+	outputQueue 		*rabbit.RabbitOutputQueue
+	endSignals 			int
 }
 
 func NewMapper(config MapperConfig) *Mapper {
@@ -37,11 +40,12 @@ func NewMapper(config MapperConfig) *Mapper {
 	outputQueue := rabbit.NewRabbitOutputQueue(channel, props.StarsMapperOutput, comms.EndMessage(config.Instance), comms.EndSignals(config.StarsFilters))
 
 	mapper := &Mapper {
-		connection:		connection,
-		channel:		channel,
-		inputDirect:	inputDirect,
-		outputQueue:	outputQueue,
-		endSignals:		config.ReviewsInputs,
+		connection:			connection,
+		channel:			channel,
+		workersPool:		config.WorkersPool,
+		inputDirect:		inputDirect,
+		outputQueue:		outputQueue,
+		endSignals:			config.ReviewsInputs,
 	}
 
 	return mapper
@@ -49,46 +53,24 @@ func NewMapper(config MapperConfig) *Mapper {
 
 func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for reviews.")
+	innerChannel := make(chan string)
 
-	var distinctEndSignals = make(map[string]int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go func() {
-		bulkCounter := 0
-		for message := range mapper.inputDirect.ConsumeData() {
-			messageBody := string(message.Body)
-
-			if comms.IsEndMessage(messageBody) {
-				newFinishReceived, allFinishReceived := comms.LastEndMessage(messageBody, distinctEndSignals, mapper.endSignals)
-
-				if newFinishReceived {
-					log.Infof("End-Message #%d received.", len(distinctEndSignals))
-				}
-
-				if allFinishReceived {
-					log.Infof("All End-Messages were received.")
-					wg.Done()
-				}
-
-			} else {
-				bulkCounter++
-				logb.Instance().Infof(fmt.Sprintf("Review bulk #%d received.", bulkCounter), bulkCounter)
-
-				wg.Add(1)
-				go func(bulkNumber int, bulk string) {
-					mappedBulk := mapper.mapData(bulkNumber, bulk)
-					mapper.sendMappedData(bulkNumber, mappedBulk, &wg)
-				}(bulkCounter, messageBody)
-			}
-		}
-	}()
+	go proc.InitializeProcessingWorkers(mapper.workersPool, innerChannel, mapper.callback, &wg)
+	go proc.ProcessInputs(mapper.inputDirect.ConsumeData(), innerChannel, mapper.endSignals, &wg)
 	
     // Using WaitGroups to avoid closing the RabbitMQ connection before all messages are sent.
     wg.Wait()
 
     // Publishing end messages.
     mapper.outputQueue.PublishFinish()
+}
+
+func (mapper *Mapper) callback(bulkNumber int, bulk string) {
+	mappedData := mapper.mapData(bulkNumber, bulk)
+	mapper.sendMappedData(bulkNumber, mappedData)
 }
 
 func (mapper *Mapper) mapData(bulkNumber int, rawReviewsBulk string) []comms.StarsData {
@@ -110,7 +92,7 @@ func (mapper *Mapper) mapData(bulkNumber int, rawReviewsBulk string) []comms.Sta
 	return starsDataList
 }
 
-func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.StarsData, wg *sync.WaitGroup) {
+func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.StarsData) {
 	data, err := json.Marshal(mappedBulk)
 	if err != nil {
 		log.Errorf("Error generating Json from mapped bulk #%d. Err: '%s'", bulkNumber, err)
@@ -123,8 +105,6 @@ func (mapper *Mapper) sendMappedData(bulkNumber int, mappedBulk []comms.StarsDat
 			logb.Instance().Infof(fmt.Sprintf("Mapped bulk #%d sent to output queue %s.", bulkNumber, mapper.outputQueue.Name), bulkNumber)
 		}
 	}
-
-	wg.Done()
 }
 
 func (mapper *Mapper) Stop() {

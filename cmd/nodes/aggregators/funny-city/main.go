@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("input", "topic")
 	configEnv.BindEnv("funcit", "joiners")
 	configEnv.BindEnv("funcit", "filters")
@@ -57,19 +58,21 @@ func main() {
 	instance := utils.GetConfigString(configEnv, configFile, "instance")
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	inputTopic := utils.GetConfigString(configEnv, configFile, "input_topic")
 	funcitJoiners := utils.GetConfigInt(configEnv, configFile, "funcit_joiners")
 	funcitFilters := utils.GetConfigInt(configEnv, configFile, "funcit_filters")
 	outputBulkSize := utils.GetConfigInt(configEnv, configFile, "output_bulk_size")
 
 	aggregatorConfig := core.AggregatorConfig {
-		Instance:			instance,
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		InputTopic: 		inputTopic,
-		FuncitFilters:		funcitFilters,
-		FuncitJoiners:		funcitJoiners,
-		OutputBulkSize:		outputBulkSize,
+		Instance:				instance,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		InputTopic: 			inputTopic,
+		FuncitFilters:			funcitFilters,
+		FuncitJoiners:			funcitJoiners,
+		OutputBulkSize:			outputBulkSize,
 	}
 
 	// Initializing custom logger.

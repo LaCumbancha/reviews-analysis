@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("min", "reviews")
 	configEnv.BindEnv("user", "aggregators")
 	configEnv.BindEnv("dishash", "joiners")
@@ -57,17 +58,19 @@ func main() {
 	instance := utils.GetConfigString(configEnv, configFile, "instance")
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	minReviews := utils.GetConfigInt(configEnv, configFile, "min_reviews")
 	userAggregators := utils.GetConfigInt(configEnv, configFile, "user_aggregators")
 	dishashJoiners := utils.GetConfigInt(configEnv, configFile, "dishash_joiners")
 
 	filterConfig := core.FilterConfig {
-		Instance:			instance,
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		MinReviews:			minReviews,
-		UserAggregators:	userAggregators,
-		DishashJoiners:		dishashJoiners,
+		Instance:				instance,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		MinReviews:				minReviews,
+		UserAggregators:		userAggregators,
+		DishashJoiners:			dishashJoiners,
 	}
 
 	// Initializing custom logger.

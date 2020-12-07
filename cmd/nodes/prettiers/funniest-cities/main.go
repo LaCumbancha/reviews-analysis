@@ -8,6 +8,7 @@ import (
 	"github.com/LaCumbancha/reviews-analysis/cmd/nodes/prettiers/funniest-cities/core"
 
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 )
 
 func InitConfig() (*viper.Viper, *viper.Viper, error) {
@@ -20,6 +21,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	// Add env variables supported
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("funcit", "filters")
 	configEnv.BindEnv("top", "size")
 	configEnv.BindEnv("config", "file")
@@ -52,15 +54,20 @@ func main() {
 
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	funcitFilters := utils.GetConfigInt(configEnv, configFile, "funcit_filters")
 	topSize := utils.GetConfigInt(configEnv, configFile, "top_size")
 
 	prettierConfig := core.PrettierConfig {
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		FuncitFilters:		funcitFilters,
-		TopSize:			topSize,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		FuncitFilters:			funcitFilters,
+		TopSize:				topSize,
 	}
+
+	// Custom logger initialization.
+	logb.Instance().SetBulkRate(1)
 
 	prettier := core.NewPrettier(prettierConfig)
 	prettier.Run()

@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, *viper.Viper, error) {
 	configEnv.BindEnv("instance")
 	configEnv.BindEnv("rabbitmq", "ip")
 	configEnv.BindEnv("rabbitmq", "port")
+	configEnv.BindEnv("workers", "pool")
 	configEnv.BindEnv("funcit", "aggregators")
 	configEnv.BindEnv("top", "size")
 	configEnv.BindEnv("log", "bulk", "rate")
@@ -56,15 +57,17 @@ func main() {
 	instance := utils.GetConfigString(configEnv, configFile, "instance")
 	rabbitIp := utils.GetConfigString(configEnv, configFile, "rabbitmq_ip")
 	rabbitPort := utils.GetConfigString(configEnv, configFile, "rabbitmq_port")
+	workersPool := utils.GetConfigInt(configEnv, configFile, "workers_pool")
 	funcitAggregators := utils.GetConfigInt(configEnv, configFile, "funcit_aggregators")
 	topSize := utils.GetConfigInt(configEnv, configFile, "top_size")
 
 	aggregatorConfig := core.AggregatorConfig {
-		Instance:			instance,
-		RabbitIp:			rabbitIp,
-		RabbitPort:			rabbitPort,
-		FuncitAggregators:	funcitAggregators,
-		TopSize:			topSize,
+		Instance:				instance,
+		RabbitIp:				rabbitIp,
+		RabbitPort:				rabbitPort,
+		WorkersPool:			workersPool,
+		FuncitAggregators:		funcitAggregators,
+		TopSize:				topSize,
 	}
 
 	// Initializing custom logger.

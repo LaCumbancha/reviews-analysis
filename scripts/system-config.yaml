@@ -4,8 +4,7 @@ test_file_size: 1000
 
 # System configuration.
 reviews_streaming: false
-reviews_pool_size: 16
-business_pool_size: 16
+common_pool_size: 16
 
 # Bulks.
 log_bulk_rate: 50

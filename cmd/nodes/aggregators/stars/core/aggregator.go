@@ -18,6 +18,7 @@ type AggregatorConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	InputTopic			string
 	StarsFilters		int
 	StarsJoiners		int

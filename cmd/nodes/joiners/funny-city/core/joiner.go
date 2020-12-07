@@ -18,6 +18,7 @@ type JoinerConfig struct {
 	Instance			string
 	RabbitIp			string
 	RabbitPort			string
+	WorkersPool 		int
 	InputTopic			string
 	FunbizAggregators 	int
 	CitbizMappers		int
