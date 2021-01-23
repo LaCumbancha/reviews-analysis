@@ -57,7 +57,7 @@ func NewMapper(config MapperConfig) *Mapper {
 
 func (mapper *Mapper) Run() {
 	log.Infof("Starting to listen for reviews.")
-	innerChannel := make(chan string)
+	innerChannel := make(chan amqp.Delivery)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

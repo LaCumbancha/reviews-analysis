@@ -24,10 +24,8 @@ func EstablishConnection(rabbitIp string, rabbitPort string) (*amqp.Connection, 
 	return connection, channel
 }
 
-func AckMessage(message *amqp.Delivery, messageId string) {
+func AckMessage(message amqp.Delivery) {
 	if err := message.Ack(false); err != nil {
 		log.Errorf("Error sending message %s ACK. Err: '%s'", message.MessageId, err)
-	} else {
-		log.Tracef("Sending message %s ACK.", messageId)
 	}
 }

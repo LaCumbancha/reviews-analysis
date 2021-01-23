@@ -8,9 +8,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
+	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
 )
 
-func ProcessInputs(inputs <- chan amqp.Delivery, storingChannel chan string, endSignals int, wg *sync.WaitGroup) {
+func ProcessInputs(inputs <- chan amqp.Delivery, storingChannel chan amqp.Delivery, endSignals int, wg *sync.WaitGroup) {
 	distinctEndSignals := make(map[string]int)
 
 	for message := range inputs {
@@ -30,12 +31,12 @@ func ProcessInputs(inputs <- chan amqp.Delivery, storingChannel chan string, end
 
 		} else {
 			wg.Add(1)
-			storingChannel <- messageBody
+			storingChannel <- message
 		}
 	}
 }
 
-func InitializeProcessingWorkers(workersPool int, storingChannel chan string, callback func(int, string), wg *sync.WaitGroup) {
+func InitializeProcessingWorkers(workersPool int, storingChannel chan amqp.Delivery, callback func(int, string), wg *sync.WaitGroup) {
 	bulkNumber := 0
 	bulkNumberMutex := &sync.Mutex{}
 
@@ -44,7 +45,7 @@ func InitializeProcessingWorkers(workersPool int, storingChannel chan string, ca
 		log.Infof("Initializing worker #%d.", worker)
 		
 		go func() {
-			for bulk := range storingChannel {
+			for message := range storingChannel {
 				bulkNumberMutex.Lock()
 				bulkNumber++
 				innerBulk := bulkNumber
@@ -52,7 +53,8 @@ func InitializeProcessingWorkers(workersPool int, storingChannel chan string, ca
 
 				logb.Instance().Infof(fmt.Sprintf("Data bulk #%d received.", innerBulk), innerBulk)
 
-				callback(bulkNumber, bulk)
+				callback(bulkNumber, string(message.Body))
+				rabbit.AckMessage(message)
     			wg.Done()
 			}
 		}()

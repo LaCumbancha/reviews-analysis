@@ -86,6 +86,12 @@ func (scatter *Scatter) Run() {
         log.Fatalf("Error reading businesses data from file %s. Err: '%s'", scatter.data, err)
     }
 
+    bulkNumber++
+    bulk := buffer.String()
+    if bulk != "" {
+    	scatter.sendData(bulkNumber, bulk[:len(bulk)-1])
+    }
+
     // Publishing end messages.
     scatter.outputQueue.PublishFinish()
 

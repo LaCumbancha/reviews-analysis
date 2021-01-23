@@ -56,7 +56,7 @@ func NewAggregator(config AggregatorConfig) *Aggregator {
 
 func (aggregator *Aggregator) Run() {
 	log.Infof("Starting to listen for distinct hashed-texts.")
-	innerChannel := make(chan string)
+	innerChannel := make(chan amqp.Delivery)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

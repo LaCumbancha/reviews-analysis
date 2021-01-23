@@ -2,12 +2,14 @@ package core
 
 import (
 	"os"
+	"fmt"
 	"time"
 	"bufio"
 	"bytes"
 	"github.com/streadway/amqp"
 
 	log "github.com/sirupsen/logrus"
+	logb "github.com/LaCumbancha/reviews-analysis/cmd/common/logger"
 	props "github.com/LaCumbancha/reviews-analysis/cmd/common/properties"
 	comms "github.com/LaCumbancha/reviews-analysis/cmd/common/communication"
 	rabbit "github.com/LaCumbancha/reviews-analysis/cmd/common/middleware"
@@ -75,11 +77,7 @@ func (scatter *Scatter) Run() {
         if chunkNumber == scatter.bulkSize {
             bulkNumber++
             bulk := buffer.String()
-            trimmedBulk := bulk[:len(bulk)-1]
-
-            for _, partition := range PartitionableValues {
-            	scatter.outputDirect.PublishData([]byte(trimmedBulk), partition)
-            }
+            scatter.sendBulk(bulkNumber, bulk[:len(bulk)-1])
 
             buffer = bytes.NewBufferString("")
             chunkNumber = 0
@@ -90,6 +88,12 @@ func (scatter *Scatter) Run() {
         log.Fatalf("Error reading reviews data from file %s. Err: '%s'", scatter.data, err)
     }
 
+    bulkNumber++
+    bulk := buffer.String()
+    if bulk != "" {
+    	scatter.sendBulk(bulkNumber, bulk[:len(bulk)-1])
+    }
+
     // Publishing end messages.
     for _, partition := range PartitionableValues {
     	for idx := 0 ; idx < scatter.outputSignals[partition]; idx++ {
@@ -98,6 +102,18 @@ func (scatter *Scatter) Run() {
     }
 
     log.Infof("Time: %s.", time.Now().Sub(start).String())
+}
+
+func (scatter *Scatter) sendBulk(bulkNumber int, bulk string) {
+	for _, partition := range PartitionableValues {
+		err := scatter.outputDirect.PublishData([]byte(bulk), partition)
+
+		if err != nil {
+			log.Errorf("Error sending bulk #%d to direct-exchange %s (partition %s). Err: '%s'", bulkNumber, scatter.outputDirect.Exchange, partition, err)
+		} else {
+			logb.Instance().Infof(fmt.Sprintf("Bulk #%d sent to direct-exchange %s (partition %s).", bulkNumber, scatter.outputDirect.Exchange, partition), bulkNumber)
+		}
+	}
 }
 
 func (scatter *Scatter) Stop() {

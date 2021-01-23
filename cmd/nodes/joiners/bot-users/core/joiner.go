@@ -60,7 +60,7 @@ func (joiner *Joiner) Run() {
 	var wg sync.WaitGroup
 
 	log.Infof("Starting to listen for bot users with only one text.")
-	innerChannel1 := make(chan string)
+	innerChannel1 := make(chan amqp.Delivery)
 	wg.Add(1)
 
 	// Receiving and processing messages from the best-users flow.
@@ -68,7 +68,7 @@ func (joiner *Joiner) Run() {
 	go proc.ProcessInputs(joiner.inputDirect1.ConsumeData(), innerChannel1, joiner.endSignals1, &wg)
 
 	log.Infof("Starting to listen for users reviews data.")
-	innerChannel2 := make(chan string)
+	innerChannel2 := make(chan amqp.Delivery)
 	wg.Add(1)
 
 	// Receiving and processing messages from the common-users flow.

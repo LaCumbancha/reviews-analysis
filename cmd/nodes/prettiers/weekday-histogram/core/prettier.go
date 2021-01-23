@@ -49,7 +49,7 @@ func NewPrettier(config PrettierConfig) *Prettier {
 
 func (prettier *Prettier) Run() {
 	log.Infof("Starting to listen for weekday reviews data.")
-	innerChannel := make(chan string)
+	innerChannel := make(chan amqp.Delivery)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

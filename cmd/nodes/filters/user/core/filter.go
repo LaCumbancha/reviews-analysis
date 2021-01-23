@@ -61,7 +61,7 @@ func NewFilter(config FilterConfig) *Filter {
 
 func (filter *Filter) Run() {
 	log.Infof("Starting to listen for user reviews data.")
-	innerChannel := make(chan string)
+	innerChannel := make(chan amqp.Delivery)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

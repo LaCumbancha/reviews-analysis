@@ -75,7 +75,7 @@ func (direct *RabbitInputDirect) ConsumeData() <-chan amqp.Delivery {
 	data, err := direct.channel.Consume(
 		direct.queue, 			// Name
 		"",     				// Consumer
-		true,   				// Auto-ACK
+		false,   				// Auto-ACK
 		false,  				// Exclusive
 		false,  				// No-Local
 		false,  				// No-Wait

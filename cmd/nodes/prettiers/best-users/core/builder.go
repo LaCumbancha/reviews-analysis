@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"sync"
+	"sort"
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
@@ -41,13 +42,23 @@ func (builder *Builder) Save(rawData string) {
 }
 
 func (builder *Builder) BuildData() string {
-	response := fmt.Sprintf("Users with +%d reviews (only 5-stars): ", builder.reviews)
-
+	var usersList []comms.UserData
 	for userId, reviews := range builder.data {
-		response += fmt.Sprintf("%s (%d) ; ", userId, reviews)
+		user := comms.UserData { UserId: userId, Reviews: reviews }
+		usersList = append(usersList, user)
     }
 
-    if len(builder.data) == 0 {
+    sort.SliceStable(usersList, func(userIdx1, userIdx2 int) bool {
+	    return usersList[userIdx1].Reviews > usersList[userIdx2].Reviews
+	})
+
+	response := fmt.Sprintf("Users with +%d reviews (only 5-stars): ", builder.reviews)
+
+	for _, user := range usersList {
+		response += fmt.Sprintf("%s (%d) ; ", user.UserId, user.Reviews)
+    }
+
+    if len(usersList) == 0 {
     	return response + "no users accomplish that requirements."
     } else {
     	return response[0:len(response)-3]

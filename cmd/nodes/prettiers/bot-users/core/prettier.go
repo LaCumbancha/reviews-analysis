@@ -50,7 +50,7 @@ func NewPrettier(config PrettierConfig) *Prettier {
 
 func (prettier *Prettier) Run() {
 	log.Infof("Starting to listen for users with +5 reviews, all with the same text.")
-	innerChannel := make(chan string)
+	innerChannel := make(chan amqp.Delivery)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
